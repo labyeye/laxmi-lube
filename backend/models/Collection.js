@@ -7,7 +7,6 @@ const collectionSchema = new mongoose.Schema({
   paymentStatus: String,
   collectedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   remarks: String,
-  proofImage: String,
   collectedOn: { type: Date, default: Date.now },
 });
 module.exports = mongoose.model("Collection", collectionSchema);

@@ -3,130 +3,52 @@ import axios from "axios";
 import styled, { keyframes } from "styled-components";
 import {
   FaMoneyBillWave,
-  FaCalendarDay,
   FaHome,
   FaMoneyCheckAlt,
-  FaListAlt,
   FaSignOutAlt,
   FaUserCircle,
   FaChevronDown,
   FaChevronRight,
-  FaSync,
-  FaExclamationTriangle,
+  FaSearch,
+  FaCalendarAlt
 } from "react-icons/fa";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const spin = keyframes`
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 `;
-
-const BillAssignedToday = () => {
-  const [bills, setBills] = useState([]);
+const CollectionsHistory = () => {
+  const [collections, setCollections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [retrying, setRetrying] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState(null);
-  const [showCollectionModal, setShowCollectionModal] = useState(false);
-  const [selectedBill, setSelectedBill] = useState(null);
-  const [paymentAmount, setPaymentAmount] = useState("");
-  const [paymentMode, setPaymentMode] = useState("cash");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
-  const [paymentRemarks, setPaymentRemarks] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
   const navigate = useNavigate();
 
-  const fetchBillsAssignedToday = async () => {
+  const fetchCollections = async () => {
     try {
       setLoading(true);
       setError("");
-
-      const response = await axios.get(
-        "http://localhost:2500/api/staff/bills-assigned-today",
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
-      );
-
-      setBills(response.data);
-    } catch (error) {
-      console.error("Error fetching bills assigned today:", error);
-      setError("Failed to fetch bills assigned today. Please try again.");
+      
+      const response = await axios.get("http://localhost:2500/api/collections", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      
+      setCollections(response.data);
+    } catch (err) {
+      console.error("Error fetching collections:", err);
+      setError("Failed to fetch collections history. Please try again.");
     } finally {
       setLoading(false);
-      setRetrying(false);
     }
   };
 
   useEffect(() => {
-    fetchBillsAssignedToday();
+    fetchCollections();
   }, []);
-  // Add this function to your component
-  const handleCollectionSubmit = async () => {
-    try {
-      setIsSubmitting(true);
-      setSubmitError('');
-      
-      const paidAmount = parseFloat(paymentAmount);
-      const dueAmount = selectedBill.dueAmount || selectedBill.amount;
-  
-      // Validate payment amount
-      if (paidAmount <= 0 || paidAmount > dueAmount) {
-        setSubmitError('Please enter a valid payment amount');
-        return;
-      }
-  
-      // 1. First create the collection record
-      await axios.post(
-        'http://localhost:2500/api/collections',
-        {
-          bill: selectedBill._id,
-          amountCollected: paidAmount,
-          paymentMode,
-          remarks: paymentRemarks
-        },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-      );
-  
-      // 2. Then update the bill with new due amount and status
-      const newDueAmount = dueAmount - paidAmount;
-      const newStatus = newDueAmount <= 0 ? 'Paid' : 'Partially Paid';
-  
-      await axios.put(
-        `http://localhost:2500/api/bills/${selectedBill._id}`,
-        { 
-          dueAmount: newDueAmount,
-          status: newStatus
-        },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-      );
-  
-      // Refresh data and close modal
-      await fetchBillsAssignedToday();
-      setShowCollectionModal(false);
-      
-    } catch (err) {
-      console.error('Collection error:', err);
-      setSubmitError(err.response?.data?.message || 'Failed to record collection');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Calculate summary values
-  const totalBills = bills.length;
-  const totalAmount = bills.reduce((sum, bill) => sum + (bill.amount || 0), 0);
-  const totalDueAmount = bills.reduce(
-    (sum, bill) => sum + (bill.dueAmount || bill.amount || 0),
-    0
-  );
-  const averageAmount = totalBills > 0 ? totalAmount / totalBills : 0;
-
-  const handleRetry = () => {
-    setRetrying(true);
-    fetchBillsAssignedToday();
-  };
 
   const toggleSubmenu = (menu) => {
     if (activeSubmenu === menu) {
@@ -137,7 +59,13 @@ const BillAssignedToday = () => {
   };
 
   const formatDate = (dateString) => {
-    const options = { day: "numeric", month: "short", year: "numeric" };
+    const options = { 
+      day: "numeric", 
+      month: "short", 
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    };
     return new Date(dateString).toLocaleDateString("en-US", options);
   };
 
@@ -146,9 +74,7 @@ const BillAssignedToday = () => {
       style: "currency",
       currency: "INR",
       maximumFractionDigits: 0,
-    })
-      .format(amount)
-      .replace("₹", "₹");
+    }).format(amount);
   };
 
   const handleLogout = () => {
@@ -157,17 +83,29 @@ const BillAssignedToday = () => {
     navigate("/login");
   };
 
-  if (loading && !retrying) {
+  const filteredCollections = collections.filter(collection => {
+    const matchesSearch = collection.bill?.billNumber?.toString().includes(searchTerm) || 
+                         collection.bill?.retailer?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesDate = dateFilter ? 
+      new Date(collection.collectedOn).toISOString().split('T')[0] === dateFilter : 
+      true;
+    
+    return matchesSearch && matchesDate;
+  });
+
+  if (loading) {
     return (
       <LoadingContainer>
         <Spinner />
-        <p>Loading bills assigned today...</p>
+        <p>Loading collections history...</p>
       </LoadingContainer>
     );
   }
 
   return (
     <DashboardLayout>
+      {/* Sidebar - Same as BillAssignedToday */}
       <Sidebar collapsed={sidebarCollapsed}>
         <SidebarHeader>
           <Logo>BillTrack</Logo>
@@ -191,12 +129,7 @@ const BillAssignedToday = () => {
             <NavIcon>
               <FaHome />
             </NavIcon>
-            {!sidebarCollapsed && (
-              <>
-                <NavText>Dashboard</NavText>
-                <NavCheckmark>☐</NavCheckmark>
-              </>
-            )}
+            {!sidebarCollapsed && <NavText>Dashboard</NavText>}
           </NavItem>
 
           <NavItemWithSubmenu>
@@ -208,11 +141,7 @@ const BillAssignedToday = () => {
                 <>
                   <NavText>Collections</NavText>
                   <NavArrow>
-                    {activeSubmenu === "collections" ? (
-                      <FaChevronDown />
-                    ) : (
-                      <FaChevronRight />
-                    )}
+                    {activeSubmenu === "collections" ? <FaChevronDown /> : <FaChevronRight />}
                   </NavArrow>
                 </>
               )}
@@ -220,31 +149,15 @@ const BillAssignedToday = () => {
 
             {!sidebarCollapsed && activeSubmenu === "collections" && (
               <Submenu>
-                <SubmenuItem
-                  onClick={() => navigate("/staff/bill-assigned-today")}
-                >
+                <SubmenuItem onClick={() => navigate("/staff/bill-assigned-today")}>
                   <NavText>Assigned Today</NavText>
-                  <NavCheckmark>☑</NavCheckmark>
                 </SubmenuItem>
-                <SubmenuItem>
+                <SubmenuItem active>
                   <NavText>History</NavText>
-                  <NavCheckmark>☐</NavCheckmark>
                 </SubmenuItem>
               </Submenu>
             )}
           </NavItemWithSubmenu>
-
-          <NavItem>
-            <NavIcon>
-              <FaListAlt />
-            </NavIcon>
-            {!sidebarCollapsed && (
-              <>
-                <NavText>Assigned Bills</NavText>
-                <NavCheckmark>☐</NavCheckmark>
-              </>
-            )}
-          </NavItem>
         </NavMenu>
         <LogoutButton onClick={handleLogout}>
           <NavIcon>
@@ -256,206 +169,174 @@ const BillAssignedToday = () => {
 
       <MainContent>
         <TopBar>
-          <PageTitle>Bills Assigned Today</PageTitle>
+          <PageTitle>Collections History</PageTitle>
           <HeaderActions>
-            <NewCollectionButton onClick={() => setShowCollectionModal(true)}>
-              New Collection
-            </NewCollectionButton>
-            <RefreshButton onClick={handleRetry} disabled={retrying}>
-              <FaSync className={retrying ? "spinning" : ""} />
-              {retrying ? "Refreshing..." : "Refresh Data"}
-            </RefreshButton>
+            <SearchContainer>
+              <SearchIcon>
+                <FaSearch />
+              </SearchIcon>
+              <SearchInput
+                type="text"
+                placeholder="Search by bill # or retailer..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </SearchContainer>
+            <DateFilterContainer>
+              <CalendarIcon>
+                <FaCalendarAlt />
+              </CalendarIcon>
+              <DateInput
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+              />
+            </DateFilterContainer>
           </HeaderActions>
         </TopBar>
 
         <ContentArea>
           {error ? (
             <ErrorAlert>
-              <ErrorIcon>
-                <FaExclamationTriangle />
-              </ErrorIcon>
               <ErrorMessage>{error}</ErrorMessage>
-              <RetryButton onClick={handleRetry} disabled={retrying}>
-                {retrying ? "Retrying..." : "Retry Now"}
-              </RetryButton>
             </ErrorAlert>
+          ) : filteredCollections.length > 0 ? (
+            <CollectionsTable>
+              <TableHeader>
+                <TableRow>
+                  <TableHeaderCell>Bill #</TableHeaderCell>
+                  <TableHeaderCell>Retailer</TableHeaderCell>
+                  <TableHeaderCell>Amount</TableHeaderCell>
+                  <TableHeaderCell>Payment Mode</TableHeaderCell>
+                  <TableHeaderCell>Collection Time</TableHeaderCell>
+                  <TableHeaderCell>Remarks</TableHeaderCell>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredCollections.map((collection) => (
+                  <TableRow key={collection._id}>
+                    <TableCell>#{collection.bill?.billNumber}</TableCell>
+                    <TableCell>{collection.bill?.retailer}</TableCell>
+                    <TableCell>{formatCurrency(collection.amountCollected)}</TableCell>
+                    <TableCell>
+                      <PaymentMode mode={collection.paymentMode}>
+                        {collection.paymentMode}
+                      </PaymentMode>
+                    </TableCell>
+                    <TableCell>{formatDate(collection.collectedOn)}</TableCell>
+                    <TableCell>{collection.remarks || "-"}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </CollectionsTable>
           ) : (
-            <>
-              <SummaryCard>
-                <SummaryItem>
-                  <SummaryLabel>Total Bills</SummaryLabel>
-                  <SummaryValue>{totalBills}</SummaryValue>
-                </SummaryItem>
-                <SummaryItem>
-                  <SummaryLabel>Total Amount</SummaryLabel>
-                  <SummaryValue>{formatCurrency(totalAmount)}</SummaryValue>
-                </SummaryItem>
-                <SummaryItem>
-                  <SummaryLabel>Total Due Amount</SummaryLabel>
-                  <SummaryValue>{formatCurrency(totalDueAmount)}</SummaryValue>
-                </SummaryItem>
-                <SummaryItem>
-                  <SummaryLabel>Average Amount</SummaryLabel>
-                  <SummaryValue>{formatCurrency(averageAmount)}</SummaryValue>
-                </SummaryItem>
-              </SummaryCard>
-
-              {bills.length > 0 ? (
-                <BillsList>
-                  {bills.map((bill) => (
-                    <BillCard key={bill._id}>
-                      <BillHeader>
-                        <BillNumber>Bill #{bill.billNumber}</BillNumber>
-                        <BillStatus status={bill.status}>
-                          {bill.status}
-                        </BillStatus>
-                      </BillHeader>
-                      <BillRetailer>{bill.retailer}</BillRetailer>
-                      <BillDetails>
-                        <DetailItem>
-                          <DetailLabel>Amount:</DetailLabel>
-                          <DetailValue>
-                            {formatCurrency(bill.amount)}
-                          </DetailValue>
-                        </DetailItem>
-                        <DetailItem>
-                          <DetailLabel>Due Amount:</DetailLabel>
-                          <DetailValue>
-                            {formatCurrency(bill.dueAmount || bill.amount)}
-                          </DetailValue>
-                        </DetailItem>
-                        <DetailItem>
-                          <DetailLabel>Due Date:</DetailLabel>
-                          <DetailValue>{formatDate(bill.dueDate)}</DetailValue>
-                        </DetailItem>
-                        <DetailItem>
-                          <DetailLabel>Assigned Date:</DetailLabel>
-                          <DetailValue>
-                            {formatDate(bill.assignedDate || bill.billDate)}
-                          </DetailValue>
-                        </DetailItem>
-                      </BillDetails>
-                      <BillIcon>
-                        <FaMoneyBillWave />
-                      </BillIcon>
-                    </BillCard>
-                  ))}
-                </BillsList>
-              ) : (
-                <EmptyState>
-                  <FaMoneyBillWave size={48} />
-                  <EmptyMessage>No bills assigned to you today</EmptyMessage>
-                  <RefreshButton onClick={handleRetry} disabled={retrying}>
-                    <FaSync className={retrying ? "spinning" : ""} />
-                    {retrying ? "Refreshing..." : "Check Again"}
-                  </RefreshButton>
-                </EmptyState>
-              )}
-            </>
+            <EmptyState>
+              <FaMoneyBillWave size={48} />
+              <EmptyMessage>No collections found</EmptyMessage>
+            </EmptyState>
           )}
         </ContentArea>
-        {showCollectionModal && (
-  <ModalOverlay>
-    <Modal>
-      <ModalHeader>
-        <ModalTitle>Record New Collection</ModalTitle>
-        <CloseButton onClick={() => {
-          setShowCollectionModal(false);
-          setSelectedBill(null);
-          setPaymentAmount('');
-          setPaymentMode('cash');
-          setSubmitError('');
-        }}>
-          &times;
-        </CloseButton>
-      </ModalHeader>
-      <ModalBody>
-        {!selectedBill ? (
-          <>
-            <ModalSubtitle>Select a Bill</ModalSubtitle>
-            <BillSelection>
-              {bills.map(bill => (
-                <BillOption 
-                  key={bill._id} 
-                  onClick={() => setSelectedBill(bill)}
-                >
-                  <div>Bill #{bill.billNumber}</div>
-                  <div>{bill.retailer}</div>
-                  <div>Due: {formatCurrency(bill.dueAmount || bill.amount)}</div>
-                </BillOption>
-              ))}
-            </BillSelection>
-          </>
-        ) : (
-          <>
-            <SelectedBillInfo>
-              <div>
-                <strong>Bill #:</strong> {selectedBill.billNumber}
-              </div>
-              <div>
-                <strong>Retailer:</strong> {selectedBill.retailer}
-              </div>
-              <div>
-                <strong>Due Amount:</strong> {formatCurrency(selectedBill.dueAmount || selectedBill.amount)}
-              </div>
-            </SelectedBillInfo>
-            
-            <FormGroup>
-              <Label htmlFor="paymentAmount">Amount Paid</Label>
-              <Input
-                type="number"
-                id="paymentAmount"
-                value={paymentAmount}
-                onChange={(e) => setPaymentAmount(e.target.value)}
-                placeholder="Enter amount paid"
-                max={selectedBill.dueAmount || selectedBill.amount}
-                min="1"
-              />
-            </FormGroup>
-            
-            <FormGroup>
-              <Label htmlFor="paymentMode">Payment Mode</Label>
-              <Select
-                id="paymentMode"
-                value={paymentMode}
-                onChange={(e) => setPaymentMode(e.target.value)}
-              >
-                <option value="cash">Cash</option>
-                <option value="cheque">Cheque</option>
-                <option value="bank_transfer">Bank Transfer</option>
-                <option value="upi">UPI</option>
-              </Select>
-            </FormGroup>
-            
-            {submitError && <ErrorText>{submitError}</ErrorText>}
-            
-            <ButtonGroup>
-              <BackButton onClick={() => {
-                setSelectedBill(null);
-                setPaymentAmount('');
-                setSubmitError('');
-              }}>
-                Back to Bill Selection
-              </BackButton>
-              <SubmitButton 
-                onClick={handleCollectionSubmit}
-                disabled={isSubmitting || !paymentAmount}
-              >
-                {isSubmitting ? 'Processing...' : 'Submit Collection'}
-              </SubmitButton>
-            </ButtonGroup>
-          </>
-        )}
-      </ModalBody>
-    </Modal>
-  </ModalOverlay>
-)}
       </MainContent>
     </DashboardLayout>
   );
 };
 
-// Styled Components (consistent with StaffDashboard)
+// Styled Components (extend your existing styles)
+const CollectionsTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
+`;
+
+const TableHeader = styled.thead`
+  background-color: #f8f9fc;
+`;
+
+const TableHeaderCell = styled.th`
+  padding: 15px;
+  text-align: left;
+  font-weight: 600;
+  color: #4e73df;
+`;
+
+const TableBody = styled.tbody``;
+
+const TableRow = styled.tr`
+  border-bottom: 1px solid #eee;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+  
+  &:hover {
+    background-color: #f8f9fc;
+  }
+`;
+
+const TableCell = styled.td`
+  padding: 15px;
+  color: #6c757d;
+`;
+
+const PaymentMode = styled.span`
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background-color: ${(props) =>
+    props.mode === "cash" ? "#1cc88a20" : 
+     props.mode === "upi" ? "#4e73df20" : 
+     props.mode === "bank_transfer" ? "#36b9cc20" : "#f6c23e20"};
+  color: ${(props) =>
+    props.mode === "cash" ? "#1cc88a" : 
+     props.mode === "upi" ? "#4e73df" : 
+     props.mode === "bank_transfer" ? "#36b9cc" : "#f6c23e"};
+`;
+
+const SearchContainer = styled.div`
+  display: flex;
+  align-items: center;
+  background-color: #fff;
+  border-radius: 4px;
+  padding: 8px 15px;
+  border: 1px solid #ddd;
+`;
+
+const SearchIcon = styled.div`
+  color: #6c757d;
+  margin-right: 10px;
+`;
+
+const SearchInput = styled.input`
+  border: none;
+  outline: none;
+  width: 250px;
+  font-size: 0.9rem;
+`;
+
+const DateFilterContainer = styled.div`
+  display: flex;
+  align-items: center;
+  background-color: #fff;
+  border-radius: 4px;
+  padding: 8px 15px;
+  border: 1px solid #ddd;
+`;
+
+const CalendarIcon = styled.div`
+  color: #6c757d;
+  margin-right: 10px;
+`;
+
+const DateInput = styled.input`
+  border: none;
+  outline: none;
+  font-size: 0.9rem;
+`;
 
 const DashboardLayout = styled.div`
   display: flex;
@@ -873,33 +754,6 @@ const HeaderActions = styled.div`
   gap: 15px;
 `;
 
-const RefreshButton = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background-color: #4e73df;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 16px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-
-  &:hover {
-    background-color: #3a5bc7;
-  }
-
-  &:disabled {
-    background-color: #b0b7d4;
-    cursor: not-allowed;
-  }
-
-  .spinning {
-    animation: ${spin} 1s linear infinite;
-  }
-`;
 
 const ContentArea = styled.div`
   flex: 1;
@@ -1110,5 +964,7 @@ const EmptyMessage = styled.p`
   color: #6c757d;
   margin: 20px 0;
 `;
+// Reuse your existing styled components from BillAssignedToday.js
+// (DashboardLayout, Sidebar, MainContent, etc.)
 
-export default BillAssignedToday;
+export default CollectionsHistory;

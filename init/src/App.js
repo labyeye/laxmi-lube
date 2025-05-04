@@ -9,6 +9,7 @@ import Users from './pages/Users';
 import Logout from './pages/Logout';
 import BillAssignedToday from './pages/BillAssignedToday';
 import BillsPage from './pages/BillsPage';
+import CollectionsHistory from './pages/CollectionHistoryPage';
 
 const App = () => {
   const user = JSON.parse(localStorage.getItem('user'));
@@ -72,6 +73,7 @@ const App = () => {
         <Route path="/admin/bills" element={
           user?.role === 'admin' ? <BillsPage /> : <Navigate to="/login" />
         } />
+        <Route path="/staff/collections-history" element={<CollectionsHistory />} />
 
         {/* Logout Route */}
         <Route path="/logout" element={<Logout />} />

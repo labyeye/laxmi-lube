@@ -106,6 +106,31 @@ router.get('/', protect, async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch bills', error: err.message });
   }
 });
+// Add this to your existing billRoutes.js
+// In your billRoutes.js
+router.put('/:id', protect, async (req, res) => {
+  try {
+    const { status, dueAmount } = req.body;
+    
+    const bill = await Bill.findById(req.params.id);
+    if (!bill) {
+      return res.status(404).json({ message: 'Bill not found' });
+    }
+
+    // Update the fields if they're provided
+    if (status !== undefined) bill.status = status;
+    if (dueAmount !== undefined) bill.dueAmount = dueAmount;
+
+    await bill.save();
+    
+    res.json(bill);
+  } catch (err) {
+    res.status(500).json({ 
+      message: 'Failed to update bill',
+      error: err.message 
+    });
+  }
+});
 
 router.delete('/:id', protect, adminOnly, async (req, res) => {
   try {
