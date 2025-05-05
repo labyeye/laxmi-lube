@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import styled from "styled-components";
 import Layout from "../components/Layout";
-
+import * as xlsx from "xlsx";
 const BillsAdd = () => {
   const [file, setFile] = useState(null);
   const [manualBill, setManualBill] = useState({
@@ -19,27 +19,21 @@ const BillsAdd = () => {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
 
-  // API base URL
   const API_URL = "https://laxmi-lube.onrender.com/api";
 
-  // Handle file selection
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     setFile(selectedFile);
-    // Clear previous messages when a new file is selected
     setMessage("");
     setError("");
   };
 
-  // Handle manual input change
   const handleManualInputChange = (e) => {
     const { name, value } = e.target;
     setManualBill((prevBill) => ({
       ...prevBill,
       [name]: value,
     }));
-
-    // Clear field error when user starts typing
     if (fieldErrors[name]) {
       setFieldErrors((prev) => ({
         ...prev,
@@ -48,7 +42,6 @@ const BillsAdd = () => {
     }
   };
 
-  // Validate form fields
   const validateForm = () => {
     const errors = {};
 
@@ -66,16 +59,137 @@ const BillsAdd = () => {
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
+  // Update the validateExcelStructure function
+const validateExcelStructure = (file) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = xlsx.read(data, { type: 'array', cellDates: true });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        const headers = jsonData[0] || [];
+        const lowerHeaders = headers.map(h => String(h).toLowerCase().trim());
+        
+        // Check for required columns (case insensitive)
+        const requiredColumns = [
+          'billno', 'custname', 'billamt', 'billdate'
+        ];
+        
+        const missingColumns = requiredColumns.filter(col => 
+          !lowerHeaders.includes(col.toLowerCase())
+        );
+        
+        if (missingColumns.length > 0) {
+          resolve(`Missing required columns: ${missingColumns.join(', ')}`);
+          return;
+        }
+        
+        // Check first data row for valid date
+        if (jsonData.length > 1) {
+          const dateColIndex = headers.findIndex(h => 
+            ['billdate', 'date'].includes(String(h).toLowerCase())
+          );
+          
+          if (dateColIndex !== -1) {
+            const dateValue = jsonData[1][dateColIndex];
+            if (dateValue && isNaN(new Date(dateValue).getTime())) {
+              resolve("Invalid date format in Bill Date column");
+              return;
+            }
+          }
+        }
+        
+        resolve(null);
+      } catch (error) {
+        resolve("Error reading Excel file: " + error.message);
+      }
+    };
+    reader.onerror = () => {
+      resolve("Error reading file. Please check if the file is valid.");
+    };
+    reader.readAsArrayBuffer(file);
+  });
+};
 
-  // Handle manual bill submission
+// Update the handleImport function to better handle responses
+const handleImport = async (e) => {
+  e.preventDefault();
+  setError("");
+  setMessage("");
+
+  if (!file) {
+    setError("Please select a file to upload");
+    return;
+  }
+
+  // Validate file structure first
+  const validationError = await validateExcelStructure(file);
+  if (validationError) {
+    setError(validationError);
+    return;
+  }
+
+  setLoading(true);
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      throw new Error("Authentication token not found. Please log in again.");
+    }
+
+    const response = await axios.post(`${API_URL}/bills/import`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (response.data.errorCount > 0) {
+      setMessage(
+        `Successfully imported ${response.data.importedCount} bills. ${response.data.errorCount} records had errors.`
+      );
+      setError(
+        `Some rows had errors: ${response.data.errors?.join('; ') || ''}`
+      );
+    } else {
+      setMessage(`Successfully imported ${response.data.count} bills.`);
+    }
+
+    setFile(null);
+    document.getElementById("fileInput").value = "";
+  } catch (error) {
+    console.error("Error importing file:", error);
+    if (error.response) {
+      if (error.response.data?.message) {
+        setError(`Failed to import: ${error.response.data.message}`);
+      } else if (error.response.data?.error) {
+        setError(`Failed to import: ${error.response.data.error}`);
+      } else {
+        setError("Failed to import: Unknown server error");
+      }
+    } else if (error.request) {
+      setError("No response from server. Check your connection.");
+    } else {
+      setError(`Failed to import: ${error.message}`);
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+  
+  
+
   const handleManualSubmit = async (e) => {
     e.preventDefault();
 
-    // Clear previous messages
     setError("");
     setMessage("");
 
-    // Validate form
     if (!validateForm()) {
       setError("Please fix the errors in the form.");
       return;
@@ -108,12 +222,8 @@ const BillsAdd = () => {
     } catch (error) {
       console.error("Error adding bill:", error);
 
-      // Handle different types of errors
       if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
         if (error.response.data && error.response.data.errors) {
-          // Handle validation errors from backend
           const backendErrors = error.response.data.errors;
           setError(`Failed to add bill: ${backendErrors.join(", ")}`);
         } else if (error.response.data && error.response.data.message) {
@@ -124,12 +234,10 @@ const BillsAdd = () => {
           );
         }
       } else if (error.request) {
-        // The request was made but no response was received
         setError(
           "Failed to add bill: No response received from server. Please check your network connection."
         );
       } else {
-        // Something happened in setting up the request that triggered an Error
         setError(`Failed to add bill: ${error.message}`);
       }
     } finally {
@@ -137,68 +245,6 @@ const BillsAdd = () => {
     }
   };
 
-  // Handle file upload and bulk import
-  const handleImport = async (e) => {
-    e.preventDefault();
-
-    // Clear previous messages
-    setError("");
-    setMessage("");
-
-    if (!file) {
-      setError("Please select a file to upload");
-      return;
-    }
-
-    setLoading(true);
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Authentication token not found. Please log in again.");
-      }
-
-      const response = await axios.post(`${API_URL}/bills/import`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      // Handle partial success (some rows imported, some failed)
-      if (response.data.errors && response.data.errors.length > 0) {
-        setMessage(
-          `Imported ${response.data.importedCount} bills successfully. ${response.data.errors.length} records had errors.`
-        );
-      } else {
-        setMessage(`Successfully imported ${response.data.count} bills.`);
-      }
-
-      // Clear file input
-      setFile(null);
-      document.getElementById("fileInput").value = "";
-    } catch (error) {
-      console.error("Error importing file:", error);
-
-      if (
-        error.response &&
-        error.response.data &&
-        error.response.data.message
-      ) {
-        setError(`Failed to import file: ${error.response.data.message}`);
-      } else if (error.request) {
-        setError(
-          "Failed to import file: No response received from server. Please check your network connection."
-        );
-      } else {
-        setError(`Failed to import file: ${error.message}`);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <Layout>

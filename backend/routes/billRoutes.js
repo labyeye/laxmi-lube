@@ -39,7 +39,7 @@ router.post("/", protect, adminOnly, async (req, res) => {
       billNumber,
       retailer,
       amount,
-      dueAmount: dueAmount || amount, 
+      dueAmount: dueAmount || amount,
       dueDate,
       billDate,
       status: status || "Unpaid",
@@ -179,82 +179,152 @@ router.delete("/:id", protect, adminOnly, async (req, res) => {
       .json({ message: "Failed to delete bill", error: err.message });
   }
 });
-router.post("/import", protect, adminOnly, upload.single("file"), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
-    }
-
-    const workbook = xlsx.readFile(req.file.path);
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    const jsonData = xlsx.utils.sheet_to_json(worksheet);
-
-    const errors = [];
-    const importedBills = [];
-
-    // Process each row
-    for (const [index, row] of jsonData.entries()) {
-      try {
-        // Validate required fields
-        if (!row.billNumber || !row.retailer || !row.amount || !row.dueDate || !row.billDate) {
-          errors.push(`Row ${index + 2}: Missing required fields`);
-          continue;
-        }
-
-        // Fix date parsing - handle both string dates and Excel serial numbers
-        const parseExcelDate = (excelDate) => {
-          if (typeof excelDate === 'number') {
-            // Convert Excel serial number to JS date
-            const utcDays = Math.floor(excelDate - 25569);
-            const utcValue = utcDays * 86400;
-            return new Date(utcValue * 1000);
-          }
-          return new Date(excelDate);
-        };
-
-        // Create new bill with properly parsed dates
-        const newBill = new Bill({
-          billNumber: row.billNumber,
-          retailer: row.retailer,
-          amount: parseFloat(row.amount),
-          dueAmount: parseFloat(row.dueAmount || row.amount),
-          dueDate: parseExcelDate(row.dueDate),
-          billDate: parseExcelDate(row.billDate),
-          status: row.status || "Unpaid",
-        });
-
-        await newBill.save();
-        importedBills.push(newBill);
-      } catch (error) {
-        errors.push(`Row ${index + 2}: ${error.message}`);
+// Update the import route in billRoutes.js
+router.post(
+  "/import",
+  protect,
+  adminOnly,
+  upload.single("file"),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
       }
-    }
 
-    // Clean up - delete the uploaded file
-    fs.unlinkSync(req.file.path);
+      // Read file with cellDates option to properly handle Excel dates
+      const workbook = xlsx.readFile(req.file.path, { cellDates: true });
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+        raw: false,
+        defval: null,
+      });
 
-    if (errors.length > 0) {
-      return res.status(207).json({
-        message: "Partial success - some rows had errors",
+      const errors = [];
+      const importedBills = [];
+      const staffMap = new Map();
+
+      try {
+        const User = require("../models/User");
+        const staffMembers = await User.find({ role: "staff" }).lean();
+        staffMembers.forEach((staff) => {
+          staffMap.set(staff.name.toUpperCase(), staff._id);
+        });
+      } catch (err) {
+        console.warn("Could not load staff members:", err.message);
+      }
+
+      for (const [index, row] of jsonData.entries()) {
+        try {
+          // Get values with case-insensitive field names
+          const getValue = (obj, possibleNames) => {
+            const key = Object.keys(obj).find((k) =>
+              possibleNames.some(
+                (name) => k.toLowerCase() === name.toLowerCase()
+              )
+            );
+            return key ? obj[key] : null;
+          };
+
+          const custName = getValue(row, ["custname", "customer", "retailer"]);
+          const billNo = getValue(row, ["billno", "billnumber", "bill no"]);
+          const billDateValue = getValue(row, ["billdate", "date"]);
+          const billAmt = getValue(row, ["billamt", "amount"]);
+          const billRec = getValue(row, ["billrec", "received amount"]);
+          const billBalance = getValue(row, ["billbalance", "balance"]);
+          const staffName = getValue(row, ["staff name", "staff"]);
+
+          // Validate required fields
+          if (!custName || !billNo || !billAmt || !billDateValue) {
+            errors.push(`Row ${index + 2}: Missing required fields`);
+            continue;
+          }
+
+          // Parse date - handle Excel date objects and strings
+          let billDate;
+          if (billDateValue instanceof Date) {
+            billDate = billDateValue;
+          } else if (typeof billDateValue === "number") {
+            // Handle Excel serial dates
+            billDate = new Date((billDateValue - (25567 + 1)) * 86400 * 1000);
+          } else {
+            // Try parsing as string
+            billDate = new Date(billDateValue);
+          }
+
+          if (isNaN(billDate.getTime())) {
+            errors.push(`Row ${index + 2}: Invalid date format`);
+            continue;
+          }
+
+          // Parse amounts
+          const amount = parseFloat(String(billAmt).replace(/,/g, "")) || 0;
+          const received = parseFloat(String(billRec).replace(/,/g, "")) || 0;
+          const balance =
+            parseFloat(String(billBalance).replace(/,/g, "")) ||
+            amount - received;
+
+          if (isNaN(amount) || amount <= 0) {
+            errors.push(`Row ${index + 2}: Invalid amount`);
+            continue;
+          }
+
+          // Determine status
+          let status = "Unpaid";
+          if (balance <= 0) {
+            status = "Paid";
+          } else if (received > 0) {
+            status = "Partially Paid";
+          }
+
+          // Create bill
+          const newBill = new Bill({
+            billNumber: billNo,
+            retailer: custName,
+            amount: amount,
+            dueAmount: balance,
+            billDate: billDate,
+            dueDate: billDate, // Same as bill date unless specified
+            status: status,
+            assignedTo: staffName
+              ? staffMap.get(staffName.toUpperCase())
+              : null,
+          });
+
+          await newBill.save();
+          importedBills.push(newBill);
+        } catch (error) {
+          errors.push(`Row ${index + 2}: ${error.message}`);
+        }
+      }
+
+      // Clean up file
+      fs.unlinkSync(req.file.path);
+
+      if (errors.length > 0) {
+        return res.status(207).json({
+          message: `Imported ${importedBills.length} bills with ${errors.length} errors`,
+          importedCount: importedBills.length,
+          errorCount: errors.length,
+          errors: errors.slice(0, 10), // Return first 10 errors
+        });
+      }
+
+      res.json({
+        message: "Bills imported successfully",
+        count: importedBills.length,
         importedCount: importedBills.length,
-        errors,
+      });
+    } catch (error) {
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      res.status(500).json({
+        message: "Failed to import bills",
+        error: error.message,
       });
     }
-
-    res.json({
-      message: "Bills imported successfully",
-      count: importedBills.length,
-    });
-  } catch (error) {
-    if (req.file) {
-      fs.unlinkSync(req.file.path); // Clean up file on error
-    }
-    res.status(500).json({
-      message: "Failed to import bills",
-      error: error.message,
-    });
   }
-});
+);
 router.get("/staff/bills-assigned-today", protect, async (req, res) => {
   try {
     const today = new Date();
@@ -262,17 +332,19 @@ router.get("/staff/bills-assigned-today", protect, async (req, res) => {
 
     const bills = await Bill.find({
       assignedTo: req.user._id,
-      assignedDate: { $gte: today }
+      assignedDate: { $gte: today },
     })
       .populate("collections")
       .lean();
 
     // Filter out fully paid bills if you want to hide them
-    const visibleBills = bills.filter(bill => bill.dueAmount > 0);
+    const visibleBills = bills.filter((bill) => bill.dueAmount > 0);
 
     res.json(visibleBills);
   } catch (err) {
-    res.status(500).json({ message: "Failed to fetch bills", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to fetch bills", error: err.message });
   }
 });
 

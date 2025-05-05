@@ -4,7 +4,6 @@ import {
   FaMoneyBillWave,
   FaClipboardList,
   FaTasks,
-  FaHandHoldingUsd,
   FaExclamationTriangle,
   FaSync,
   FaHome,

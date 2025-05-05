@@ -7,21 +7,25 @@ const BillSchema = new mongoose.Schema(
       required: [true, "Bill number is required"],
       trim: true,
       unique: true,
+      uppercase: true
     },
     retailer: {
       type: String,
       required: [true, "Retailer name is required"],
       trim: true,
+      index: true
     },
     amount: {
       type: Number,
       required: [true, "Amount is required"],
       min: [0, "Amount cannot be negative"],
+      set: v => parseFloat(v.toFixed(2))
     },
     dueAmount: {
       type: Number,
       required: [true, "Due amount is required"],
       min: [0, "Due amount cannot be negative"],
+      set: v => parseFloat(v.toFixed(2)),
       validate: {
         validator: function(value) {
           return value <= this.amount;
@@ -29,48 +33,66 @@ const BillSchema = new mongoose.Schema(
         message: 'Due amount cannot exceed total bill amount'
       }
     },
-    dueDate: {
-      type: Date,
-      required: [true, "Due date is required"],
+    outstandingDays: {
+      type: Number,
+      min: 0,
+      default: 0
     },
     billDate: {
       type: Date,
-      required: [true, "Bill date is required"],
+      required: [true, "Bill date is required"]
+    },
+    dueDate: {
+      type: Date,
+      required: [true, "Due date is required"]
     },
     status: {
       type: String,
       enum: ["Paid", "Unpaid", "Partially Paid"],
-      default: "Unpaid",
+      default: "Unpaid"
     },
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+      index: true
+    },
+    assignedToName: {
+      type: String,
+      trim: true
     },
     assignedDate: {
-      type: Date,
+      type: Date
     },
     collections: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Collection'
     }],
     paymentDate: {
-      type: Date,
+      type: Date
     },
     paymentMethod: {
       type: String,
-      enum: ["Cash", "Check", "Bank Transfer", "Credit Card", "Other"],
+      enum: ["Cash", "Cheque", "Bank Transfer", "UPI", "Other"]
     },
     notes: {
       type: String,
-      trim: true,
-    }
+      trim: true
+    },
+    history: [{
+      action: String,
+      changedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      changedAt: { type: Date, default: Date.now },
+      changes: Object
+    }]
   },
   {
     timestamps: true,
     toJSON: { virtuals: true },
-    toObject: { virtuals: true },
+    toObject: { virtuals: true }
   }
 );
+
+// Add virtuals and methods as before...
 
 // Virtual for total collected amount
 BillSchema.virtual('collectedAmount').get(function() {

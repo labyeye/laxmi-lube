@@ -3,10 +3,8 @@ import axios from "axios";
 import styled, { keyframes } from "styled-components";
 import {
   FaMoneyBillWave,
-  FaCalendarDay,
   FaHome,
   FaMoneyCheckAlt,
-  FaListAlt,
   FaSignOutAlt,
   FaUserCircle,
   FaChevronDown,
@@ -43,7 +41,24 @@ const BillAssignedToday = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [paymentRemarks, setPaymentRemarks] = useState("");
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [customerBills, setCustomerBills] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  
+
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (bills.length > 0) {
+      const uniqueCustomers = [...new Set(bills.map((bill) => bill.retailer))];
+      setCustomers(uniqueCustomers);
+    }
+  }, [bills]);
+
+  const handleCustomerSelect = (customer) => {
+    setSelectedCustomer(customer);
+    setCustomerBills(bills.filter((bill) => bill.retailer === customer));
+  };
 
   const fetchBillsAssignedToday = async () => {
     try {
@@ -70,24 +85,31 @@ const BillAssignedToday = () => {
   useEffect(() => {
     fetchBillsAssignedToday();
   }, []);
-  // Add this function to your component
-  // Fixed handleCollectionSubmit function
+
   const handleCollectionSubmit = async () => {
     try {
       setIsSubmitting(true);
       setSubmitError("");
-
-      // Convert to number with exactly 2 decimal places
       const paidAmount = parseFloat(Number(paymentAmount).toFixed(2)); // Ensure two decimal places
       const dueAmount = parseFloat(Number(selectedBill.dueAmount).toFixed(2)); // Ensure due amount has 2 decimal places
-
+      if (selectedBill.billDate && selectedBill._originalBillDate && 
+        selectedBill.billDate.toString() !== selectedBill._originalBillDate.toString()) {
+      await axios.put(
+        `https://laxmi-lube.onrender.com/api/bills/${selectedBill._id}`,
+        { billDate: selectedBill.billDate },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+    }
       if (paidAmount <= 0 || paidAmount > dueAmount) {
         setSubmitError(
           `Please enter a valid amount between 0.01 and ${dueAmount}`
         );
         return;
       }
-
       const collectionData = {
         bill: selectedBill._id,
         amountCollected: paidAmount,
@@ -95,7 +117,6 @@ const BillAssignedToday = () => {
         remarks: paymentRemarks,
         ...(paymentMode !== "cash" && { paymentDetails }),
       };
-
       await axios.post(
         "https://laxmi-lube.onrender.com/api/collections",
         collectionData,
@@ -141,7 +162,6 @@ const BillAssignedToday = () => {
   };
 
   // Calculate summary values
-  // Calculate summary values
   const totalBills = bills.length;
   const totalAmount = bills.reduce((sum, bill) => sum + (bill.amount || 0), 0);
   const totalDueAmount = bills.reduce(
@@ -150,7 +170,7 @@ const BillAssignedToday = () => {
   );
   const averageAmount = totalBills > 0 ? totalAmount / totalBills : 0;
 
-  const paidBills = bills.filter((bill) => bill.dueAmount <= 0).length;
+
   const handleRetry = () => {
     setRetrying(true);
     fetchBillsAssignedToday();
@@ -169,7 +189,6 @@ const BillAssignedToday = () => {
     return new Date(dateString).toLocaleDateString("en-US", options);
   };
 
-  // Update formatCurrency to consistently show ₹ symbol
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -185,6 +204,16 @@ const BillAssignedToday = () => {
     navigate("/login");
   };
 
+  const handleOpenCollectionModal = () => {
+    setSelectedBill(null);
+    setSelectedCustomer(null);
+    setPaymentAmount("");
+    setPaymentMode("cash");
+    setPaymentRemarks("");
+    setSubmitError("");
+    setShowCollectionModal(true);
+  };
+
   if (loading && !retrying) {
     return (
       <LoadingContainer>
@@ -197,7 +226,6 @@ const BillAssignedToday = () => {
   return (
     <DashboardLayout>
       <Sidebar collapsed={sidebarCollapsed.toString()}>
-        {" "}
         <SidebarHeader>
           <Logo>BillTrack</Logo>
           <ToggleButton onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>
@@ -280,7 +308,7 @@ const BillAssignedToday = () => {
         <TopBar>
           <PageTitle>Bills Assigned Today</PageTitle>
           <HeaderActions>
-            <NewCollectionButton onClick={() => setShowCollectionModal(true)}>
+            <NewCollectionButton onClick={handleOpenCollectionModal}>
               New Collection
             </NewCollectionButton>
             <RefreshButton onClick={handleRetry} disabled={retrying}>
@@ -315,9 +343,7 @@ const BillAssignedToday = () => {
                 <SummaryItem>
                   <SummaryLabel>Total Due Amount</SummaryLabel>
                   <SummaryValue>
-                    {" "}
-                    {formatCurrency(totalDueAmount.toFixed(2))}{" "}
-                    {/* Ensure exact due amount is displayed with two decimals */}
+                    {formatCurrency(totalDueAmount.toFixed(2))}
                   </SummaryValue>
                 </SummaryItem>
                 <SummaryItem>
@@ -325,10 +351,23 @@ const BillAssignedToday = () => {
                   <SummaryValue>{formatCurrency(averageAmount)}</SummaryValue>
                 </SummaryItem>
               </SummaryCard>
-
+              <CustomerSelector>
+                <Label>Select Customer:</Label>
+                <Select
+                  value={selectedCustomer || ""}
+                  onChange={(e) => handleCustomerSelect(e.target.value)}
+                >
+                  <option value="">All Customers</option>
+                  {customers.map((customer) => (
+                    <option key={customer} value={customer}>
+                      {customer}
+                    </option>
+                  ))}
+                </Select>
+              </CustomerSelector>
               {bills.length > 0 ? (
                 <BillsList>
-                  {bills.map((bill) => (
+                  {(selectedCustomer ? customerBills : bills).map((bill) => (
                     <BillCard key={bill._id}>
                       <BillHeader>
                         <BillNumber>Bill #{bill.billNumber}</BillNumber>
@@ -347,11 +386,9 @@ const BillAssignedToday = () => {
                         <DetailItem>
                           <DetailLabel>Due Amount:</DetailLabel>
                           <DetailValue>
-                            <DetailValue>
-                              {bill.dueAmount <= 0
-                                ? "Cleared"
-                                : bill.dueAmount.toFixed(2)}
-                            </DetailValue>
+                            {bill.dueAmount <= 0
+                              ? "Cleared"
+                              : formatCurrency(bill.dueAmount.toFixed(2))}
                           </DetailValue>
                         </DetailItem>
                         <DetailItem>
@@ -388,40 +425,78 @@ const BillAssignedToday = () => {
           <ModalOverlay>
             <Modal>
               <ModalHeader>
-                <ModalTitle>Record New Collection</ModalTitle>
-                <CloseButton onClick={() => setShowCollectionModal(false)}>
+                <ModalTitle>
+                  {selectedCustomer
+                    ? `Collections for ${selectedCustomer}`
+                    : "Record New Collection"}
+                </ModalTitle>
+                <CloseButton
+                  onClick={() => {
+                    setShowCollectionModal(false);
+                    setSelectedCustomer(null);
+                    setSelectedBill(null);
+                  }}
+                >
                   &times;
                 </CloseButton>
               </ModalHeader>
               <ModalBody>
-                {bills.filter((bill) => bill.dueAmount > 0).length === 0 ? (
-                  <NoBillsMessage>
-                    <FaCheckCircle size={32} />
-                    <p>All bills are cleared - nothing to collect!</p>
-                    <p>No outstanding payments remaining.</p>
-                  </NoBillsMessage>
-                ) : !selectedBill ? (
-                  <>
-                    <ModalSubtitle>Select a Bill</ModalSubtitle>
-                    <BillSelection>
-                      {bills
-                        .filter((bill) => bill.dueAmount > 0)
-                        .map((bill) => (
-                          // In the BillOption component, ensure all fields are properly displayed
-                          <BillOption
-                            key={bill._id}
-                            onClick={() => setSelectedBill(bill)}
-                          >
-                            <div>Bill #{bill.billNumber}</div>
-                            <div>{bill.retailer}</div>
-                            <div>Amount: {formatCurrency(bill.amount)}</div>
-                            <div>Due: {formatCurrency(bill.dueAmount)}</div>
-                            <div>Due Date: {formatDate(bill.dueDate)}</div>
-                          </BillOption>
-                        ))}
-                    </BillSelection>
-                  </>
-                ) : (
+                {!selectedCustomer && !selectedBill ? (
+                  // Customer selection step
+                  <div>
+                    <ModalSubtitle>Select a Customer</ModalSubtitle>
+                    <CustomerBillsContainer>
+                      {customers.map((customer) => (
+                        <BillOption
+                          key={customer}
+                          onClick={() => handleCustomerSelect(customer)}
+                        >
+                          <div>{customer}</div>
+                          <div>
+                            Bills:{" "}
+                            {
+                              bills.filter((bill) => bill.retailer === customer)
+                                .length
+                            }
+                          </div>
+                        </BillOption>
+                      ))}
+                    </CustomerBillsContainer>
+                  </div>
+                ) : selectedCustomer && !selectedBill ? (
+                  // Bill selection step
+                  <CustomerBillsContainer>
+                    <h4>Select Bill to Collect Payment</h4>
+                    {customerBills
+                      .filter((bill) => bill.dueAmount > 0)
+                      .map((bill) => (
+                        <BillOption
+                          key={bill._id}
+                          onClick={() => setSelectedBill(bill)}
+                          selected={selectedBill?._id === bill._id}
+                        >
+                          <div>Bill #{bill.billNumber}</div>
+                          <div>Amount: {formatCurrency(bill.amount)}</div>
+                          <div>Due: {formatCurrency(bill.dueAmount)}</div>
+                          <div>Due Date: {formatDate(bill.dueDate)}</div>
+                          {bill.outstandingDays > 0 && (
+                            <OverdueBadge>
+                              Overdue: {bill.outstandingDays} days
+                            </OverdueBadge>
+                          )}
+                        </BillOption>
+                      ))}
+                    {customerBills.filter((bill) => bill.dueAmount > 0)
+                      .length === 0 && (
+                      <NoBillsMessage>
+                        <FaCheckCircle size={32} />
+                        <p>No pending bills for this customer</p>
+                        <p>All bills have been paid</p>
+                      </NoBillsMessage>
+                    )}
+                  </CustomerBillsContainer>
+                ) : selectedBill ? (
+                  // Payment collection step
                   <>
                     <SelectedBillInfo>
                       <div>
@@ -431,24 +506,35 @@ const BillAssignedToday = () => {
                         <strong>Retailer:</strong> {selectedBill.retailer}
                       </div>
                       <div>
-                        <strong>Due Amount:</strong>
-                        {selectedBill.dueAmount <= 0
-                          ? "Cleared"
-                          : selectedBill.dueAmount.toFixed(2)}{" "}
-                        {/* Ensure due amount is shown with 2 decimals */}
+                        <strong>Due Amount:</strong>{" "}
+                        {formatCurrency(selectedBill.dueAmount.toFixed(2))}
                       </div>
                     </SelectedBillInfo>
+                    <FormGroup>
+                      <Label>Bill Date:</Label>
+                      <DateInput
+                        type="date"
+                        value={
+                          selectedBill.billDate.toISOString().split("T")[0]
+                        }
+                        onChange={(e) => {
+                          const updatedBill = {
+                            ...selectedBill,
+                            billDate: new Date(e.target.value),
+                          };
+                          setSelectedBill(updatedBill);
+                        }}
+                      />
+                    </FormGroup>
 
                     <FormGroup>
                       <Label htmlFor="paymentAmount">Amount Paid</Label>
-                      // Replace the existing Input component with:
                       <Input
                         type="number"
                         id="paymentAmount"
                         value={paymentAmount}
                         onChange={(e) => {
                           const value = e.target.value;
-                          // Allow only numbers with up to 2 decimal places
                           if (/^\d*\.?\d{0,2}$/.test(value) || value === "") {
                             setPaymentAmount(value);
                           }
@@ -483,8 +569,6 @@ const BillAssignedToday = () => {
                         <option value="upi">UPI</option>
                       </Select>
                     </FormGroup>
-
-                    {/* Conditional fields based on payment mode */}
                     {paymentMode === "upi" && (
                       <>
                         <FormGroup>
@@ -594,6 +678,18 @@ const BillAssignedToday = () => {
                       </>
                     )}
 
+                    <FormGroup>
+                      <Label htmlFor="paymentRemarks">Remarks (Optional)</Label>
+                      <Input
+                        as="textarea"
+                        id="paymentRemarks"
+                        value={paymentRemarks}
+                        onChange={(e) => setPaymentRemarks(e.target.value)}
+                        placeholder="Add any additional notes..."
+                        rows={3}
+                      />
+                    </FormGroup>
+
                     {submitError && <ErrorText>{submitError}</ErrorText>}
 
                     <ButtonGroup>
@@ -614,7 +710,7 @@ const BillAssignedToday = () => {
                       </SubmitButton>
                     </ButtonGroup>
                   </>
-                )}
+                ) : null}
               </ModalBody>
             </Modal>
           </ModalOverlay>
@@ -645,6 +741,7 @@ const NoBillsMessage = styled.div`
     }
   }
 `;
+
 const DashboardLayout = styled.div`
   display: flex;
   min-height: 100vh;
@@ -652,7 +749,7 @@ const DashboardLayout = styled.div`
 `;
 
 const Sidebar = styled.div`
-  width: ${(props) => (props.collapsed ? "80px" : "250px")};
+  width: ${(props) => (props.collapsed === "true" ? "80px" : "250px")};
   background-color: #fff;
   box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
   transition: width 0.3s ease;
@@ -669,6 +766,39 @@ const SidebarHeader = styled.div`
   padding: 0 20px;
   height: 70px;
   border-bottom: 1px solid #f0f0f0;
+`;
+
+const CustomerSelector = styled.div`
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const CustomerBillsContainer = styled.div`
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 10px;
+`;
+
+const OverdueBadge = styled.span`
+  background-color: #e74a3b;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  margin-left: auto;
+`;
+
+const DateInput = styled.input`
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 100%;
 `;
 
 const Logo = styled.div`
@@ -703,6 +833,7 @@ const UserInfo = styled.div`
   display: flex;
   flex-direction: column;
 `;
+
 const NewCollectionButton = styled.button`
   display: flex;
   align-items: center;
@@ -784,14 +915,7 @@ const ModalSubtitle = styled.h3`
   color: #4e73df;
 `;
 
-const BillSelection = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-height: 300px;
-  overflow-y: auto;
-  margin-bottom: 20px;
-`;
+
 
 const BillOption = styled.div`
   padding: 15px;
