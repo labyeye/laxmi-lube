@@ -23,6 +23,13 @@ const spin = keyframes`
 `;
 
 const BillAssignedToday = () => {
+  const [paymentDetails, setPaymentDetails] = useState({
+    upiId: "",
+    upiTransactionId: "",
+    bankName: "",
+    chequeNumber: "",
+    bankTransactionId: "",
+  });
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -65,68 +72,99 @@ const BillAssignedToday = () => {
   }, []);
   // Add this function to your component
   // Fixed handleCollectionSubmit function
-const handleCollectionSubmit = async () => {
-  try {
-    setIsSubmitting(true);
-    setSubmitError("");
-
-    // Validate payment amount
-    const paidAmount = parseFloat(paymentAmount);
-    const dueAmount = selectedBill.dueAmount || selectedBill.amount;
-    
-    if (paidAmount <= 0 || paidAmount > dueAmount) {
-      setSubmitError("Please enter a valid payment amount");
-      return;
+  const handleCollectionSubmit = async () => {
+    try {
+      setIsSubmitting(true);
+      setSubmitError("");
+  
+      // Validate payment amount
+      const paidAmount = parseFloat(paymentAmount);
+      const dueAmount = selectedBill.dueAmount || selectedBill.amount;
+      
+      if (paidAmount <= 0 || paidAmount > dueAmount) {
+        setSubmitError("Please enter a valid payment amount");
+        return;
+      }
+  
+      // Validate payment details based on mode
+      let validationError = "";
+      switch(paymentMode) {
+        case 'upi':
+          if (!paymentDetails.upiId || !paymentDetails.upiTransactionId) {
+            validationError = "UPI ID and Transaction ID are required";
+          }
+          break;
+        case 'cheque':
+          if (!paymentDetails.bankName || !paymentDetails.chequeNumber) {
+            validationError = "Bank name and cheque number are required";
+          }
+          break;
+        case 'bank_transfer':
+          if (!paymentDetails.bankName || !paymentDetails.bankTransactionId) {
+            validationError = "Bank name and transaction ID are required";
+          }
+          break;
+      }
+  
+      if (validationError) {
+        setSubmitError(validationError);
+        return;
+      }
+  
+      const newDueAmount = dueAmount - paidAmount;
+      const newStatus = newDueAmount <= 0 ? "Paid" : "Partially Paid";
+  
+      // Create the collection record
+      await axios.post(
+        "https://laxmi-lube.onrender.com/api/collections",
+        {
+          bill: selectedBill._id,
+          amountCollected: paidAmount,
+          paymentMode,
+          paymentDetails: paymentMode === 'cash' ? null : paymentDetails,
+          remarks: paymentRemarks,
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+  
+      // Update the bill's dueAmount and status
+      await axios.put(
+        `https://laxmi-lube.onrender.com/api/bills/${selectedBill._id}`,
+        {
+          dueAmount: newDueAmount,
+          status: newStatus,
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+  
+      // Refresh data and reset form
+      await fetchBillsAssignedToday();
+      setShowCollectionModal(false);
+      setSelectedBill(null);
+      setPaymentAmount("");
+      setPaymentMode("cash");
+      setPaymentRemarks("");
+      setPaymentDetails({
+        upiId: '',
+        upiTransactionId: '',
+        bankName: '',
+        chequeNumber: '',
+        bankTransactionId: ''
+      });
+      
+    } catch (err) {
+      console.error("Collection error:", err);
+      setSubmitError(
+        err.response?.data?.message || "Failed to record collection"
+      );
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    const newDueAmount = dueAmount - paidAmount;
-    const newStatus = newDueAmount <= 0 ? "Paid" : "Partially Paid";
-
-    // 1. First create the collection record - with proper authorization header
-    await axios.post(
-      "https://laxmi-lube.onrender.com/api/collections",
-      {
-        bill: selectedBill._id,
-        amountCollected: paidAmount,
-        paymentMode,
-        remarks: paymentRemarks,
-      },
-      {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      }
-    );
-
-    // 2. Then update the bill's dueAmount and status - with proper authorization header
-    await axios.put(
-      `https://laxmi-lube.onrender.com/api/bills/${selectedBill._id}`,
-      {
-        dueAmount: newDueAmount,
-        status: newStatus,
-      },
-      {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      }
-    );
-
-    // Refresh data and close modal
-    await fetchBillsAssignedToday();
-    setShowCollectionModal(false);
-    
-    // Reset form values
-    setSelectedBill(null);
-    setPaymentAmount("");
-    setPaymentMode("cash");
-    setPaymentRemarks("");
-    
-  } catch (err) {
-    console.error("Collection error:", err);
-    setSubmitError(
-      err.response?.data?.message || "Failed to record collection"
-    );
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
   // Calculate summary values
   // Calculate summary values
@@ -434,7 +472,17 @@ const handleCollectionSubmit = async () => {
                       <Select
                         id="paymentMode"
                         value={paymentMode}
-                        onChange={(e) => setPaymentMode(e.target.value)}
+                        onChange={(e) => {
+                          setPaymentMode(e.target.value);
+                          // Reset payment details when mode changes
+                          setPaymentDetails({
+                            upiId: "",
+                            upiTransactionId: "",
+                            bankName: "",
+                            chequeNumber: "",
+                            bankTransactionId: "",
+                          });
+                        }}
                       >
                         <option value="cash">Cash</option>
                         <option value="cheque">Cheque</option>
@@ -442,6 +490,116 @@ const handleCollectionSubmit = async () => {
                         <option value="upi">UPI</option>
                       </Select>
                     </FormGroup>
+
+                    {/* Conditional fields based on payment mode */}
+                    {paymentMode === "upi" && (
+                      <>
+                        <FormGroup>
+                          <Label htmlFor="upiId">UPI ID</Label>
+                          <Input
+                            type="text"
+                            id="upiId"
+                            value={paymentDetails.upiId}
+                            onChange={(e) =>
+                              setPaymentDetails({
+                                ...paymentDetails,
+                                upiId: e.target.value,
+                              })
+                            }
+                            placeholder="Enter UPI ID"
+                          />
+                        </FormGroup>
+                        <FormGroup>
+                          <Label htmlFor="upiTransactionId">
+                            Transaction ID
+                          </Label>
+                          <Input
+                            type="text"
+                            id="upiTransactionId"
+                            value={paymentDetails.upiTransactionId}
+                            onChange={(e) =>
+                              setPaymentDetails({
+                                ...paymentDetails,
+                                upiTransactionId: e.target.value,
+                              })
+                            }
+                            placeholder="Enter UPI Transaction ID"
+                          />
+                        </FormGroup>
+                      </>
+                    )}
+
+                    {paymentMode === "cheque" && (
+                      <>
+                        <FormGroup>
+                          <Label htmlFor="bankName">Bank Name</Label>
+                          <Input
+                            type="text"
+                            id="bankName"
+                            value={paymentDetails.bankName}
+                            onChange={(e) =>
+                              setPaymentDetails({
+                                ...paymentDetails,
+                                bankName: e.target.value,
+                              })
+                            }
+                            placeholder="Enter Bank Name"
+                          />
+                        </FormGroup>
+                        <FormGroup>
+                          <Label htmlFor="chequeNumber">Cheque Number</Label>
+                          <Input
+                            type="text"
+                            id="chequeNumber"
+                            value={paymentDetails.chequeNumber}
+                            onChange={(e) =>
+                              setPaymentDetails({
+                                ...paymentDetails,
+                                chequeNumber: e.target.value,
+                              })
+                            }
+                            placeholder="Enter Cheque Number"
+                          />
+                        </FormGroup>
+                      </>
+                    )}
+
+                    {paymentMode === "bank_transfer" && (
+                      <>
+                        <FormGroup>
+                          <Label htmlFor="bankName">Bank Name</Label>
+                          <Input
+                            type="text"
+                            id="bankName"
+                            value={paymentDetails.bankName}
+                            onChange={(e) =>
+                              setPaymentDetails({
+                                ...paymentDetails,
+                                bankName: e.target.value,
+                              })
+                            }
+                            placeholder="Enter Bank Name"
+                          />
+                        </FormGroup>
+                        <FormGroup>
+                          <Label htmlFor="bankTransactionId">
+                            Transaction ID
+                          </Label>
+                          <Input
+                            type="text"
+                            id="bankTransactionId"
+                            value={paymentDetails.bankTransactionId}
+                            onChange={(e) =>
+                              setPaymentDetails({
+                                ...paymentDetails,
+                                bankTransactionId: e.target.value,
+                              })
+                            }
+                            placeholder="Enter Bank Transaction ID"
+                          />
+                        </FormGroup>
+                      </>
+                    )}
 
                     {submitError && <ErrorText>{submitError}</ErrorText>}
 

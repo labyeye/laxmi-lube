@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-
 const collectionSchema = new mongoose.Schema({
   bill: { 
     type: mongoose.Schema.Types.ObjectId, 
@@ -20,6 +19,31 @@ const collectionSchema = new mongoose.Schema({
     },
     default: "cash"
   },
+  // New fields for payment details
+  paymentDetails: {
+    upiId: {
+      type: String,
+      required: function() { return this.paymentMode === 'upi'; }
+    },
+    upiTransactionId: {
+      type: String,
+      required: function() { return this.paymentMode === 'upi'; }
+    },
+    bankName: {
+      type: String,
+      required: function() { 
+        return this.paymentMode === 'cheque' || this.paymentMode === 'bank_transfer'; 
+      }
+    },
+    chequeNumber: {
+      type: String,
+      required: function() { return this.paymentMode === 'cheque'; }
+    },
+    bankTransactionId: {
+      type: String,
+      required: function() { return this.paymentMode === 'bank_transfer'; }
+    }
+  },
   collectedBy: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: "User",
@@ -34,12 +58,5 @@ const collectionSchema = new mongoose.Schema({
     default: Date.now 
   }
 }, {
-  timestamps: true // Adds createdAt and updatedAt fields
+  timestamps: true
 });
-
-// Add index for better query performance
-collectionSchema.index({ bill: 1 });
-collectionSchema.index({ collectedBy: 1 });
-collectionSchema.index({ collectedOn: -1 });
-
-module.exports = mongoose.model("Collection", collectionSchema);

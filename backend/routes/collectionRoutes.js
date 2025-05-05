@@ -7,7 +7,7 @@ const { protect } = require('../middleware/authMiddleware');
 // Create new collection (protected route)
 router.post('/', protect, async (req, res) => {
   try {
-    const { bill, amountCollected, paymentMode, remarks, proofImage } = req.body;
+    const { bill, amountCollected, paymentMode, remarks, paymentDetails } = req.body;
     
     // Validate required fields
     if (!bill || !amountCollected || !paymentMode) {
@@ -24,6 +24,30 @@ router.post('/', protect, async (req, res) => {
       });
     }
 
+    // Validate payment details based on payment mode
+    let validationError;
+    switch(paymentMode) {
+      case 'upi':
+        if (!paymentDetails?.upiId || !paymentDetails?.upiTransactionId) {
+          validationError = 'UPI ID and Transaction ID are required for UPI payments';
+        }
+        break;
+      case 'cheque':
+        if (!paymentDetails?.bankName || !paymentDetails?.chequeNumber) {
+          validationError = 'Bank name and cheque number are required for cheque payments';
+        }
+        break;
+      case 'bank_transfer':
+        if (!paymentDetails?.bankName || !paymentDetails?.bankTransactionId) {
+          validationError = 'Bank name and transaction ID are required for bank transfers';
+        }
+        break;
+    }
+    
+    if (validationError) {
+      return res.status(400).json({ message: validationError });
+    }
+
     // Check if bill exists
     const existingBill = await Bill.findById(bill);
     if (!existingBill) {
@@ -35,10 +59,9 @@ router.post('/', protect, async (req, res) => {
       bill,
       amountCollected: amount,
       paymentMode,
-      paymentStatus: 'completed',
+      paymentDetails,
       collectedBy: req.user._id,
       remarks,
-      proofImage,
       collectedOn: new Date()
     });
 
