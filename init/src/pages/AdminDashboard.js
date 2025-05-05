@@ -17,58 +17,58 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const token = localStorage.getItem("token");
-        if (!token) {
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      const response = await axios.get(
+        "https://laxmi-lube.onrender.com/api/admin/dashboard",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Failed to load dashboard data");
+      }
+
+      setDashboardData(response.data);
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+      
+      // Handle specific error cases
+      if (error.response) {
+        // Server responded with error status
+        if (error.response.status === 401) {
+          // Unauthorized - token expired or invalid
+          localStorage.removeItem("token");
           navigate("/login");
           return;
         }
-  
-        const response = await axios.get(
-          "https://laxmi-lube.onrender.com/api/admin/dashboard",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-  
-        if (!response.data.success) {
-          throw new Error(response.data.message || "Failed to load dashboard data");
-        }
-  
-        setDashboardData(response.data);
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-        
-        // Handle specific error cases
-        if (error.response) {
-          // Server responded with error status
-          if (error.response.status === 401) {
-            // Unauthorized - token expired or invalid
-            localStorage.removeItem("token");
-            navigate("/login");
-            return;
-          }
-          setError(error.response.data.message || "Failed to load dashboard data");
-        } else if (error.request) {
-          // Request was made but no response
-          setError("Network error - please check your connection");
-        } else {
-          // Other errors
-          setError(error.message || "Failed to load dashboard data");
-        }
-      } finally {
-        setLoading(false);
+        setError(error.response.data.message || "Failed to load dashboard data");
+      } else if (error.request) {
+        // Request was made but no response
+        setError("Network error - please check your connection");
+      } else {
+        // Other errors
+        setError(error.message || "Failed to load dashboard data");
       }
-    };
-  
-    fetchDashboardData();
-  }, [navigate]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchDashboardData();
+}, [navigate]);
 
   return (
     <Layout>
