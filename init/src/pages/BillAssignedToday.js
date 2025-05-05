@@ -64,72 +64,69 @@ const BillAssignedToday = () => {
     fetchBillsAssignedToday();
   }, []);
   // Add this function to your component
-  const handleCollectionSubmit = async () => {
-    try {
-      setIsSubmitting(true);
-      setSubmitError("");
+  // Fixed handleCollectionSubmit function
+const handleCollectionSubmit = async () => {
+  try {
+    setIsSubmitting(true);
+    setSubmitError("");
 
-      const paidAmount = parseFloat(paymentAmount);
-      const dueAmount = selectedBill.dueAmount || selectedBill.amount;
-      const newDueAmount =
-        (selectedBill.dueAmount || selectedBill.amount) - paidAmount;
-      await axios.post("/api/collections", {
+    // Validate payment amount
+    const paidAmount = parseFloat(paymentAmount);
+    const dueAmount = selectedBill.dueAmount || selectedBill.amount;
+    
+    if (paidAmount <= 0 || paidAmount > dueAmount) {
+      setSubmitError("Please enter a valid payment amount");
+      return;
+    }
+    
+    const newDueAmount = dueAmount - paidAmount;
+    const newStatus = newDueAmount <= 0 ? "Paid" : "Partially Paid";
+
+    // 1. First create the collection record - with proper authorization header
+    await axios.post(
+      "http://localhost:2500/api/collections",
+      {
         bill: selectedBill._id,
         amountCollected: paidAmount,
         paymentMode,
         remarks: paymentRemarks,
-      });
-
-      // 2. Then update the bill's dueAmount and status
-      await axios.put(`/api/bills/${selectedBill._id}`, {
-        dueAmount: newDueAmount,
-        status: newDueAmount <= 0 ? "Paid" : "Partially Paid",
-      });
-      // Validate payment amount
-      if (paidAmount <= 0 || paidAmount > dueAmount) {
-        setSubmitError("Please enter a valid payment amount");
-        return;
+      },
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       }
+    );
 
-      // 1. First create the collection record
-      await axios.post(
-        "http://localhost:2500/api/collections",
-        {
-          bill: selectedBill._id,
-          amountCollected: paidAmount,
-          paymentMode,
-          remarks: paymentRemarks,
-        },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
-      );
+    // 2. Then update the bill's dueAmount and status - with proper authorization header
+    await axios.put(
+      `http://localhost:2500/api/bills/${selectedBill._id}`,
+      {
+        dueAmount: newDueAmount,
+        status: newStatus,
+      },
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      }
+    );
 
-      const newStatus = newDueAmount <= 0 ? "Paid" : "Partially Paid";
-
-      await axios.put(
-        `http://localhost:2500/api/bills/${selectedBill._id}`,
-        {
-          dueAmount: newDueAmount,
-          status: newStatus,
-        },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
-      );
-
-      // Refresh data and close modal
-      await fetchBillsAssignedToday();
-      setShowCollectionModal(false);
-    } catch (err) {
-      console.error("Collection error:", err);
-      setSubmitError(
-        err.response?.data?.message || "Failed to record collection"
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    // Refresh data and close modal
+    await fetchBillsAssignedToday();
+    setShowCollectionModal(false);
+    
+    // Reset form values
+    setSelectedBill(null);
+    setPaymentAmount("");
+    setPaymentMode("cash");
+    setPaymentRemarks("");
+    
+  } catch (err) {
+    console.error("Collection error:", err);
+    setSubmitError(
+      err.response?.data?.message || "Failed to record collection"
+    );
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   // Calculate summary values
   // Calculate summary values

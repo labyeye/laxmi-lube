@@ -23,7 +23,6 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-// Create new bill
 router.post("/", protect, adminOnly, async (req, res) => {
   try {
     const {
@@ -40,7 +39,7 @@ router.post("/", protect, adminOnly, async (req, res) => {
       billNumber,
       retailer,
       amount,
-      dueAmount: dueAmount || amount, // Default to full amount if not specified
+      dueAmount: dueAmount || amount, 
       dueDate,
       billDate,
       status: status || "Unpaid",
@@ -53,7 +52,6 @@ router.post("/", protect, adminOnly, async (req, res) => {
   }
 });
 
-// Assign bill to staff
 router.put("/:billId/assign", protect, adminOnly, async (req, res) => {
   try {
     const { staffId } = req.body;
@@ -91,7 +89,6 @@ router.put("/:billId/assign", protect, adminOnly, async (req, res) => {
   }
 });
 
-// Get all bills with collections data
 router.get("/", protect, async (req, res) => {
   try {
     let query = {};
@@ -108,7 +105,6 @@ router.get("/", protect, async (req, res) => {
       .sort({ dueDate: 1 })
       .lean();
 
-    // Calculate collected and due amounts for each bill
     const processedBills = bills.map((bill) => {
       const collectedAmount =
         bill.collections.reduce(
@@ -143,7 +139,6 @@ router.get("/", protect, async (req, res) => {
   }
 });
 
-// Update bill status and due amount
 router.put("/:id", protect, async (req, res) => {
   try {
     const { status, dueAmount } = req.body;
@@ -153,12 +148,9 @@ router.put("/:id", protect, async (req, res) => {
       return res.status(404).json({ message: "Bill not found" });
     }
 
-    // Prevent negative due amounts
     if (dueAmount !== undefined && dueAmount < 0) {
       return res.status(400).json({ message: "Due amount cannot be negative" });
     }
-
-    // Update fields
     if (status !== undefined) bill.status = status;
     if (dueAmount !== undefined) bill.dueAmount = dueAmount;
 
@@ -173,13 +165,9 @@ router.put("/:id", protect, async (req, res) => {
   }
 });
 
-// Delete bill
 router.delete("/:id", protect, adminOnly, async (req, res) => {
   try {
-    // First delete all associated collections
     await Collection.deleteMany({ bill: req.params.id });
-
-    // Then delete the bill
     const bill = await Bill.findByIdAndDelete(req.params.id);
     if (!bill) {
       return res.status(404).json({ message: "Bill not found" });
@@ -191,8 +179,82 @@ router.delete("/:id", protect, adminOnly, async (req, res) => {
       .json({ message: "Failed to delete bill", error: err.message });
   }
 });
-// In billRoutes.js - update the /staff/bills-assigned-today route
-// In billRoutes.js - update the bills-assigned-today endpoint
+router.post("/import", protect, adminOnly, upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const workbook = xlsx.readFile(req.file.path);
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+    const jsonData = xlsx.utils.sheet_to_json(worksheet);
+
+    const errors = [];
+    const importedBills = [];
+
+    // Process each row
+    for (const [index, row] of jsonData.entries()) {
+      try {
+        // Validate required fields
+        if (!row.billNumber || !row.retailer || !row.amount || !row.dueDate || !row.billDate) {
+          errors.push(`Row ${index + 2}: Missing required fields`);
+          continue;
+        }
+
+        // Fix date parsing - handle both string dates and Excel serial numbers
+        const parseExcelDate = (excelDate) => {
+          if (typeof excelDate === 'number') {
+            // Convert Excel serial number to JS date
+            const utcDays = Math.floor(excelDate - 25569);
+            const utcValue = utcDays * 86400;
+            return new Date(utcValue * 1000);
+          }
+          return new Date(excelDate);
+        };
+
+        // Create new bill with properly parsed dates
+        const newBill = new Bill({
+          billNumber: row.billNumber,
+          retailer: row.retailer,
+          amount: parseFloat(row.amount),
+          dueAmount: parseFloat(row.dueAmount || row.amount),
+          dueDate: parseExcelDate(row.dueDate),
+          billDate: parseExcelDate(row.billDate),
+          status: row.status || "Unpaid",
+        });
+
+        await newBill.save();
+        importedBills.push(newBill);
+      } catch (error) {
+        errors.push(`Row ${index + 2}: ${error.message}`);
+      }
+    }
+
+    // Clean up - delete the uploaded file
+    fs.unlinkSync(req.file.path);
+
+    if (errors.length > 0) {
+      return res.status(207).json({
+        message: "Partial success - some rows had errors",
+        importedCount: importedBills.length,
+        errors,
+      });
+    }
+
+    res.json({
+      message: "Bills imported successfully",
+      count: importedBills.length,
+    });
+  } catch (error) {
+    if (req.file) {
+      fs.unlinkSync(req.file.path); // Clean up file on error
+    }
+    res.status(500).json({
+      message: "Failed to import bills",
+      error: error.message,
+    });
+  }
+});
 router.get("/staff/bills-assigned-today", protect, async (req, res) => {
   try {
     const today = new Date();

@@ -70,9 +70,7 @@ const AdminDashboard = () => {
                 <FaFileInvoiceDollar size={24} />
                 <div>
                   <h3>Total Bill Amount</h3>
-                  <p>
-                    ₹{dashboardData?.totalBillAmount?.toLocaleString() || "0"}
-                  </p>
+                  <p>₹{dashboardData?.totalBillAmount?.toFixed(2) || "0.00"}</p>
                 </div>
               </MetricCard>
 
@@ -80,9 +78,7 @@ const AdminDashboard = () => {
                 <FaMoneyBillWave size={24} />
                 <div>
                   <h3>Total Paid Today</h3>
-                  <p>
-                    ₹{dashboardData?.totalPaidAmount?.toLocaleString() || "0"}
-                  </p>
+                  <p>₹{dashboardData?.totalPaidAmount?.toFixed(2) || "0.00"}</p>
                 </div>
               </MetricCard>
 
@@ -91,9 +87,7 @@ const AdminDashboard = () => {
                 <div>
                   <h3>Remaining Today</h3>
                   <p>
-                    ₹
-                    {dashboardData?.totalRemainingAmount?.toLocaleString() ||
-                      "0"}
+                    ₹{dashboardData?.totalRemainingAmount?.toFixed(2) || "0.00"}
                   </p>
                 </div>
               </MetricCard>
