@@ -76,72 +76,46 @@ const BillAssignedToday = () => {
     try {
       setIsSubmitting(true);
       setSubmitError("");
-  
-      // Validate payment amount
-      const paidAmount = parseFloat(paymentAmount);
-      const dueAmount = selectedBill.dueAmount || selectedBill.amount;
-      
+
+      // Convert to number with exactly 2 decimal places
+      const paidAmount = parseFloat(Number(paymentAmount).toFixed(2)); // Ensure two decimal places
+      const dueAmount = parseFloat(Number(selectedBill.dueAmount).toFixed(2)); // Ensure due amount has 2 decimal places
+
       if (paidAmount <= 0 || paidAmount > dueAmount) {
-        setSubmitError("Please enter a valid payment amount");
+        setSubmitError(
+          `Please enter a valid amount between 0.01 and ${dueAmount}`
+        );
         return;
       }
-  
-      // Validate payment details based on mode
-      let validationError = "";
-      switch(paymentMode) {
-        case 'upi':
-          if (!paymentDetails.upiId || !paymentDetails.upiTransactionId) {
-            validationError = "UPI ID and Transaction ID are required";
-          }
-          break;
-        case 'cheque':
-          if (!paymentDetails.bankName || !paymentDetails.chequeNumber) {
-            validationError = "Bank name and cheque number are required";
-          }
-          break;
-        case 'bank_transfer':
-          if (!paymentDetails.bankName || !paymentDetails.bankTransactionId) {
-            validationError = "Bank name and transaction ID are required";
-          }
-          break;
-      }
-  
-      if (validationError) {
-        setSubmitError(validationError);
-        return;
-      }
-  
-      const newDueAmount = dueAmount - paidAmount;
-      const newStatus = newDueAmount <= 0 ? "Paid" : "Partially Paid";
-  
-      // Create the collection record
+
+      const collectionData = {
+        bill: selectedBill._id,
+        amountCollected: paidAmount,
+        paymentMode,
+        remarks: paymentRemarks,
+        ...(paymentMode !== "cash" && { paymentDetails }),
+      };
+
       await axios.post(
         "https://laxmi-lube.onrender.com/api/collections",
-        {
-          bill: selectedBill._id,
-          amountCollected: paidAmount,
-          paymentMode,
-          paymentDetails: paymentMode === 'cash' ? null : paymentDetails,
-          remarks: paymentRemarks,
-        },
+        collectionData,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
       );
-  
-      // Update the bill's dueAmount and status
+
+      const newDueAmount = dueAmount - paidAmount;
       await axios.put(
         `https://laxmi-lube.onrender.com/api/bills/${selectedBill._id}`,
         {
           dueAmount: newDueAmount,
-          status: newStatus,
+          status: newDueAmount <= 0 ? "Paid" : "Partially Paid",
         },
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
       );
-  
-      // Refresh data and reset form
+
       await fetchBillsAssignedToday();
       setShowCollectionModal(false);
       setSelectedBill(null);
@@ -149,17 +123,17 @@ const BillAssignedToday = () => {
       setPaymentMode("cash");
       setPaymentRemarks("");
       setPaymentDetails({
-        upiId: '',
-        upiTransactionId: '',
-        bankName: '',
-        chequeNumber: '',
-        bankTransactionId: ''
+        upiId: "",
+        upiTransactionId: "",
+        bankName: "",
+        chequeNumber: "",
+        bankTransactionId: "",
       });
-      
     } catch (err) {
       console.error("Collection error:", err);
       setSubmitError(
-        err.response?.data?.message || "Failed to record collection"
+        err.response?.data?.message ||
+          `Failed to record collection: ${err.message}`
       );
     } finally {
       setIsSubmitting(false);
@@ -195,14 +169,14 @@ const BillAssignedToday = () => {
     return new Date(dateString).toLocaleDateString("en-US", options);
   };
 
+  // Update formatCurrency to consistently show ₹ symbol
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
-      maximumFractionDigits: 0,
-    })
-      .format(amount)
-      .replace("₹", "₹");
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
   };
 
   const handleLogout = () => {
@@ -222,7 +196,8 @@ const BillAssignedToday = () => {
 
   return (
     <DashboardLayout>
-      <Sidebar collapsed={sidebarCollapsed}>
+      <Sidebar collapsed={sidebarCollapsed.toString()}>
+        {" "}
         <SidebarHeader>
           <Logo>BillTrack</Logo>
           <ToggleButton onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>
@@ -339,7 +314,11 @@ const BillAssignedToday = () => {
                 </SummaryItem>
                 <SummaryItem>
                   <SummaryLabel>Total Due Amount</SummaryLabel>
-                  <SummaryValue>{formatCurrency(totalDueAmount)}</SummaryValue>
+                  <SummaryValue>
+                    {" "}
+                    {formatCurrency(totalDueAmount.toFixed(2))}{" "}
+                    {/* Ensure exact due amount is displayed with two decimals */}
+                  </SummaryValue>
                 </SummaryItem>
                 <SummaryItem>
                   <SummaryLabel>Average Amount</SummaryLabel>
@@ -368,9 +347,11 @@ const BillAssignedToday = () => {
                         <DetailItem>
                           <DetailLabel>Due Amount:</DetailLabel>
                           <DetailValue>
-                            {bill.dueAmount <= 0
-                              ? "Cleared"
-                              : formatCurrency(bill.dueAmount)}
+                            <DetailValue>
+                              {bill.dueAmount <= 0
+                                ? "Cleared"
+                                : bill.dueAmount.toFixed(2)}
+                            </DetailValue>
                           </DetailValue>
                         </DetailItem>
                         <DetailItem>
@@ -426,13 +407,16 @@ const BillAssignedToday = () => {
                       {bills
                         .filter((bill) => bill.dueAmount > 0)
                         .map((bill) => (
+                          // In the BillOption component, ensure all fields are properly displayed
                           <BillOption
                             key={bill._id}
                             onClick={() => setSelectedBill(bill)}
                           >
                             <div>Bill #{bill.billNumber}</div>
                             <div>{bill.retailer}</div>
+                            <div>Amount: {formatCurrency(bill.amount)}</div>
                             <div>Due: {formatCurrency(bill.dueAmount)}</div>
+                            <div>Due Date: {formatDate(bill.dueDate)}</div>
                           </BillOption>
                         ))}
                     </BillSelection>
@@ -447,23 +431,32 @@ const BillAssignedToday = () => {
                         <strong>Retailer:</strong> {selectedBill.retailer}
                       </div>
                       <div>
-                        <strong>Due Amount:</strong>{" "}
-                        {formatCurrency(
-                          selectedBill.dueAmount || selectedBill.amount
-                        )}
+                        <strong>Due Amount:</strong>
+                        {selectedBill.dueAmount <= 0
+                          ? "Cleared"
+                          : selectedBill.dueAmount.toFixed(2)}{" "}
+                        {/* Ensure due amount is shown with 2 decimals */}
                       </div>
                     </SelectedBillInfo>
 
                     <FormGroup>
                       <Label htmlFor="paymentAmount">Amount Paid</Label>
+                      // Replace the existing Input component with:
                       <Input
                         type="number"
                         id="paymentAmount"
                         value={paymentAmount}
-                        onChange={(e) => setPaymentAmount(e.target.value)}
-                        placeholder="Enter amount paid"
-                        max={selectedBill.dueAmount || selectedBill.amount}
-                        min="1"
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          // Allow only numbers with up to 2 decimal places
+                          if (/^\d*\.?\d{0,2}$/.test(value) || value === "") {
+                            setPaymentAmount(value);
+                          }
+                        }}
+                        placeholder="0.00"
+                        step="0.01"
+                        min="0.01"
+                        max={selectedBill?.dueAmount}
                       />
                     </FormGroup>
 
