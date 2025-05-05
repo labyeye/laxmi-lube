@@ -3,16 +3,19 @@ import axios from "axios";
 import styled, { keyframes } from "styled-components";
 import {
   FaMoneyBillWave,
+  FaCalendarDay,
   FaHome,
   FaMoneyCheckAlt,
+  FaListAlt,
   FaSignOutAlt,
   FaUserCircle,
   FaChevronDown,
   FaChevronRight,
   FaSync,
+  FaCheckCircle,
   FaExclamationTriangle,
 } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const spin = keyframes`
   0% { transform: rotate(0deg); }
@@ -35,75 +38,60 @@ const BillAssignedToday = () => {
   const [paymentRemarks, setPaymentRemarks] = useState("");
   const navigate = useNavigate();
 
-  // In BillAssignedToday.js
   const fetchBillsAssignedToday = async () => {
     try {
       setLoading(true);
       setError("");
-  
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-  
-      // Get bills assigned today
-      const billsResponse = await axios.get(
-        "http://localhost:2500/api/bills/staff/bills-assigned-today",
-        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+
+      const response = await axios.get(
+        "http://localhost:2500/api/staff/bills-assigned-today",
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
       );
-  
-      // Process bills to ensure consistency with backend data
-      const billsWithCollections = await Promise.all(
-        billsResponse.data.map(async (bill) => {
-          // Use the backend's status and dueAmount values directly
-          // This ensures consistency between UI and database
-          return {
-            ...bill,
-            amountCollected: bill.amount - (bill.dueAmount || 0),
-            dueAmount: bill.dueAmount || 0,
-            status: bill.status || (bill.dueAmount <= 0 ? 'Paid' : 
-                   bill.dueAmount < bill.amount ? 'Partially Paid' : 'Unpaid')
-          };
-        })
-      );
-  
-      setBills(billsWithCollections);
+
+      setBills(response.data);
     } catch (error) {
-      setError("Failed to fetch today's bills and collections");
-      console.error("Error fetching bills:", error);
+      console.error("Error fetching bills assigned today:", error);
+      setError("Failed to fetch bills assigned today. Please try again.");
     } finally {
       setLoading(false);
+      setRetrying(false);
     }
   };
+
   useEffect(() => {
     fetchBillsAssignedToday();
   }, []);
+  // Add this function to your component
   const handleCollectionSubmit = async () => {
     try {
       setIsSubmitting(true);
       setSubmitError("");
-  
+
       const paidAmount = parseFloat(paymentAmount);
-      const currentDueAmount = selectedBill.dueAmount || selectedBill.amount;
-  
+      const dueAmount = selectedBill.dueAmount || selectedBill.amount;
+      const newDueAmount =
+        (selectedBill.dueAmount || selectedBill.amount) - paidAmount;
+      await axios.post("/api/collections", {
+        bill: selectedBill._id,
+        amountCollected: paidAmount,
+        paymentMode,
+        remarks: paymentRemarks,
+      });
+
+      // 2. Then update the bill's dueAmount and status
+      await axios.put(`/api/bills/${selectedBill._id}`, {
+        dueAmount: newDueAmount,
+        status: newDueAmount <= 0 ? "Paid" : "Partially Paid",
+      });
       // Validate payment amount
-      if (paidAmount <= 0 || isNaN(paidAmount)) {
+      if (paidAmount <= 0 || paidAmount > dueAmount) {
         setSubmitError("Please enter a valid payment amount");
         return;
       }
-  
-      if (paidAmount > currentDueAmount) {
-        setSubmitError(
-          `Payment cannot exceed due amount of ${formatCurrency(
-            currentDueAmount
-          )}`
-        );
-        return;
-      }
-  
-      // Calculate new values
-      const newDueAmount = Math.max(0, currentDueAmount - paidAmount);
-      const newStatus = newDueAmount === 0 ? "Paid" : "Partially Paid";
-  
-      // 1. Create collection record
+
+      // 1. First create the collection record
       await axios.post(
         "http://localhost:2500/api/collections",
         {
@@ -116,8 +104,9 @@ const BillAssignedToday = () => {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
       );
-  
-      // 2. Update bill with corrected dueAmount and status
+
+      const newStatus = newDueAmount <= 0 ? "Paid" : "Partially Paid";
+
       await axios.put(
         `http://localhost:2500/api/bills/${selectedBill._id}`,
         {
@@ -128,48 +117,31 @@ const BillAssignedToday = () => {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
       );
-  
-      // Optimistically update the UI after API call completes
-      setBills((prevBills) =>
-        prevBills.map((bill) =>
-          bill._id === selectedBill._id
-            ? {
-                ...bill,
-                amountCollected: bill.amount - newDueAmount,
-                dueAmount: newDueAmount,
-                status: newStatus,
-              }
-            : bill
-        )
-      );
-  
-      // Close modal and reset form
+
+      // Refresh data and close modal
+      await fetchBillsAssignedToday();
       setShowCollectionModal(false);
-      setPaymentAmount("");
-      setPaymentRemarks("");
-      setPaymentMode("cash");
-      
-      // Refresh bills to ensure consistency with backend
-      fetchBillsAssignedToday();
-      
     } catch (err) {
       console.error("Collection error:", err);
       setSubmitError(
         err.response?.data?.message || "Failed to record collection"
       );
-  
-      // Revert optimistic update if API call fails
-      fetchBillsAssignedToday();
     } finally {
       setIsSubmitting(false);
     }
-  };// Calculate totals based directly on bills data from backend
+  };
+
+  // Calculate summary values
+  // Calculate summary values
   const totalBills = bills.length;
   const totalAmount = bills.reduce((sum, bill) => sum + (bill.amount || 0), 0);
-  const totalCollectedAmount = bills.reduce(
-    (sum, bill) => sum + ((bill.amount || 0) - (bill.dueAmount || 0)), 0
+  const totalDueAmount = bills.reduce(
+    (sum, bill) => sum + (bill.dueAmount > 0 ? bill.dueAmount : 0),
+    0
   );
-  const totalDueAmount = bills.reduce((sum, bill) => sum + (bill.dueAmount || 0), 0);
+  const averageAmount = totalBills > 0 ? totalAmount / totalBills : 0;
+
+  const paidBills = bills.filter((bill) => bill.dueAmount <= 0).length;
   const handleRetry = () => {
     setRetrying(true);
     fetchBillsAssignedToday();
@@ -273,10 +245,15 @@ const BillAssignedToday = () => {
                   <NavText>Assigned Today</NavText>
                   <NavCheckmark>☑</NavCheckmark>
                 </SubmenuItem>
-                <SubmenuItem>
-                  <NavText>History</NavText>
-                  <NavCheckmark>☐</NavCheckmark>
-                </SubmenuItem>
+                <Link
+                  to="/staff/collections-history"
+                  style={{ textDecoration: "none" }}
+                >
+                  <SubmenuItem>
+                    <NavText>History</NavText>
+                    <NavCheckmark>☐</NavCheckmark>
+                  </SubmenuItem>
+                </Link>
               </Submenu>
             )}
           </NavItemWithSubmenu>
@@ -322,18 +299,16 @@ const BillAssignedToday = () => {
                   <SummaryValue>{totalBills}</SummaryValue>
                 </SummaryItem>
                 <SummaryItem>
-                  <SummaryLabel>Total Bill Amount</SummaryLabel>
+                  <SummaryLabel>Total Amount</SummaryLabel>
                   <SummaryValue>{formatCurrency(totalAmount)}</SummaryValue>
                 </SummaryItem>
                 <SummaryItem>
-                  <SummaryLabel>Amount Collected</SummaryLabel>
-                  <SummaryValue>
-                    {formatCurrency(totalCollectedAmount)}
-                  </SummaryValue>
+                  <SummaryLabel>Total Due Amount</SummaryLabel>
+                  <SummaryValue>{formatCurrency(totalDueAmount)}</SummaryValue>
                 </SummaryItem>
                 <SummaryItem>
-                  <SummaryLabel>Amount Due</SummaryLabel>
-                  <SummaryValue>{formatCurrency(totalDueAmount)}</SummaryValue>
+                  <SummaryLabel>Average Amount</SummaryLabel>
+                  <SummaryValue>{formatCurrency(averageAmount)}</SummaryValue>
                 </SummaryItem>
               </SummaryCard>
 
@@ -343,47 +318,35 @@ const BillAssignedToday = () => {
                     <BillCard key={bill._id}>
                       <BillHeader>
                         <BillNumber>Bill #{bill.billNumber}</BillNumber>
-                        <BillStatus
-                          status={bill.status.toLowerCase().replace(" ", "")}
-                        >
+                        <BillStatus status={bill.status}>
                           {bill.status}
                         </BillStatus>
                       </BillHeader>
                       <BillRetailer>{bill.retailer}</BillRetailer>
                       <BillDetails>
                         <DetailItem>
-                          <DetailLabel>Bill Amount:</DetailLabel>
+                          <DetailLabel>Amount:</DetailLabel>
                           <DetailValue>
                             {formatCurrency(bill.amount)}
                           </DetailValue>
                         </DetailItem>
                         <DetailItem>
-                          <DetailLabel>Amount Collected:</DetailLabel>
+                          <DetailLabel>Due Amount:</DetailLabel>
                           <DetailValue>
-                            {formatCurrency(bill.amountCollected || 0)}
-                          </DetailValue>
-                        </DetailItem>
-                        <DetailItem>
-                          <DetailLabel>Amount Due:</DetailLabel>
-                          <DetailValue>
-                          {formatCurrency(Math.max(0, (bill.dueAmount || bill.amount) - (bill.amountCollected || 0)))}
-                          </DetailValue>
-                        </DetailItem>
-                        <DetailItem>
-                          <DetailLabel>Status:</DetailLabel>
-                          <DetailValue>
-                            <BillStatus
-                              status={bill.status
-                                .toLowerCase()
-                                .replace(" ", "")}
-                            >
-                              {bill.status}
-                            </BillStatus>
+                            {bill.dueAmount <= 0
+                              ? "Cleared"
+                              : formatCurrency(bill.dueAmount)}
                           </DetailValue>
                         </DetailItem>
                         <DetailItem>
                           <DetailLabel>Due Date:</DetailLabel>
                           <DetailValue>{formatDate(bill.dueDate)}</DetailValue>
+                        </DetailItem>
+                        <DetailItem>
+                          <DetailLabel>Assigned Date:</DetailLabel>
+                          <DetailValue>
+                            {formatDate(bill.assignedDate || bill.billDate)}
+                          </DetailValue>
                         </DetailItem>
                       </BillDetails>
                       <BillIcon>
@@ -410,35 +373,33 @@ const BillAssignedToday = () => {
             <Modal>
               <ModalHeader>
                 <ModalTitle>Record New Collection</ModalTitle>
-                <CloseButton
-                  onClick={() => {
-                    setShowCollectionModal(false);
-                    setSelectedBill(null);
-                    setPaymentAmount("");
-                    setPaymentMode("cash");
-                    setSubmitError("");
-                  }}
-                >
+                <CloseButton onClick={() => setShowCollectionModal(false)}>
                   &times;
                 </CloseButton>
               </ModalHeader>
               <ModalBody>
-                {!selectedBill ? (
+                {bills.filter((bill) => bill.dueAmount > 0).length === 0 ? (
+                  <NoBillsMessage>
+                    <FaCheckCircle size={32} />
+                    <p>All bills are cleared - nothing to collect!</p>
+                    <p>No outstanding payments remaining.</p>
+                  </NoBillsMessage>
+                ) : !selectedBill ? (
                   <>
                     <ModalSubtitle>Select a Bill</ModalSubtitle>
                     <BillSelection>
-                      {bills.map((bill) => (
-                        <BillOption
-                          key={bill._id}
-                          onClick={() => setSelectedBill(bill)}
-                        >
-                          <div>Bill #{bill.billNumber}</div>
-                          <div>{bill.retailer}</div>
-                          <div>
-                            Due: {formatCurrency(bill.dueAmount || bill.amount)}
-                          </div>
-                        </BillOption>
-                      ))}
+                      {bills
+                        .filter((bill) => bill.dueAmount > 0)
+                        .map((bill) => (
+                          <BillOption
+                            key={bill._id}
+                            onClick={() => setSelectedBill(bill)}
+                          >
+                            <div>Bill #{bill.billNumber}</div>
+                            <div>{bill.retailer}</div>
+                            <div>Due: {formatCurrency(bill.dueAmount)}</div>
+                          </BillOption>
+                        ))}
                     </BillSelection>
                   </>
                 ) : (
@@ -516,7 +477,26 @@ const BillAssignedToday = () => {
 };
 
 // Styled Components (consistent with StaffDashboard)
+const NoBillsMessage = styled.div`
+  text-align: center;
+  padding: 20px;
+  color: #1cc88a;
 
+  svg {
+    margin-bottom: 15px;
+    color: #1cc88a;
+  }
+
+  p {
+    margin: 5px 0;
+    font-size: 0.95rem;
+
+    &:first-of-type {
+      font-weight: 500;
+      font-size: 1.1rem;
+    }
+  }
+`;
 const DashboardLayout = styled.div`
   display: flex;
   min-height: 100vh;

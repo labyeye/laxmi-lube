@@ -9,7 +9,6 @@ import {
   FaSync,
   FaHome,
   FaMoneyCheckAlt,
-  FaListAlt,
   FaSignOutAlt,
   FaUserCircle,
   FaChevronDown,
@@ -17,7 +16,7 @@ import {
   FaCalendarDay,
   FaHistory,
 } from "react-icons/fa";
-import { Link } from "react-router-dom";
+import { Link,useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const API_BASE_URL = "http://localhost:2500/api";
@@ -37,42 +36,50 @@ const StaffDashboard = () => {
   const [retrying, setRetrying] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState(null);
+  const navigate = useNavigate(); // Initialize the navigate function
 
   // In StaffDashboard.js - update the fetchDashboardData function
-const fetchDashboardData = useCallback(async () => {
-  try {
-    setLoading(true);
-    setError("");
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
 
-    const token = localStorage.getItem("token");
-    if (!token) throw new Error("Authentication token not found");
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Authentication token not found");
 
-    const response = await axios.get(`${API_BASE_URL}/staff/dashboard`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+      const response = await axios.get(`${API_BASE_URL}/staff/dashboard`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    // Calculate total collected from all collections assigned today
-    const todayAmountCollected = response.data.collectionsAssignedToday.reduce(
-      (sum, collection) => sum + (collection.amountCollected),
-      0
-    );
+      // Safely calculate totals with default values
+      const collectionsToday = response.data.collectionsAssignedToday || [];
+      const todayAmountCollected = collectionsToday.reduce(
+        (sum, collection) => sum + (collection.amountCollected || 0),
+        0
+      );
 
-    setDashboardData({
-      todayAmountAssigned: response.data.todayAmountAssigned,
-      todayAmountCollected,
-      amountRemainingToday: (response.data.todayAmountAssigned) - todayAmountCollected,
-      billsAssignedToday: response.data.billsAssignedToday,
-      overdueBillsCount: response.data.overdueBillsCount,
-      collectionsAssignedToday: response.data.collectionsAssignedToday || [],
-      collectionsHistory: response.data.collectionsHistory || [],
-    });
-  } catch (err) {
-    // ... existing error handling ...
-  } finally {
-    setLoading(false);
-    setRetrying(false);
-  }
-}, []);
+      setDashboardData({
+        todayAmountAssigned: response.data.todayAmountAssigned || 0,
+        todayAmountCollected,
+        amountRemainingToday:
+          (response.data.todayAmountAssigned || 0) - todayAmountCollected,
+        billsAssignedToday: response.data.billsAssignedToday || 0,
+        overdueBillsCount: response.data.overdueBillsCount || 0,
+        collectionsAssignedToday: collectionsToday,
+        collectionsHistory: response.data.collectionsHistory || [],
+      });
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to fetch dashboard data"
+      );
+      console.error("Dashboard fetch error:", err);
+    } finally {
+      setLoading(false);
+      setRetrying(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchDashboardData();
@@ -82,7 +89,10 @@ const fetchDashboardData = useCallback(async () => {
     setRetrying(true);
     fetchDashboardData();
   };
-
+  const handleLogout = () => {
+    localStorage.removeItem("token"); // Remove the authentication token
+    navigate("/login"); // Redirect to the login page
+  };
   const toggleSubmenu = (menu) => {
     if (activeSubmenu === menu) {
       setActiveSubmenu(null);
@@ -178,7 +188,7 @@ const fetchDashboardData = useCallback(async () => {
             )}
           </NavItemWithSubmenu>
         </NavMenu>
-        <LogoutButton>
+        <LogoutButton onClick={handleLogout}>
           <NavIcon>
             <FaSignOutAlt />
           </NavIcon>
@@ -216,7 +226,10 @@ const fetchDashboardData = useCallback(async () => {
                   <StatInfo>
                     <StatTitle>Today's Amount Assigned</StatTitle>
                     <StatValue>
-                      ₹{dashboardData.todayAmountAssigned.toLocaleString()}
+                      ₹
+                      {(
+                        dashboardData.todayAmountAssigned || 0
+                      ).toLocaleString()}
                     </StatValue>
                   </StatInfo>
                 </StatCard>
@@ -233,7 +246,7 @@ const fetchDashboardData = useCallback(async () => {
                   </StatInfo>
                 </StatCard>
 
-                <StatCard>
+                {/* <StatCard>
                   <StatIcon color="#36b9cc">
                     <FaHandHoldingUsd />
                   </StatIcon>
@@ -243,7 +256,7 @@ const fetchDashboardData = useCallback(async () => {
                       ₹{dashboardData.amountRemainingToday.toLocaleString()}
                     </StatValue>
                   </StatInfo>
-                </StatCard>
+                </StatCard> */}
 
                 <StatCard>
                   <StatIcon color="#f6c23e">

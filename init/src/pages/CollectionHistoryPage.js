@@ -241,7 +241,6 @@ const CollectionsHistory = () => {
   );
 };
 
-// Styled Components (extend your existing styles)
 const CollectionsTable = styled.table`
   width: 100%;
   border-collapse: collapse;
@@ -396,221 +395,6 @@ const UserInfo = styled.div`
   display: flex;
   flex-direction: column;
 `;
-const NewCollectionButton = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background-color: #1cc88a;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 16px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-
-  &:hover {
-    background-color: #17a673;
-  }
-`;
-
-const ModalOverlay = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-`;
-
-const Modal = styled.div`
-  background-color: white;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 500px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
-`;
-
-const ModalHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #eee;
-`;
-
-const ModalTitle = styled.h2`
-  margin: 0;
-  font-size: 1.25rem;
-  color: #2e3a59;
-`;
-
-const CloseButton = styled.button`
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: #6c757d;
-  padding: 0;
-  line-height: 1;
-
-  &:hover {
-    color: #2e3a59;
-  }
-`;
-
-const ModalBody = styled.div`
-  padding: 20px;
-`;
-
-const ModalSubtitle = styled.h3`
-  margin-top: 0;
-  margin-bottom: 15px;
-  font-size: 1rem;
-  color: #4e73df;
-`;
-
-const BillSelection = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-height: 300px;
-  overflow-y: auto;
-  margin-bottom: 20px;
-`;
-
-const BillOption = styled.div`
-  padding: 15px;
-  border: 1px solid #eee;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background-color: #f8f9fc;
-    border-color: #4e73df;
-  }
-
-  & > div {
-    margin-bottom: 5px;
-  }
-
-  & > div:last-child {
-    margin-bottom: 0;
-    color: #e74a3b;
-    font-weight: 500;
-  }
-`;
-
-const SelectedBillInfo = styled.div`
-  background-color: #f8f9fc;
-  padding: 15px;
-  border-radius: 4px;
-  margin-bottom: 20px;
-
-  & > div {
-    margin-bottom: 8px;
-  }
-
-  & > div:last-child {
-    margin-bottom: 0;
-    color: #e74a3b;
-    font-weight: 500;
-  }
-`;
-
-const FormGroup = styled.div`
-  margin-bottom: 20px;
-`;
-
-const Label = styled.label`
-  display: block;
-  margin-bottom: 8px;
-  font-size: 0.9rem;
-  color: #6c757d;
-  font-weight: 500;
-`;
-
-const Input = styled.input`
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 0.9rem;
-
-  &:focus {
-    outline: none;
-    border-color: #4e73df;
-  }
-`;
-
-const Select = styled.select`
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  background-color: white;
-
-  &:focus {
-    outline: none;
-    border-color: #4e73df;
-  }
-`;
-
-const ErrorText = styled.div`
-  color: #e74a3b;
-  font-size: 0.9rem;
-  margin-bottom: 20px;
-`;
-
-const ButtonGroup = styled.div`
-  display: flex;
-  gap: 10px;
-  margin-top: 30px;
-`;
-
-const BackButton = styled.button`
-  flex: 1;
-  padding: 10px;
-  background-color: #f8f9fc;
-  color: #6c757d;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s;
-
-  &:hover {
-    background-color: #e9ecef;
-  }
-`;
-
-const SubmitButton = styled.button`
-  flex: 1;
-  padding: 10px;
-  background-color: #4e73df;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s;
-
-  &:hover {
-    background-color: #3a5bc7;
-  }
-
-  &:disabled {
-    background-color: #b0b7d4;
-    cursor: not-allowed;
-  }
-`;
 
 const UserName = styled.div`
   font-weight: 600;
@@ -684,11 +468,6 @@ const NavArrow = styled.div`
   font-size: 0.8rem;
 `;
 
-const NavCheckmark = styled.span`
-  margin-left: auto;
-  font-size: 0.9rem;
-  color: ${(props) => (props.active ? "#4e73df" : "#6c757d")};
-`;
 
 const Submenu = styled.div`
   padding-left: 40px;
@@ -774,11 +553,6 @@ const ErrorAlert = styled.div`
   margin-bottom: 30px;
 `;
 
-const ErrorIcon = styled.div`
-  color: #e74a3b;
-  font-size: 2rem;
-  margin-bottom: 15px;
-`;
 
 const ErrorMessage = styled.div`
   font-size: 1rem;
@@ -786,26 +560,7 @@ const ErrorMessage = styled.div`
   margin-bottom: 20px;
 `;
 
-const RetryButton = styled.button`
-  background-color: #e74a3b;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 20px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
 
-  &:hover {
-    background-color: #d62c1a;
-  }
-
-  &:disabled {
-    background-color: #ee9b95;
-    cursor: not-allowed;
-  }
-`;
 
 const LoadingContainer = styled.div`
   display: flex;
@@ -824,127 +579,6 @@ const Spinner = styled.div`
   border-top-color: #4e73df;
   animation: ${spin} 1s linear infinite;
   margin-bottom: 20px;
-`;
-
-// New styled components for the Bills page
-const SummaryCard = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
-  background-color: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
-`;
-
-const SummaryItem = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 15px;
-`;
-
-const SummaryLabel = styled.div`
-  font-size: 0.9rem;
-  color: #6c757d;
-  margin-bottom: 8px;
-`;
-
-const SummaryValue = styled.div`
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #4e73df;
-`;
-
-const BillsList = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-`;
-
-const BillCard = styled.div`
-  background-color: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s;
-
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-  }
-`;
-
-const BillHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-`;
-
-const BillNumber = styled.div`
-  font-weight: 600;
-  color: #2e3a59;
-  font-size: 1.1rem;
-`;
-
-const BillStatus = styled.div`
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background-color: ${(props) =>
-    props.status === "Paid"
-      ? "#1cc88a20"
-      : props.status === "Pending"
-      ? "#f6c23e20"
-      : "#e74a3b20"};
-  color: ${(props) =>
-    props.status === "Paid"
-      ? "#1cc88a"
-      : props.status === "Pending"
-      ? "#f6c23e"
-      : "#e74a3b"};
-`;
-
-const BillRetailer = styled.div`
-  font-size: 0.9rem;
-  color: #6c757d;
-  margin-bottom: 15px;
-`;
-
-const BillDetails = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`;
-
-const DetailItem = styled.div`
-  display: flex;
-  justify-content: space-between;
-`;
-
-const DetailLabel = styled.div`
-  font-size: 0.85rem;
-  color: #6c757d;
-`;
-
-const DetailValue = styled.div`
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #2e3a59;
-`;
-
-const BillIcon = styled.div`
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  color: rgba(78, 115, 223, 0.1);
-  font-size: 3rem;
-  z-index: 0;
 `;
 
 const EmptyState = styled.div`

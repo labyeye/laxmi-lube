@@ -200,45 +200,17 @@ router.get("/staff/bills-assigned-today", protect, async (req, res) => {
 
     const bills = await Bill.find({
       assignedTo: req.user._id,
-      assignedDate: { $gte: today },
+      assignedDate: { $gte: today }
     })
-      .populate({
-        path: "collections",
-        select: "amountCollected paymentDate paymentMode collectedBy",
-      })
+      .populate("collections")
       .lean();
 
-    const processedBills = bills.map((bill) => {
-      const totalCollected = bill.collections.reduce(
-        (sum, collection) => sum + (collection.amountCollected || 0),
-        0
-      );
+    // Filter out fully paid bills if you want to hide them
+    const visibleBills = bills.filter(bill => bill.dueAmount > 0);
 
-      const dueAmount = Math.max(0, bill.amount - totalCollected);
-      
-      let status = bill.status;
-      if (totalCollected >= bill.amount) {
-        status = "Paid";
-      } else if (totalCollected > 0) {
-        status = "Partially Paid";
-      } else {
-        status = "Unpaid";
-      }
-
-      return {
-        ...bill,
-        amountCollected: totalCollected,
-        dueAmount,
-        status,
-      };
-    });
-
-    res.json(processedBills);
+    res.json(visibleBills);
   } catch (err) {
-    res.status(500).json({
-      message: "Failed to fetch bills",
-      error: err.message,
-    });
+    res.status(500).json({ message: "Failed to fetch bills", error: err.message });
   }
 });
 

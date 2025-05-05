@@ -2,50 +2,84 @@ const express = require("express");
 const router = express.Router();
 const { protect, staffOnly } = require("../middleware/authMiddleware");
 const Bill = require("../models/Bill");
+const Collection = require("../models/Collection"); // Added missing import
 
 // In staffRoutes.js - dashboard endpoint
-// In staffRoutes.js - Update dashboard endpoint
 router.get("/dashboard", protect, async (req, res) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Get bills assigned today with their collections
-    const assignedBills = await Bill.find({
+    // Get bills assigned today
+    const bills = await Bill.find({
       assignedTo: req.user._id,
-      assignedDate: { $gte: today },
-    }).populate({
-      path: "collections",
-      match: { collectedOn: { $gte: today } },
-      select: "amountCollected",
+      assignedDate: { $gte: today }
+    }).lean();
+
+    // Get today's collections
+    const collections = await Collection.find({
+      collectedOn: { $gte: today },
+      collectedBy: req.user._id
     });
 
     // Calculate totals
-    let todayAmountAssigned = 0;
-    let todayAmountCollected = 0;
-    let amountRemaining = 0;
+    const todayAmountAssigned = bills.reduce(
+      (sum, bill) => sum + (bill.amount || 0), 
+      0
+    );
+    
+    const totalCollected = collections.reduce(
+      (sum, c) => sum + (c.amountCollected || 0), 
+      0
+    );
 
-    assignedBills.forEach((bill) => {
-      const billAmount = bill.amount || 0;
-      todayAmountAssigned += billAmount;
+    // Get number of bills with outstanding amounts
+    const billsWithDueAmount = bills.filter(bill => 
+      (bill.dueAmount || bill.amount) > 0
+    ).length;
 
-      const billCollected = bill.collections.reduce(
-        (sum, coll) => sum + (coll.amountCollected || 0),
-        0
-      );
-
-      todayAmountCollected += billCollected;
-      amountRemaining += Math.max(0, billAmount - billCollected);
+    // Get overdue bills count (bills with due date before today)
+    const overdueBillsCount = await Bill.countDocuments({
+      assignedTo: req.user._id,
+      dueDate: { $lt: today },
+      dueAmount: { $gt: 0 }
     });
+
+    // Format collections for frontend display
+    const collectionsAssignedToday = collections.map(c => ({
+      billNumber: c.bill?.billNumber || "Unknown",
+      retailer: c.bill?.retailer || "Unknown",
+      amount: c.amountCollected || 0,
+      status: "Completed",
+      dueDate: c.bill?.dueDate || new Date()
+    }));
+
+    // Get recent collection history (last 5)
+    const recentCollections = await Collection.find({
+      collectedBy: req.user._id
+    })
+    .sort({ collectedOn: -1 })
+    .limit(5)
+    .populate('bill', 'billNumber retailer');
+
+    const collectionsHistory = recentCollections.map(c => ({
+      billNumber: c.bill?.billNumber || "Unknown",
+      retailer: c.bill?.retailer || "Unknown",
+      amount: c.amountCollected || 0,
+      collectionDate: c.collectedOn
+    }));
 
     res.json({
       todayAmountAssigned,
-      todayAmountCollected,
-      amountRemainingToday: amountRemaining,
-      billsAssignedToday: assignedBills.length,
-      // ... other data
+      todayAmountCollected: totalCollected,
+      amountRemainingToday: todayAmountAssigned - totalCollected,
+      billsAssignedToday: billsWithDueAmount,
+      overdueBillsCount,
+      collectionsAssignedToday,
+      collectionsHistory
     });
   } catch (err) {
+    console.error("Dashboard error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
