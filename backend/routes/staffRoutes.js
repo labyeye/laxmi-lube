@@ -2,17 +2,18 @@ const express = require("express");
 const router = express.Router();
 const { protect, staffOnly } = require("../middleware/authMiddleware");
 const Bill = require("../models/Bill");
-const Collection = require("../models/Collection"); // Added missing import
+const Collection = require("../models/Collection");
 
-// In staffRoutes.js - dashboard endpoint
 router.get("/dashboard", protect, async (req, res) => {
   try {
     const today = new Date();
+    const dayOfWeek = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][today.getDay()];
     today.setHours(0, 0, 0, 0);
 
-    // Get bills assigned today
+    // Get bills assigned today AND matching collection day
     const bills = await Bill.find({
       assignedTo: req.user._id,
+      collectionDay: dayOfWeek,
       assignedDate: { $gte: today }
     }).lean();
 
@@ -41,6 +42,7 @@ router.get("/dashboard", protect, async (req, res) => {
     // Get overdue bills count (bills with due date before today)
     const overdueBillsCount = await Bill.countDocuments({
       assignedTo: req.user._id,
+      collectionDay: dayOfWeek,
       dueDate: { $lt: today },
       dueAmount: { $gt: 0 }
     });
@@ -114,25 +116,26 @@ router.get("/bills-history", protect, staffOnly, async (req, res) => {
 
 router.get("/bills-assigned-today", protect, staffOnly, async (req, res) => {
   try {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
-
+    const today = new Date();
+    const dayOfWeek = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][today.getDay()];
+    
     const bills = await Bill.find({
       assignedTo: req.user._id,
-      assignedDate: { $gte: todayStart, $lte: todayEnd },
-    }).populate("assignedTo");
+      collectionDay: dayOfWeek,
+      assignedDate: { 
+        $gte: new Date(today.setHours(0, 0, 0, 0)),
+        $lt: new Date(today.setHours(23, 59, 59, 999))
+      }
+    })
+    .populate("assignedTo", "name")
+    .lean();
 
     res.json(bills);
   } catch (err) {
-    res
-      .status(500)
-      .json({
-        message: "Error fetching bills assigned today",
-        error: err.message,
-      });
+    res.status(500).json({
+      message: "Error fetching bills assigned today",
+      error: err.message,
+    });
   }
 });
 

@@ -178,54 +178,49 @@ const BillsPage = () => {
                     <th>Bill #</th>
                     <th>Retailer</th>
                     <th>Amount</th>
-                    <th>Due Date</th>
+                    <th>Bill Date</th>
                     <th>Status</th>
                     <th>Assigned To</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {filteredBills.length > 0 ? (
-                    filteredBills.map((bill) => (
-                      <tr key={bill._id}>
-                        <td>{bill.billNumber}</td>
-                        <td>{bill.retailer}</td>
-                        <td>{formatCurrency(bill.amount)}</td>
-                        <td>{new Date(bill.dueDate).toLocaleDateString()}</td>
-                        <td>
-                          <StatusBadge status={bill.status}>
-                            {bill.status}
-                          </StatusBadge>
-                        </td>
-                        <td>{bill.assignedToName || "Not Assigned"}</td>
-                        <td>
-                          <ActionButtons>
-                            <AssignButton onClick={() => openAssignModal(bill)}>
-                              <FaUserPlus />
-                            </AssignButton>
-                            <EditButton onClick={() => handleEditBill(bill)}>
-                              <FaEdit />
-                            </EditButton>
-                            <DeleteButton
-                              onClick={() => handleDeleteBill(bill._id)}
-                            >
-                              <FaTrash />
-                            </DeleteButton>
-                          </ActionButtons>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan="7"
-                        style={{ textAlign: "center", padding: "20px" }}
-                      >
-                        No bills found matching your search
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
+<tbody>
+  {filteredBills.length > 0 ? (
+    filteredBills.map((bill) => (
+      <tr key={bill._id}>
+        <td>{bill.billNumber}</td>
+        <td>{bill.retailer}</td>
+        <td>{formatCurrency(bill.amount)}</td>
+        <td>{new Date(bill.billDate).toLocaleDateString()}</td> {/* Changed from dueDate to billDate */}
+        <td>
+          <StatusBadge status={bill.status}>
+            {bill.status}
+          </StatusBadge>
+        </td>
+        <td>{bill.assignedToName || "Not Assigned"}</td>
+        <td>
+          <ActionButtons>
+            <AssignButton onClick={() => openAssignModal(bill)}>
+              <FaUserPlus />
+            </AssignButton>
+            <EditButton onClick={() => handleEditBill(bill)}>
+              <FaEdit />
+            </EditButton>
+            <DeleteButton onClick={() => handleDeleteBill(bill._id)}>
+              <FaTrash />
+            </DeleteButton>
+          </ActionButtons>
+        </td>
+      </tr>
+    ))
+  ) : (
+    <tr>
+      <td colSpan="7" style={{ textAlign: "center", padding: "20px" }}>
+        No bills found matching your search
+      </td>
+    </tr>
+  )}
+</tbody>
               </BillsTable>
             </TableContainer>
 

@@ -44,7 +44,6 @@ const BillAssignedToday = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [customerBills, setCustomerBills] = useState([]);
   const [customers, setCustomers] = useState([]);
-  
 
   const navigate = useNavigate();
 
@@ -63,16 +62,27 @@ const BillAssignedToday = () => {
   const fetchBillsAssignedToday = async () => {
     try {
       setLoading(true);
-      setError("");
-
-      const response = await axios.get(
-        "https://laxmi-lube.onrender.com/api/staff/bills-assigned-today",
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    setError("");
+    const today = new Date();
+    const dayOfWeek = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][today.getDay()];
+    const response = await axios.get(
+      "https://laxmi-lube.onrender.com/api/staff/bills-assigned-today",
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        params: {
+          date: today.toISOString().split('T')[0],
+          collectionDay: dayOfWeek // Pass the day
         }
-      );
-
-      setBills(response.data);
+      }
+    );
+  
+      const billsWithDates = response.data.map((bill) => ({
+        ...bill,
+        billDate: new Date(bill.billDate),
+        assignedDate: bill.assignedDate ? new Date(bill.assignedDate) : null,
+      }));
+  
+      setBills(billsWithDates);
     } catch (error) {
       console.error("Error fetching bills assigned today:", error);
       setError("Failed to fetch bills assigned today. Please try again.");
@@ -92,18 +102,22 @@ const BillAssignedToday = () => {
       setSubmitError("");
       const paidAmount = parseFloat(Number(paymentAmount).toFixed(2)); // Ensure two decimal places
       const dueAmount = parseFloat(Number(selectedBill.dueAmount).toFixed(2)); // Ensure due amount has 2 decimal places
-      if (selectedBill.billDate && selectedBill._originalBillDate && 
-        selectedBill.billDate.toString() !== selectedBill._originalBillDate.toString()) {
-      await axios.put(
-        `https://laxmi-lube.onrender.com/api/bills/${selectedBill._id}`,
-        { billDate: selectedBill.billDate },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-    }
+      if (
+        selectedBill.billDate &&
+        selectedBill._originalBillDate &&
+        selectedBill.billDate.getTime() !==
+          selectedBill._originalBillDate.getTime()
+      ) {
+        await axios.put(
+          `https://laxmi-lube.onrender.com/api/bills/${selectedBill._id}`,
+          { billDate: selectedBill.billDate },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+      }
       if (paidAmount <= 0 || paidAmount > dueAmount) {
         setSubmitError(
           `Please enter a valid amount between 0.01 and ${dueAmount}`
@@ -115,6 +129,7 @@ const BillAssignedToday = () => {
         amountCollected: paidAmount,
         paymentMode,
         remarks: paymentRemarks,
+        collectedOn: new Date(), // Use current date
         ...(paymentMode !== "cash" && { paymentDetails }),
       };
       await axios.post(
@@ -169,7 +184,6 @@ const BillAssignedToday = () => {
     0
   );
   const averageAmount = totalBills > 0 ? totalAmount / totalBills : 0;
-
 
   const handleRetry = () => {
     setRetrying(true);
@@ -392,8 +406,8 @@ const BillAssignedToday = () => {
                           </DetailValue>
                         </DetailItem>
                         <DetailItem>
-                          <DetailLabel>Due Date:</DetailLabel>
-                          <DetailValue>{formatDate(bill.dueDate)}</DetailValue>
+                          <DetailLabel>Bill Date:</DetailLabel>
+                          <DetailValue>{formatDate(bill.billDate)}</DetailValue>
                         </DetailItem>
                         <DetailItem>
                           <DetailLabel>Assigned Date:</DetailLabel>
@@ -511,22 +525,32 @@ const BillAssignedToday = () => {
                       </div>
                     </SelectedBillInfo>
                     <FormGroup>
-                      <Label>Bill Date:</Label>
+                      <Label>Collection Date</Label>
                       <DateInput
                         type="date"
-                        value={
-                          selectedBill.billDate.toISOString().split("T")[0]
-                        }
-                        onChange={(e) => {
-                          const updatedBill = {
-                            ...selectedBill,
-                            billDate: new Date(e.target.value),
-                          };
-                          setSelectedBill(updatedBill);
-                        }}
+                        value={new Date().toISOString().split("T")[0]}
+                        disabled
                       />
                     </FormGroup>
-
+                    <FormGroup>
+                      <Label>Days Overdue</Label>
+                      <Input
+                        type="text"
+                        value={
+                          selectedBill && selectedBill.billDate
+                            ? Math.max(
+                                0,
+                                Math.floor(
+                                  (new Date() -
+                                    new Date(selectedBill.billDate)) /
+                                    (1000 * 60 * 60 * 24)
+                                )
+                              ) + " days"
+                            : "0 days"
+                        }
+                        disabled
+                      />
+                    </FormGroup>
                     <FormGroup>
                       <Label htmlFor="paymentAmount">Amount Paid</Label>
                       <Input
@@ -914,8 +938,6 @@ const ModalSubtitle = styled.h3`
   font-size: 1rem;
   color: #4e73df;
 `;
-
-
 
 const BillOption = styled.div`
   padding: 15px;

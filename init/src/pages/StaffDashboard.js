@@ -15,7 +15,7 @@ import {
   FaCalendarDay,
   FaHistory,
 } from "react-icons/fa";
-import { Link,useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const API_BASE_URL = "https://laxmi-lube.onrender.com/api";
@@ -42,12 +42,22 @@ const StaffDashboard = () => {
     try {
       setLoading(true);
       setError("");
-
+      const today = new Date();
+      const dayOfWeek = [
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+      ][today.getDay()];
       const token = localStorage.getItem("token");
       if (!token) throw new Error("Authentication token not found");
 
       const response = await axios.get(`${API_BASE_URL}/staff/dashboard`, {
         headers: { Authorization: `Bearer ${token}` },
+        params: { collectionDay: dayOfWeek },
       });
 
       // Safely calculate totals with default values
@@ -266,7 +276,6 @@ const StaffDashboard = () => {
                     <StatValue>{dashboardData.billsAssignedToday}</StatValue>
                   </StatInfo>
                 </StatCard>
-
                 <StatCard>
                   <StatIcon color="#e74a3b">
                     <FaExclamationTriangle />

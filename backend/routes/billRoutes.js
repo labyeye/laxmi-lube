@@ -5,7 +5,11 @@ const xlsx = require("xlsx");
 const fs = require("fs");
 const Bill = require("../models/Bill");
 const Collection = require("../models/Collection");
-const { protect, adminOnly } = require("../middleware/authMiddleware");
+const {
+  protect,
+  adminOnly,
+  staffOnly,
+} = require("../middleware/authMiddleware");
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -33,6 +37,7 @@ router.post("/", protect, adminOnly, async (req, res) => {
       dueDate,
       billDate,
       status,
+      collectionDay,
     } = req.body;
 
     const newBill = new Bill({
@@ -42,6 +47,7 @@ router.post("/", protect, adminOnly, async (req, res) => {
       dueAmount: dueAmount || amount,
       dueDate,
       billDate,
+      collectionDay,
       status: status || "Unpaid",
     });
 
@@ -179,7 +185,7 @@ router.delete("/:id", protect, adminOnly, async (req, res) => {
       .json({ message: "Failed to delete bill", error: err.message });
   }
 });
-// Update the import route in billRoutes.js
+
 router.post(
   "/import",
   protect,
@@ -199,6 +205,12 @@ router.post(
         defval: null,
       });
 
+      // Validate we have data
+      if (!jsonData || jsonData.length === 0) {
+        fs.unlinkSync(req.file.path);
+        return res.status(400).json({ message: "No data found in the file" });
+      }
+
       const errors = [];
       const importedBills = [];
       const staffMap = new Map();
@@ -213,8 +225,16 @@ router.post(
         console.warn("Could not load staff members:", err.message);
       }
 
+      // Track processed bills by bill number AND customer name
+      const processedBills = {};
+
       for (const [index, row] of jsonData.entries()) {
         try {
+          // Skip header row if present
+          if (index === 0 && (row.CustName === "CustName" || row.BillNo === "BillNo")) {
+            continue;
+          }
+
           // Get values with case-insensitive field names
           const getValue = (obj, possibleNames) => {
             const key = Object.keys(obj).find((k) =>
@@ -232,12 +252,26 @@ router.post(
           const billRec = getValue(row, ["billrec", "received amount"]);
           const billBalance = getValue(row, ["billbalance", "balance"]);
           const staffName = getValue(row, ["staff name", "staff"]);
+          const collectionDay = getValue(row, ["day", "collectionday"]);
+
+          // Skip if this is a header row or empty row
+          if (!custName && !billNo && !billAmt) {
+            continue;
+          }
 
           // Validate required fields
-          if (!custName || !billNo || !billAmt || !billDateValue) {
+          if (!custName || !billNo || !billAmt || !billDateValue || !collectionDay) {
             errors.push(`Row ${index + 2}: Missing required fields`);
             continue;
           }
+
+          // Check for duplicate bill number AND customer name in this import
+          const billKey = `${billNo}_${custName}`.toUpperCase();
+          if (processedBills[billKey]) {
+            errors.push(`Row ${index + 2}: Duplicate bill ${billNo} for customer ${custName} in this file`);
+            continue;
+          }
+          processedBills[billKey] = true;
 
           // Parse date - handle Excel date objects and strings
           let billDate;
@@ -249,10 +283,14 @@ router.post(
           } else {
             // Try parsing as string
             billDate = new Date(billDateValue);
+            if (isNaN(billDate.getTime())) {
+              // Try alternative date formats if the first attempt fails
+              billDate = new Date(billDateValue.replace(/(\d{2})-(\d{2})-(\d{4})/, "$2/$1/$3"));
+            }
           }
 
           if (isNaN(billDate.getTime())) {
-            errors.push(`Row ${index + 2}: Invalid date format`);
+            errors.push(`Row ${index + 2}: Invalid date format for ${billDateValue}`);
             continue;
           }
 
@@ -268,6 +306,12 @@ router.post(
             continue;
           }
 
+          // Validate collection day
+          if (!["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].includes(collectionDay)) {
+            errors.push(`Row ${index + 2}: Invalid or missing collection day`);
+            continue;
+          }
+
           // Determine status
           let status = "Unpaid";
           if (balance <= 0) {
@@ -276,22 +320,37 @@ router.post(
             status = "Partially Paid";
           }
 
-          // Create bill
-          const newBill = new Bill({
+          // Create bill data object
+          const billData = {
             billNumber: billNo,
             retailer: custName,
             amount: amount,
             dueAmount: balance,
             billDate: billDate,
-            dueDate: billDate, // Same as bill date unless specified
+            collectionDay: collectionDay,
             status: status,
-            assignedTo: staffName
-              ? staffMap.get(staffName.toUpperCase())
-              : null,
-          });
+            assignedTo: staffName ? staffMap.get(staffName.toUpperCase()) : null,
+          };
 
-          await newBill.save();
-          importedBills.push(newBill);
+          try {
+            // Check if bill already exists in database
+            const existingBill = await Bill.findOne({
+              billNumber: billNo,
+              retailer: custName
+            });
+
+            if (existingBill) {
+              errors.push(`Row ${index + 2}: Bill number ${billNo} for customer ${custName} already exists in database`);
+              continue;
+            }
+
+            // Create and save new bill
+            const newBill = new Bill(billData);
+            await newBill.save();
+            importedBills.push(newBill);
+          } catch (saveError) {
+            errors.push(`Row ${index + 2}: ${saveError.message}`);
+          }
         } catch (error) {
           errors.push(`Row ${index + 2}: ${error.message}`);
         }
@@ -300,20 +359,20 @@ router.post(
       // Clean up file
       fs.unlinkSync(req.file.path);
 
+      // Prepare response
+      const response = {
+        message: `Imported ${importedBills.length} bills`,
+        importedCount: importedBills.length,
+      };
+
       if (errors.length > 0) {
-        return res.status(207).json({
-          message: `Imported ${importedBills.length} bills with ${errors.length} errors`,
-          importedCount: importedBills.length,
-          errorCount: errors.length,
-          errors: errors.slice(0, 10), // Return first 10 errors
-        });
+        response.message = `Imported ${importedBills.length} bills with ${errors.length} errors`;
+        response.errorCount = errors.length;
+        response.errors = errors.slice(0, 10); // Return first 10 errors
+        return res.status(207).json(response);
       }
 
-      res.json({
-        message: "Bills imported successfully",
-        count: importedBills.length,
-        importedCount: importedBills.length,
-      });
+      res.json(response);
     } catch (error) {
       if (req.file && fs.existsSync(req.file.path)) {
         fs.unlinkSync(req.file.path);
@@ -325,26 +384,55 @@ router.post(
     }
   }
 );
-router.get("/staff/bills-assigned-today", protect, async (req, res) => {
-  try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
 
+router.get("/by-collection-day/:day", protect, async (req, res) => {
+  try {
     const bills = await Bill.find({
+      collectionDay: req.params.day,
       assignedTo: req.user._id,
-      assignedDate: { $gte: today },
+      status: { $ne: "Paid" },
     })
       .populate("collections")
       .lean();
 
-    // Filter out fully paid bills if you want to hide them
-    const visibleBills = bills.filter((bill) => bill.dueAmount > 0);
-
-    res.json(visibleBills);
+    res.json(bills);
   } catch (err) {
     res
       .status(500)
       .json({ message: "Failed to fetch bills", error: err.message });
+  }
+});
+
+router.get("/bills-assigned-today", protect, staffOnly, async (req, res) => {
+  try {
+    const today = new Date();
+    const dayOfWeek = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ][today.getDay()];
+
+    const bills = await Bill.find({
+      assignedTo: req.user._id,
+      collectionDay: dayOfWeek,
+      assignedDate: {
+        $gte: new Date(today.setHours(0, 0, 0, 0)),
+        $lt: new Date(today.setHours(23, 59, 59, 999)),
+      },
+    })
+      .populate("assignedTo", "name")
+      .lean();
+
+    res.json(bills);
+  } catch (err) {
+    res.status(500).json({
+      message: "Error fetching bills assigned today",
+      error: err.message,
+    });
   }
 });
 

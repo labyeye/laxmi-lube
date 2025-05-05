@@ -33,6 +33,11 @@ const BillSchema = new mongoose.Schema(
         message: 'Due amount cannot exceed total bill amount'
       }
     },
+    collectionDay: {
+      type: String,
+      enum: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+      required: [true, "Collection day is required"]
+    },
     outstandingDays: {
       type: Number,
       min: 0,
@@ -41,10 +46,6 @@ const BillSchema = new mongoose.Schema(
     billDate: {
       type: Date,
       required: [true, "Bill date is required"]
-    },
-    dueDate: {
-      type: Date,
-      required: [true, "Due date is required"]
     },
     status: {
       type: String,

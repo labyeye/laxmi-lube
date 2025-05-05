@@ -48,6 +48,8 @@ const BillsAdd = () => {
     if (!manualBill.billNumber) errors.billNumber = "Bill number is required";
     if (!manualBill.retailer) errors.retailer = "Retailer is required";
     if (!manualBill.amount) errors.amount = "Amount is required";
+    if (!manualBill.collectionDay) errors.collectionDay = "Collection day is required";
+
     if (manualBill.amount && isNaN(parseFloat(manualBill.amount)))
       errors.amount = "Amount must be a number";
     if (!manualBill.dueAmount) errors.dueAmount = "Due amount is required";
@@ -59,130 +61,129 @@ const BillsAdd = () => {
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
-  // Update the validateExcelStructure function
-const validateExcelStructure = (file) => {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = new Uint8Array(e.target.result);
-        const workbook = xlsx.read(data, { type: 'array', cellDates: true });
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
-        
-        const headers = jsonData[0] || [];
-        const lowerHeaders = headers.map(h => String(h).toLowerCase().trim());
-        
-        // Check for required columns (case insensitive)
-        const requiredColumns = [
-          'billno', 'custname', 'billamt', 'billdate'
-        ];
-        
-        const missingColumns = requiredColumns.filter(col => 
-          !lowerHeaders.includes(col.toLowerCase())
-        );
-        
-        if (missingColumns.length > 0) {
-          resolve(`Missing required columns: ${missingColumns.join(', ')}`);
-          return;
-        }
-        
-        // Check first data row for valid date
-        if (jsonData.length > 1) {
-          const dateColIndex = headers.findIndex(h => 
-            ['billdate', 'date'].includes(String(h).toLowerCase())
+  const validateExcelStructure = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = xlsx.read(data, { type: "array", cellDates: true });
+          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
+
+          const headers = jsonData[0] || [];
+          const lowerHeaders = headers.map((h) =>
+            String(h).toLowerCase().trim()
           );
-          
-          if (dateColIndex !== -1) {
-            const dateValue = jsonData[1][dateColIndex];
-            if (dateValue && isNaN(new Date(dateValue).getTime())) {
-              resolve("Invalid date format in Bill Date column");
-              return;
+
+          const requiredColumns = [
+            'billno', 'custname', 'billamt', 'billdate', 'day'
+          ];
+
+          const missingColumns = requiredColumns.filter(
+            (col) => !lowerHeaders.includes(col.toLowerCase())
+          );
+
+          if (missingColumns.length > 0) {
+            resolve(`Missing required columns: ${missingColumns.join(", ")}`);
+            return;
+          }
+
+          if (jsonData.length > 1) {
+            const dateColIndex = headers.findIndex((h) =>
+              ["billdate", "date"].includes(String(h).toLowerCase())
+            );
+
+            if (dateColIndex !== -1) {
+              const dateValue = jsonData[1][dateColIndex];
+              if (dateValue && isNaN(new Date(dateValue).getTime())) {
+                resolve("Invalid date format in Bill Date column");
+                return;
+              }
             }
           }
+
+          resolve(null);
+        } catch (error) {
+          resolve("Error reading Excel file: " + error.message);
         }
-        
-        resolve(null);
-      } catch (error) {
-        resolve("Error reading Excel file: " + error.message);
-      }
-    };
-    reader.onerror = () => {
-      resolve("Error reading file. Please check if the file is valid.");
-    };
-    reader.readAsArrayBuffer(file);
-  });
-};
-
-// Update the handleImport function to better handle responses
-const handleImport = async (e) => {
-  e.preventDefault();
-  setError("");
-  setMessage("");
-
-  if (!file) {
-    setError("Please select a file to upload");
-    return;
-  }
-
-  // Validate file structure first
-  const validationError = await validateExcelStructure(file);
-  if (validationError) {
-    setError(validationError);
-    return;
-  }
-
-  setLoading(true);
-  const formData = new FormData();
-  formData.append("file", file);
-
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      throw new Error("Authentication token not found. Please log in again.");
-    }
-
-    const response = await axios.post(`${API_URL}/bills/import`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-        Authorization: `Bearer ${token}`,
-      },
+      };
+      reader.onerror = () => {
+        resolve("Error reading file. Please check if the file is valid.");
+      };
+      reader.readAsArrayBuffer(file);
     });
+  };
 
-    if (response.data.errorCount > 0) {
-      setMessage(
-        `Successfully imported ${response.data.importedCount} bills. ${response.data.errorCount} records had errors.`
-      );
-      setError(
-        `Some rows had errors: ${response.data.errors?.join('; ') || ''}`
-      );
-    } else {
-      setMessage(`Successfully imported ${response.data.count} bills.`);
+  const handleImport = async (e) => {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+  
+    if (!file) {
+      setError("Please select a file to upload");
+      return;
     }
-
-    setFile(null);
-    document.getElementById("fileInput").value = "";
-  } catch (error) {
-    console.error("Error importing file:", error);
-    if (error.response) {
-      if (error.response.data?.message) {
-        setError(`Failed to import: ${error.response.data.message}`);
-      } else if (error.response.data?.error) {
-        setError(`Failed to import: ${error.response.data.error}`);
-      } else {
-        setError("Failed to import: Unknown server error");
+  
+    const validationError = await validateExcelStructure(file);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+  
+    setLoading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+  
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Authentication token not found. Please log in again.");
       }
-    } else if (error.request) {
-      setError("No response from server. Check your connection.");
-    } else {
-      setError(`Failed to import: ${error.message}`);
+  
+      const response = await axios.post(`${API_URL}/bills/import`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      if (response.data.errorCount > 0) {
+        setMessage(
+          `Successfully imported ${response.data.importedCount} bills. ${response.data.errorCount} records had errors.`
+        );
+        // Show first 3 errors as examples
+        const exampleErrors = response.data.errors?.slice(0, 3).join(";\n") || "";
+        setError(
+          `Some rows had errors. Examples:\n${exampleErrors}${
+            response.data.errorCount > 3 ? "\n...and more" : ""
+          }`
+        );
+      } else {
+        setMessage(`Successfully imported ${response.data.importedCount} bills.`);
+      }
+  
+      setFile(null);
+      document.getElementById("fileInput").value = "";
+    } catch (error) {
+      console.error("Error importing file:", error);
+      if (error.response) {
+        if (error.response.data?.message) {
+          setError(`Failed to import: ${error.response.data.message}`);
+        } else if (error.response.data?.error) {
+          setError(`Failed to import: ${error.response.data.error}`);
+        } else {
+          setError("Failed to import: Unknown server error");
+        }
+      } else if (error.request) {
+        setError("No response from server. Check your connection.");
+      } else {
+        setError(`Failed to import: ${error.message}`);
+      }
+    } finally {
+      setLoading(false);
     }
-  } finally {
-    setLoading(false);
-  }
-};
-  
-  
+  };
 
   const handleManualSubmit = async (e) => {
     e.preventDefault();
@@ -245,7 +246,6 @@ const handleImport = async (e) => {
     }
   };
 
-
   return (
     <Layout>
       <PageHeader>Add Bills</PageHeader>
@@ -300,7 +300,28 @@ const handleImport = async (e) => {
             />
             {fieldErrors.amount && <ErrorText>{fieldErrors.amount}</ErrorText>}
           </FormGroup>
-
+          <FormGroup>
+            <Label htmlFor="collectionDay">Collection Day</Label>
+            <Select
+              id="collectionDay"
+              name="collectionDay"
+              value={manualBill.collectionDay}
+              onChange={handleManualInputChange}
+              hasError={!!fieldErrors.collectionDay}
+            >
+              <option value="">Select Day</option>
+              <option value="Monday">Monday</option>
+              <option value="Tuesday">Tuesday</option>
+              <option value="Wednesday">Wednesday</option>
+              <option value="Thursday">Thursday</option>
+              <option value="Friday">Friday</option>
+              <option value="Saturday">Saturday</option>
+              <option value="Sunday">Sunday</option>
+            </Select>
+            {fieldErrors.collectionDay && (
+              <ErrorText>{fieldErrors.collectionDay}</ErrorText>
+            )}
+          </FormGroup>
           <FormGroup>
             <Label htmlFor="dueAmount">Due Amount</Label>
             <Input

@@ -2,250 +2,214 @@ import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import axios from "axios";
 import { saveAs } from "file-saver";
-import { 
-  FaFileExcel, 
-  FaFilePdf, 
+import {
+  FaFileExcel,
+  FaFilePdf,
   FaSearch,
-  FaCalendarAlt
+  FaCalendarAlt,
+  FaHistory,
 } from "react-icons/fa";
 import { DateRangePicker } from "react-date-range";
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
 import Layout from "../components/Layout";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay, isToday } from "date-fns";
 
-// Changed API base URL to match backend routes
 const API_BASE_URL = "https://laxmi-lube.onrender.com/api/admin/reports";
 
 const ReportPage = () => {
-    const [reports, setReports] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [searchTerm, setSearchTerm] = useState("");
-    const [showDatePicker, setShowDatePicker] = useState(false);
-    const [dateRange, setDateRange] = useState([
-      {
-        startDate: new Date(),
-        endDate: new Date(),
-        key: "selection",
-      },
-    ]);
-  
-    useEffect(() => {
-      fetchReports();
-    }, []);
-  
-    const fetchReports = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const token = localStorage.getItem("token");
-        if (!token) return;
-  
-        const response = await axios.get(
-          `${API_BASE_URL}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-  
-        setReports(response.data);
-      } catch (error) {
-        console.error("Error fetching reports:", error);
-        setError(error.response?.data?.message || "Failed to load reports");
-      } finally {
-        setLoading(false);
-      }
-    };
-  
-    const handleDateFilter = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const token = localStorage.getItem("token");
-        if (!token) return;
-  
-        const response = await axios.get(
-          `${API_BASE_URL}?startDate=${format(
-            dateRange[0].startDate,
-            "yyyy-MM-dd"
-          )}&endDate=${format(dateRange[0].endDate, "yyyy-MM-dd")}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-  
-        setReports(response.data);
-        setShowDatePicker(false);
-      } catch (error) {
-        console.error("Error filtering reports:", error);
-        setError(error.response?.data?.message || "Failed to filter reports");
-      } finally {
-        setLoading(false);
-      }
-    };
-  
-    const handleDownloadExcel = async () => {
-        try {
-          setLoading(true);
-          const token = localStorage.getItem("token");
-          if (!token) {
-            setError("Authentication required");
-            return;
-          }
-      
-          // Build query parameters
-          const params = new URLSearchParams();
-          if (dateRange[0].startDate) {
-            params.append("startDate", format(dateRange[0].startDate, "yyyy-MM-dd"));
-          }
-          if (dateRange[0].endDate) {
-            params.append("endDate", format(dateRange[0].endDate, "yyyy-MM-dd"));
-          }
-      
-          const response = await axios.get(
-            `${API_BASE_URL}/export/excel?${params.toString()}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-              responseType: "blob",
-            }
-          );
-      
-          // Create blob from response
-          const blob = new Blob([response.data], {
-            type: response.headers["content-type"],
-          });
-      
-          // Extract filename from content-disposition or use default
-          let filename = `collections_report_${format(new Date(), "yyyyMMdd_HHmmss")}.xlsx`;
-          const contentDisposition = response.headers["content-disposition"];
-          if (contentDisposition) {
-            const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
-            if (filenameMatch && filenameMatch[1]) {
-              filename = filenameMatch[1];
-            }
-          }
-      
-          // Save file
-          saveAs(blob, filename);
-        } catch (error) {
-          console.error("Error downloading Excel:", error);
-          setError(
-            error.response?.data?.message ||
-              "Failed to download Excel report. Please try again."
-          );
-          
-          // If it's a blob error, try to parse the error message
-          if (error.response?.data instanceof Blob) {
-            try {
-              const errorText = await error.response.data.text();
-              const errorJson = JSON.parse(errorText);
-              setError(errorJson.message || "Export failed");
-            } catch (e) {
-              setError("Failed to process export error");
-            }
-          }
-        } finally {
-          setLoading(false);
-        }
-      };
-  
-    const handleDownloadPDF = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) return;
-  
-        const response = await axios.get(
-          `${API_BASE_URL}/export/pdf?startDate=${
-            dateRange[0].startDate ? format(dateRange[0].startDate, "yyyy-MM-dd") : ""
-          }&endDate=${
-            dateRange[0].endDate ? format(dateRange[0].endDate, "yyyy-MM-dd") : ""
-          }`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            responseType: "blob",
-          }
-        );
-  
-        const blob = new Blob([response.data], { type: "application/pdf" });
-        saveAs(blob, `collections_report_${format(new Date(), "yyyyMMdd")}.pdf`);
-      } catch (error) {
-        console.error("Error downloading PDF:", error);
-        setError("Failed to download PDF report");
-      }
-    };
-  
-    const filteredReports = reports.filter((report) => {
-      const searchTermLower = searchTerm.toLowerCase();
-      return (
-        report.billNumber?.toLowerCase().includes(searchTermLower) ||
-        report.retailer?.toLowerCase().includes(searchTermLower) ||
-        report.assignedToName?.toLowerCase().includes(searchTermLower) ||
-        report.status?.toLowerCase().includes(searchTermLower)
-      );
-    });
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showHistory, setShowHistory] = useState(false); // New state for history view
+  const [dateRange, setDateRange] = useState([
+    {
+      startDate: new Date(),
+      endDate: new Date(),
+      key: "selection",
+    },
+  ]);
 
+  useEffect(() => {
+    fetchReports();
+  }, [showHistory]); // Refetch when history view changes
+
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+  
+      const token = localStorage.getItem("token");
+      if (!token) return;
+  
+      let url = `${API_BASE_URL}`;
+      let params = {};
+      
+      if (!showHistory) {
+        url = `${API_BASE_URL}/today-collections`;
+      } else if (dateRange[0].startDate && dateRange[0].endDate) {
+        url = `${API_BASE_URL}`;
+        params = {
+          startDate: format(dateRange[0].startDate, "yyyy-MM-dd"),
+          endDate: format(dateRange[0].endDate, "yyyy-MM-dd")
+        };
+      }
+  
+      const response = await axios.get(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        params
+      });
+  
+      setReports(response.data);
+    } catch (error) {
+      console.error("Error fetching reports:", error);
+      setError(error.response?.data?.message || "Failed to load reports");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+
+  const toggleHistoryView = () => {
+    setShowHistory(!showHistory);
+    setShowDatePicker(false);
+  };
+
+  const handleDateFilter = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const response = await axios.get(
+        `${API_BASE_URL}?startDate=${format(
+          dateRange[0].startDate,
+          "yyyy-MM-dd"
+        )}&endDate=${format(dateRange[0].endDate, "yyyy-MM-dd")}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setReports(response.data);
+      setShowDatePicker(false);
+    } catch (error) {
+      console.error("Error filtering reports:", error);
+      setError(error.response?.data?.message || "Failed to filter reports");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownloadTodayCollections = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("Authentication required");
+        return;
+      }
+
+      const response = await axios.get(
+        `${API_BASE_URL}/export/today-collections/excel`, // Changed this line
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          responseType: "blob",
+        }
+      );
+
+      const blob = new Blob([response.data], {
+        type: response.headers["content-type"],
+      });
+
+      const filename = `today_collections_${format(
+        new Date(),
+        "yyyyMMdd"
+      )}.xlsx`;
+      saveAs(blob, filename);
+    } catch (error) {
+      console.error("Error downloading today's collections:", error);
+      setError("Failed to download today's collections");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredReports = reports.filter((report) => {
+    const searchTermLower = searchTerm.toLowerCase();
+    return (
+      report.billNumber?.toLowerCase().includes(searchTermLower) ||
+      report.retailer?.toLowerCase().includes(searchTermLower) ||
+      report.assignedToName?.toLowerCase().includes(searchTermLower) ||
+      report.status?.toLowerCase().includes(searchTermLower)
+    );
+  });
   return (
     <Layout>
       <MainContent>
         <Header>
-          <h1>Collections Report</h1>
+          <h1>
+            {showHistory ? "Historical Collections" : "Today's Collections"}
+          </h1>
           <ActionsContainer>
-            <ExportButton onClick={handleDownloadExcel}>
-              <FaFileExcel /> Export Excel
-            </ExportButton>
-            <ExportButton onClick={handleDownloadPDF}>
-              <FaFilePdf /> Export PDF
+            <HistoryButton onClick={toggleHistoryView}>
+              <FaHistory /> {showHistory ? "View Today" : "View History"}
+            </HistoryButton>
+            <ExportButton onClick={handleDownloadTodayCollections}>
+              <FaFileExcel /> Export {showHistory ? "Selected" : "Today's"}{" "}
+              Collections
             </ExportButton>
           </ActionsContainer>
         </Header>
 
-        <ControlsContainer>
-          <SearchContainer>
-            <FaSearch />
-            <SearchInput
-              type="text"
-              placeholder="Search reports..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </SearchContainer>
+        {showHistory && (
+          <ControlsContainer>
+            <SearchContainer>
+              <FaSearch />
+              <SearchInput
+                type="text"
+                placeholder="Search reports..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </SearchContainer>
 
-          <DateFilterContainer>
-            <DateFilterButton onClick={() => setShowDatePicker(!showDatePicker)}>
-              <FaCalendarAlt /> Filter by Date
-            </DateFilterButton>
-            
-            {showDatePicker && (
-              <DatePickerContainer>
-                <DateRangePicker
-                  onChange={(item) => setDateRange([item.selection])}
-                  showSelectionPreview={true}
-                  moveRangeOnFirstSelection={false}
-                  months={2}
-                  ranges={dateRange}
-                  direction="horizontal"
-                />
-                <ApplyDateFilter onClick={handleDateFilter}>
-                  Apply Filter
-                </ApplyDateFilter>
-              </DatePickerContainer>
-            )}
-          </DateFilterContainer>
-        </ControlsContainer>
+            <DateFilterContainer>
+              <DateFilterButton
+                onClick={() => setShowDatePicker(!showDatePicker)}
+              >
+                <FaCalendarAlt /> Filter by Date
+              </DateFilterButton>
 
+              {showDatePicker && (
+                <DatePickerContainer>
+                  <DateRangePicker
+                    onChange={(item) => setDateRange([item.selection])}
+                    showSelectionPreview={true}
+                    moveRangeOnFirstSelection={false}
+                    months={2}
+                    ranges={dateRange}
+                    direction="horizontal"
+                  />
+                  <ApplyDateFilter onClick={handleDateFilter}>
+                    Apply Filter
+                  </ApplyDateFilter>
+                </DatePickerContainer>
+              )}
+            </DateFilterContainer>
+          </ControlsContainer>
+        )}
         {error && <ErrorMessage>{error}</ErrorMessage>}
-
         {loading ? (
           <LoadingIndicator>Loading reports...</LoadingIndicator>
         ) : (
@@ -296,13 +260,13 @@ const ReportPage = () => {
                               </div>
                               {collection.paymentDetails && (
                                 <PaymentDetails>
-                                  {Object.entries(collection.paymentDetails).map(
-                                    ([key, value]) => (
-                                      <div key={key}>
-                                        <strong>{key}:</strong> {value}
-                                      </div>
-                                    )
-                                  )}
+                                  {Object.entries(
+                                    collection.paymentDetails
+                                  ).map(([key, value]) => (
+                                    <div key={key}>
+                                      <strong>{key}:</strong> {value}
+                                    </div>
+                                  ))}
                                 </PaymentDetails>
                               )}
                             </CollectionItem>
@@ -353,7 +317,24 @@ const Header = styled.header`
     font-weight: 600;
   }
 `;
+const HistoryButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 15px;
+  background-color: #6c757d; // Changed from theme.colors.secondary
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  margin-right: 15px;
 
+  &:hover {
+    background-color: #5a6268; // Changed from theme.colors.secondaryDark
+  }
+`;
 const ActionsContainer = styled.div`
   display: flex;
   gap: 15px;
@@ -523,19 +504,16 @@ const StatusBadge = styled.span`
       ? "#ffc107"
       : "#dc3545"};
 `;
-
 const CollectionsList = styled.div`
   display: flex;
   flex-direction: column;
   gap: 10px;
 `;
-
 const CollectionItem = styled.div`
   padding: 10px;
   background-color: #f8f9fc;
   border-radius: 4px;
   font-size: 0.85rem;
-
   div {
     margin-bottom: 5px;
 
@@ -544,7 +522,6 @@ const CollectionItem = styled.div`
     }
   }
 `;
-
 const PaymentDetails = styled.div`
   margin-top: 5px;
   padding-top: 5px;
@@ -555,13 +532,11 @@ const PaymentDetails = styled.div`
     margin-bottom: 3px;
   }
 `;
-
 const LoadingIndicator = styled.div`
   padding: 40px;
   text-align: center;
   color: #6e707e;
 `;
-
 const ErrorMessage = styled.div`
   padding: 20px;
   background-color: #f8d7da;
@@ -570,5 +545,4 @@ const ErrorMessage = styled.div`
   margin: 20px 0;
   text-align: center;
 `;
-
 export default ReportPage;
