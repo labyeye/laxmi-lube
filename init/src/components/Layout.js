@@ -7,7 +7,8 @@ import {
   FaFileInvoiceDollar, 
   FaPlusCircle, 
   FaUsers, 
-  FaSignOutAlt 
+  FaSignOutAlt, 
+  FaChartBar
 } from 'react-icons/fa';
 
 const Layout = ({ children }) => {
@@ -46,6 +47,11 @@ const Layout = ({ children }) => {
             <FaFileInvoiceDollar />
             <span>Bills</span>
             <Link to="/admin/bills" />
+          </NavItem>
+          <NavItem active={location.pathname === '/admin/reports'}>
+            <FaChartBar />
+            <span>Reports</span>
+            <Link to="/admin/reports" />
           </NavItem>
           <NavItem active={location.pathname === '/admin/users'}>
             <FaUsers />

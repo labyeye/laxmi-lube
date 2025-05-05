@@ -7,7 +7,8 @@ const userRoutes = require('./routes/userRoutes');
 const billRoutes = require('./routes/billRoutes');
 const collectionRoutes = require('./routes/collectionRoutes');
 const adminDashboardRoutes = require('./routes/adminDashboardRoutes'); 
-const staffRoutes = require('./routes/staffRoutes'); 
+const staffRoutes = require('./routes/staffRoutes');
+const reportRoutes = require('./routes/reportRoutes'); 
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -22,6 +23,6 @@ app.use('/api/bills', billRoutes);
 app.use('/api/collections', collectionRoutes);
 app.use('/api/admin', adminDashboardRoutes); 
 app.use('/api/staff', staffRoutes); 
-
+app.use('/api/admin/reports', reportRoutes);
 const PORT = 2500;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

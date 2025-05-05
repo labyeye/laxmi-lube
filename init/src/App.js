@@ -10,6 +10,7 @@ import Logout from './pages/Logout';
 import BillAssignedToday from './pages/BillAssignedToday';
 import BillsPage from './pages/BillsPage';
 import CollectionsHistory from './pages/CollectionHistoryPage';
+import ReportPage from './pages/ReportPage';
 
 const App = () => {
   const user = JSON.parse(localStorage.getItem('user'));
@@ -67,6 +68,9 @@ const App = () => {
         {/* Bill Assigned Today (For Staff) */}
         <Route path="/staff/bill-assigned-today" element={
           user?.role === 'staff' ? <BillAssignedToday /> : <Navigate to="/login" />
+        } />
+         <Route path="/admin/reports" element={
+          user?.role === 'admin' ? <ReportPage /> : <Navigate to="/login" />
         } />
 
         {/* Admin Bills Page */}
