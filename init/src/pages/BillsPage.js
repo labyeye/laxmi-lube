@@ -30,13 +30,13 @@ const BillsPage = () => {
         }
 
         const [billsResponse, staffResponse] = await Promise.all([
-          axios.get("http://localhost:2500/api/bills", {
+          axios.get("https://laxmi-lube.onrender.com/api/bills", {
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
           }),
-          axios.get("http://localhost:2500/api/users/staff", {
+          axios.get("https://laxmi-lube.onrender.com/api/users/staff", {
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
@@ -83,7 +83,7 @@ const BillsPage = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
-        `http://localhost:2500/api/bills/${selectedBill._id}/assign`,
+        `https://laxmi-lube.onrender.com/api/bills/${selectedBill._id}/assign`,
         { staffId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -110,7 +110,7 @@ const BillsPage = () => {
 
     const token = localStorage.getItem("token");
     try {
-      await axios.delete(`http://localhost:2500/api/bills/${billId}`, {
+      await axios.delete(`https://laxmi-lube.onrender.com/api/bills/${billId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

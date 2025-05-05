@@ -44,7 +44,7 @@ const BillAssignedToday = () => {
       setError("");
 
       const response = await axios.get(
-        "http://localhost:2500/api/staff/bills-assigned-today",
+        "https://laxmi-lube.onrender.com/api/staff/bills-assigned-today",
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
@@ -84,7 +84,7 @@ const handleCollectionSubmit = async () => {
 
     // 1. First create the collection record - with proper authorization header
     await axios.post(
-      "http://localhost:2500/api/collections",
+      "https://laxmi-lube.onrender.com/api/collections",
       {
         bill: selectedBill._id,
         amountCollected: paidAmount,
@@ -98,7 +98,7 @@ const handleCollectionSubmit = async () => {
 
     // 2. Then update the bill's dueAmount and status - with proper authorization header
     await axios.put(
-      `http://localhost:2500/api/bills/${selectedBill._id}`,
+      `https://laxmi-lube.onrender.com/api/bills/${selectedBill._id}`,
       {
         dueAmount: newDueAmount,
         status: newStatus,
