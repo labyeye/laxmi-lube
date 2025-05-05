@@ -17,58 +17,53 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const token = localStorage.getItem("token");
-      if (!token) {
-        navigate("/login");
-        return;
-      }
-
-      const response = await axios.get(
-        "https://laxmi-lube.onrender.com/api/admin/dashboard",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.data.success) {
-        throw new Error(response.data.message || "Failed to load dashboard data");
-      }
-
-      setDashboardData(response.data);
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-      
-      // Handle specific error cases
-      if (error.response) {
-        // Server responded with error status
-        if (error.response.status === 401) {
-          // Unauthorized - token expired or invalid
-          localStorage.removeItem("token");
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const token = localStorage.getItem("token");
+        if (!token) {
           navigate("/login");
           return;
         }
-        setError(error.response.data.message || "Failed to load dashboard data");
-      } else if (error.request) {
-        // Request was made but no response
-        setError("Network error - please check your connection");
-      } else {
-        // Other errors
-        setError(error.message || "Failed to load dashboard data");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  fetchDashboardData();
-}, [navigate]);
+        const response = await axios.get(
+          "https://laxmi-lube.onrender.com/api/admin/dashboard",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.data.success) {
+          throw new Error(response.data.message || "Failed to load dashboard data");
+        }
+
+        setDashboardData(response.data);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+        
+        if (error.response) {
+          if (error.response.status === 401) {
+            localStorage.removeItem("token");
+            navigate("/login");
+            return;
+          }
+          setError(error.response.data.message || "Failed to load dashboard data");
+        } else if (error.request) {
+          setError("Network error - please check your connection");
+        } else {
+          setError(error.message || "Failed to load dashboard data");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [navigate]);
 
   return (
     <Layout>
@@ -134,35 +129,36 @@ const AdminDashboard = () => {
                 </ViewAllLink>
               </SectionHeader>
 
-              <DataTable>
-                <thead>
-                  <tr>
-                    <th>Bill Number</th>
-                    <th>Amount</th>
-                    <th>Collected By</th>
-                    <th>Payment Mode</th>
-                    <th>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dashboardData?.recentCollections?.map((collection) => (
-                    <tr key={collection._id}>
-                     <td>{collection.bill?.billNumber || "N/A"}</td>
-
-                      <td>₹{collection.amountCollected.toLocaleString()}</td>
-                      <td>{collection.collectedBy.name}</td>
-                      <td>
-                        <PaymentBadge mode={collection.paymentMode}>
-                          {collection.paymentMode}
-                        </PaymentBadge>
-                      </td>
-                      <td>
-                        {new Date(collection.collectedOn).toLocaleString()}
-                      </td>
+              <TableContainer>
+                <DataTable>
+                  <thead>
+                    <tr>
+                      <th>Bill No.</th>
+                      <th>Amount</th>
+                      <th>Collected By</th>
+                      <th>Payment</th>
+                      <th>Date</th>
                     </tr>
-                  ))}
-                </tbody>
-              </DataTable>
+                  </thead>
+                  <tbody>
+                    {dashboardData?.recentCollections?.map((collection) => (
+                      <tr key={collection._id}>
+                        <td data-label="Bill No.">{collection.bill?.billNumber || "N/A"}</td>
+                        <td data-label="Amount">₹{collection.amountCollected.toLocaleString()}</td>
+                        <td data-label="Collected By">{collection.collectedBy.name}</td>
+                        <td data-label="Payment">
+                          <PaymentBadge mode={collection.paymentMode}>
+                            {collection.paymentMode}
+                          </PaymentBadge>
+                        </td>
+                        <td data-label="Date">
+                          {new Date(collection.collectedOn).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </DataTable>
+              </TableContainer>
             </ContentSection>
           </>
         )}
@@ -173,126 +169,191 @@ const AdminDashboard = () => {
 
 const MainContent = styled.div`
   flex: 1;
-  padding: 20px;
-  overflow-x: hidden;
+  padding: 1rem;
+  overflow-x: auto;
+
+  @media (min-width: 768px) {
+    padding: 1.5rem;
+  }
 
   @media (min-width: 1200px) {
-    padding: 30px;
+    padding: 2rem;
   }
 `;
 
 const Header = styled.header`
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
 
   h1 {
     color: #2e3a59;
-    font-size: 1.8rem;
+    font-size: 1.5rem;
     margin: 0;
     font-weight: 600;
+
+    @media (min-width: 768px) {
+      font-size: 1.8rem;
+    }
   }
 `;
 
 const UserProfile = styled.div`
   display: flex;
   align-items: center;
+  gap: 0.5rem;
 
   img {
-    width: 40px;
-    height: 40px;
+    width: 2.5rem;
+    height: 2.5rem;
     border-radius: 50%;
-    margin-right: 10px;
   }
 
   span {
     color: #2e3a59;
     font-weight: 500;
+    font-size: 0.9rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
   }
 `;
 
 const MetricsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 2rem;
+
+  @media (min-width: 480px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
 `;
 
 const MetricCard = styled.div`
   background-color: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   display: flex;
   align-items: center;
+  gap: 0.75rem;
   border-left: 4px solid ${(props) => props.color};
   transition: transform 0.3s ease;
 
   &:hover {
-    transform: translateY(-5px);
+    transform: translateY(-3px);
   }
 
   svg {
     color: ${(props) => props.color};
-    margin-right: 15px;
     flex-shrink: 0;
   }
 
   h3 {
     color: #6e707e;
-    font-size: 0.9rem;
-    margin: 0 0 5px 0;
+    font-size: 0.8rem;
+    margin: 0 0 0.25rem 0;
     font-weight: 600;
+
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+    }
   }
 
   p {
     color: #2e3a59;
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     margin: 0;
     font-weight: 700;
+
+    @media (min-width: 768px) {
+      font-size: 1.5rem;
+    }
   }
 `;
 
 const ContentSection = styled.section`
   background-color: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+
+  @media (min-width: 768px) {
+    padding: 1.5rem;
+  }
 `;
 
 const SectionHeader = styled.div`
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
 
   h2 {
     color: #2e3a59;
-    font-size: 1.3rem;
+    font-size: 1.2rem;
     margin: 0;
     font-weight: 600;
+
+    @media (min-width: 768px) {
+      font-size: 1.3rem;
+    }
   }
 `;
 
 const ViewAllLink = styled(Link)`
   color: #4e73df;
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 500;
+  white-space: nowrap;
 
   &:hover {
     text-decoration: underline;
   }
+
+  @media (min-width: 768px) {
+    font-size: 0.9rem;
+  }
+`;
+
+const TableContainer = styled.div`
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 `;
 
 const DataTable = styled.table`
   width: 100%;
   border-collapse: collapse;
+  font-size: 0.85rem;
+
+  @media (min-width: 768px) {
+    font-size: 0.9rem;
+  }
 
   th,
   td {
-    padding: 12px 15px;
+    padding: 0.75rem;
     text-align: left;
     border-bottom: 1px solid #eee;
   }
@@ -300,25 +361,65 @@ const DataTable = styled.table`
   th {
     color: #6e707e;
     font-weight: 600;
-    font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+
+    @media (min-width: 768px) {
+      font-size: 0.8rem;
+      padding: 1rem 0.75rem;
+    }
   }
 
   td {
     color: #2e3a59;
-    font-size: 0.9rem;
+    white-space: nowrap;
   }
 
   tr:hover {
     background-color: #f9f9f9;
   }
+
+  @media (max-width: 768px) {
+    thead {
+      display: none;
+    }
+
+    tr {
+      display: block;
+      margin-bottom: 1rem;
+      border: 1px solid #eee;
+      border-radius: 0.5rem;
+    }
+
+    td {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0.75rem;
+      text-align: right;
+      border-bottom: 1px solid #eee;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      &::before {
+        content: attr(data-label);
+        float: left;
+        font-weight: bold;
+        color: #6e707e;
+        margin-right: 1rem;
+      }
+    }
+  }
 `;
 
 const PaymentBadge = styled.span`
   display: inline-block;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
   font-size: 0.75rem;
   font-weight: 600;
   background-color: ${(props) =>
@@ -336,17 +437,17 @@ const PaymentBadge = styled.span`
 `;
 
 const LoadingIndicator = styled.div`
-  padding: 40px;
+  padding: 2rem;
   text-align: center;
   color: #6e707e;
 `;
 
 const ErrorMessage = styled.div`
-  padding: 20px;
+  padding: 1rem;
   background-color: #f8d7da;
   color: #721c24;
-  border-radius: 4px;
-  margin: 20px 0;
+  border-radius: 0.25rem;
+  margin: 1rem 0;
   text-align: center;
 `;
 

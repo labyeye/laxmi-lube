@@ -300,6 +300,7 @@ const BillsAdd = () => {
             />
             {fieldErrors.amount && <ErrorText>{fieldErrors.amount}</ErrorText>}
           </FormGroup>
+          
           <FormGroup>
             <Label htmlFor="collectionDay">Collection Day</Label>
             <Select
@@ -322,6 +323,7 @@ const BillsAdd = () => {
               <ErrorText>{fieldErrors.collectionDay}</ErrorText>
             )}
           </FormGroup>
+          
           <FormGroup>
             <Label htmlFor="dueAmount">Due Amount</Label>
             <Input
@@ -429,90 +431,147 @@ export default BillsAdd;
 
 // Styled Components
 const PageHeader = styled.h1`
-  font-size: 24px;
-  margin-bottom: 24px;
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
   color: #333;
+  text-align: center;
+
+  @media (min-width: 768px) {
+    font-size: 2rem;
+    text-align: left;
+  }
 `;
 
 const SectionHeader = styled.h2`
-  font-size: 18px;
-  margin-bottom: 16px;
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
   color: #444;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #eee;
+
+  @media (min-width: 768px) {
+    font-size: 1.5rem;
+  }
 `;
 
 const FormContainer = styled.form`
   background: white;
-  padding: 20px;
-  border-radius: 6px;
+  padding: 1.25rem;
+  border-radius: 0.5rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  margin-bottom: 24px;
-  max-width: 900px;
+  margin-bottom: 1.5rem;
+  width: 100%;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+
+  @media (min-width: 768px) {
+    padding: 1.5rem;
+  }
 `;
 
 const FormGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 16px;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+
+  @media (min-width: 480px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
 `;
 
 const FormGroup = styled.div`
-  margin-bottom: 16px;
+  margin-bottom: 1rem;
 `;
 
 const Label = styled.label`
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 0.5rem;
   color: #555;
   font-weight: 500;
+  font-size: 0.875rem;
+
+  @media (min-width: 768px) {
+    font-size: 1rem;
+  }
 `;
 
 const Input = styled.input`
   width: 100%;
-  padding: 8px 12px;
+  padding: 0.625rem 0.75rem;
   border: 1px solid ${(props) => (props.hasError ? "#e74c3c" : "#ddd")};
-  border-radius: 4px;
-  font-size: 14px;
-  transition: border 0.2s ease;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
   background-color: white;
+  min-height: 2.5rem;
 
   &:focus {
     outline: none;
     border-color: #4299e1;
     box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+  }
+
+  @media (min-width: 768px) {
+    font-size: 1rem;
   }
 `;
 
 const Select = styled.select`
   width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid ${(props) => (props.hasError ? "#e74c3c" : "#ddd")};
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
   background-color: white;
+  min-height: 2.5rem;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
 
   &:focus {
     outline: none;
     border-color: #4299e1;
     box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
   }
+
+  @media (min-width: 768px) {
+    font-size: 1rem;
+  }
 `;
 
 const ButtonContainer = styled.div`
-  margin-top: 20px;
+  margin-top: 1.25rem;
   display: flex;
-  justify-content: flex-start;
+  justify-content: center;
+
+  @media (min-width: 768px) {
+    justify-content: flex-start;
+  }
 `;
 
 const Button = styled.button`
-  padding: 10px 16px;
+  padding: 0.625rem 1rem;
   background-color: #4299e1;
   color: white;
   border: none;
-  border-radius: 4px;
-  font-size: 14px;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
+  width: 100%;
+  max-width: 200px;
 
   &:hover {
     background-color: #3182ce;
@@ -522,26 +581,44 @@ const Button = styled.button`
     background-color: #a0aec0;
     cursor: not-allowed;
   }
+
+  @media (min-width: 768px) {
+    font-size: 1rem;
+    padding: 0.75rem 1.25rem;
+  }
 `;
 
 const FileUploadContainer = styled.div`
   display: flex;
-  align-items: center;
-  margin-bottom: 16px;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+
+  @media (min-width: 480px) {
+    flex-direction: row;
+    align-items: center;
+  }
 `;
 
 const FileInputLabel = styled.label`
   display: inline-block;
-  padding: 8px 14px;
+  padding: 0.625rem 1rem;
   background-color: #edf2f7;
   color: #4a5568;
   border: 1px solid #cbd5e0;
-  border-radius: 4px;
+  border-radius: 0.375rem;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 0.875rem;
+  text-align: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 
   &:hover {
     background-color: #e2e8f0;
+  }
+
+  @media (min-width: 768px) {
+    font-size: 1rem;
   }
 `;
 
@@ -550,38 +627,71 @@ const FileInput = styled.input`
 `;
 
 const FileName = styled.span`
-  margin-left: 12px;
-  font-size: 14px;
+  font-size: 0.875rem;
   color: #4a5568;
+  word-break: break-all;
+
+  @media (min-width: 768px) {
+    font-size: 1rem;
+    margin-left: 1rem;
+  }
 `;
 
 const NoteText = styled.p`
-  font-size: 14px;
+  font-size: 0.875rem;
   color: #718096;
-  margin-top: 16px;
+  margin-top: 1rem;
+  line-height: 1.5;
+
+  @media (min-width: 768px) {
+    font-size: 1rem;
+  }
 `;
 
 const SuccessMessage = styled.div`
-  padding: 12px 16px;
+  padding: 0.75rem 1rem;
   background-color: #c6f6d5;
   color: #2f855a;
-  border-radius: 4px;
-  margin-bottom: 16px;
-  font-size: 14px;
+  border-radius: 0.375rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  width: 100%;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+
+  @media (min-width: 768px) {
+    font-size: 1rem;
+    padding: 1rem 1.25rem;
+  }
 `;
 
 const ErrorMessage = styled.div`
-  padding: 12px 16px;
+  padding: 0.75rem 1rem;
   background-color: #fed7d7;
   color: #c53030;
-  border-radius: 4px;
-  margin-bottom: 16px;
-  font-size: 14px;
+  border-radius: 0.375rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  width: 100%;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  white-space: pre-line;
+
+  @media (min-width: 768px) {
+    font-size: 1rem;
+    padding: 1rem 1.25rem;
+  }
 `;
 
 const ErrorText = styled.span`
   color: #e74c3c;
-  font-size: 12px;
-  margin-top: 4px;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
   display: block;
+
+  @media (min-width: 768px) {
+    font-size: 0.875rem;
+  }
 `;
