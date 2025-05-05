@@ -147,7 +147,8 @@ const AdminDashboard = () => {
                 <tbody>
                   {dashboardData?.recentCollections?.map((collection) => (
                     <tr key={collection._id}>
-                      <td>{collection.bill.billNumber}</td>
+                     <td>{collection.bill?.billNumber || "N/A"}</td>
+
                       <td>₹{collection.amountCollected.toLocaleString()}</td>
                       <td>{collection.collectedBy.name}</td>
                       <td>
