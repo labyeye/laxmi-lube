@@ -3,10 +3,8 @@ import axios from "axios";
 import styled, { keyframes } from "styled-components";
 import {
   FaMoneyBillWave,
-  FaCalendarDay,
   FaHome,
   FaMoneyCheckAlt,
-  FaListAlt,
   FaSignOutAlt,
   FaUserCircle,
   FaChevronDown,
@@ -14,7 +12,7 @@ import {
   FaSync,
   FaExclamationTriangle,
 } from "react-icons/fa";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const spin = keyframes`
   0% { transform: rotate(0deg); }
@@ -37,92 +35,141 @@ const BillAssignedToday = () => {
   const [paymentRemarks, setPaymentRemarks] = useState("");
   const navigate = useNavigate();
 
+  // In BillAssignedToday.js
   const fetchBillsAssignedToday = async () => {
     try {
       setLoading(true);
       setError("");
-
-      const response = await axios.get(
-        "http://localhost:2500/api/staff/bills-assigned-today",
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
+  
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+  
+      // Get bills assigned today
+      const billsResponse = await axios.get(
+        "http://localhost:2500/api/bills/staff/bills-assigned-today",
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
-
-      setBills(response.data);
+  
+      // Process bills to ensure consistency with backend data
+      const billsWithCollections = await Promise.all(
+        billsResponse.data.map(async (bill) => {
+          // Use the backend's status and dueAmount values directly
+          // This ensures consistency between UI and database
+          return {
+            ...bill,
+            amountCollected: bill.amount - (bill.dueAmount || 0),
+            dueAmount: bill.dueAmount || 0,
+            status: bill.status || (bill.dueAmount <= 0 ? 'Paid' : 
+                   bill.dueAmount < bill.amount ? 'Partially Paid' : 'Unpaid')
+          };
+        })
+      );
+  
+      setBills(billsWithCollections);
     } catch (error) {
-      console.error("Error fetching bills assigned today:", error);
-      setError("Failed to fetch bills assigned today. Please try again.");
+      setError("Failed to fetch today's bills and collections");
+      console.error("Error fetching bills:", error);
     } finally {
       setLoading(false);
-      setRetrying(false);
     }
   };
-
   useEffect(() => {
     fetchBillsAssignedToday();
   }, []);
-  // Add this function to your component
   const handleCollectionSubmit = async () => {
     try {
       setIsSubmitting(true);
-      setSubmitError('');
-      
+      setSubmitError("");
+  
       const paidAmount = parseFloat(paymentAmount);
-      const dueAmount = selectedBill.dueAmount || selectedBill.amount;
+      const currentDueAmount = selectedBill.dueAmount || selectedBill.amount;
   
       // Validate payment amount
-      if (paidAmount <= 0 || paidAmount > dueAmount) {
-        setSubmitError('Please enter a valid payment amount');
+      if (paidAmount <= 0 || isNaN(paidAmount)) {
+        setSubmitError("Please enter a valid payment amount");
         return;
       }
   
-      // 1. First create the collection record
+      if (paidAmount > currentDueAmount) {
+        setSubmitError(
+          `Payment cannot exceed due amount of ${formatCurrency(
+            currentDueAmount
+          )}`
+        );
+        return;
+      }
+  
+      // Calculate new values
+      const newDueAmount = Math.max(0, currentDueAmount - paidAmount);
+      const newStatus = newDueAmount === 0 ? "Paid" : "Partially Paid";
+  
+      // 1. Create collection record
       await axios.post(
-        'http://localhost:2500/api/collections',
+        "http://localhost:2500/api/collections",
         {
           bill: selectedBill._id,
           amountCollected: paidAmount,
           paymentMode,
-          remarks: paymentRemarks
+          remarks: paymentRemarks,
         },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
       );
   
-      // 2. Then update the bill with new due amount and status
-      const newDueAmount = dueAmount - paidAmount;
-      const newStatus = newDueAmount <= 0 ? 'Paid' : 'Partially Paid';
-  
+      // 2. Update bill with corrected dueAmount and status
       await axios.put(
         `http://localhost:2500/api/bills/${selectedBill._id}`,
-        { 
+        {
           dueAmount: newDueAmount,
-          status: newStatus
+          status: newStatus,
         },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
       );
   
-      // Refresh data and close modal
-      await fetchBillsAssignedToday();
+      // Optimistically update the UI after API call completes
+      setBills((prevBills) =>
+        prevBills.map((bill) =>
+          bill._id === selectedBill._id
+            ? {
+                ...bill,
+                amountCollected: bill.amount - newDueAmount,
+                dueAmount: newDueAmount,
+                status: newStatus,
+              }
+            : bill
+        )
+      );
+  
+      // Close modal and reset form
       setShowCollectionModal(false);
+      setPaymentAmount("");
+      setPaymentRemarks("");
+      setPaymentMode("cash");
+      
+      // Refresh bills to ensure consistency with backend
+      fetchBillsAssignedToday();
       
     } catch (err) {
-      console.error('Collection error:', err);
-      setSubmitError(err.response?.data?.message || 'Failed to record collection');
+      console.error("Collection error:", err);
+      setSubmitError(
+        err.response?.data?.message || "Failed to record collection"
+      );
+  
+      // Revert optimistic update if API call fails
+      fetchBillsAssignedToday();
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  // Calculate summary values
+  };// Calculate totals based directly on bills data from backend
   const totalBills = bills.length;
   const totalAmount = bills.reduce((sum, bill) => sum + (bill.amount || 0), 0);
-  const totalDueAmount = bills.reduce(
-    (sum, bill) => sum + (bill.dueAmount || bill.amount || 0),
-    0
+  const totalCollectedAmount = bills.reduce(
+    (sum, bill) => sum + ((bill.amount || 0) - (bill.dueAmount || 0)), 0
   );
-  const averageAmount = totalBills > 0 ? totalAmount / totalBills : 0;
-
+  const totalDueAmount = bills.reduce((sum, bill) => sum + (bill.dueAmount || 0), 0);
   const handleRetry = () => {
     setRetrying(true);
     fetchBillsAssignedToday();
@@ -233,18 +280,6 @@ const BillAssignedToday = () => {
               </Submenu>
             )}
           </NavItemWithSubmenu>
-
-          <NavItem>
-            <NavIcon>
-              <FaListAlt />
-            </NavIcon>
-            {!sidebarCollapsed && (
-              <>
-                <NavText>Assigned Bills</NavText>
-                <NavCheckmark>☐</NavCheckmark>
-              </>
-            )}
-          </NavItem>
         </NavMenu>
         <LogoutButton onClick={handleLogout}>
           <NavIcon>
@@ -287,16 +322,18 @@ const BillAssignedToday = () => {
                   <SummaryValue>{totalBills}</SummaryValue>
                 </SummaryItem>
                 <SummaryItem>
-                  <SummaryLabel>Total Amount</SummaryLabel>
+                  <SummaryLabel>Total Bill Amount</SummaryLabel>
                   <SummaryValue>{formatCurrency(totalAmount)}</SummaryValue>
                 </SummaryItem>
                 <SummaryItem>
-                  <SummaryLabel>Total Due Amount</SummaryLabel>
-                  <SummaryValue>{formatCurrency(totalDueAmount)}</SummaryValue>
+                  <SummaryLabel>Amount Collected</SummaryLabel>
+                  <SummaryValue>
+                    {formatCurrency(totalCollectedAmount)}
+                  </SummaryValue>
                 </SummaryItem>
                 <SummaryItem>
-                  <SummaryLabel>Average Amount</SummaryLabel>
-                  <SummaryValue>{formatCurrency(averageAmount)}</SummaryValue>
+                  <SummaryLabel>Amount Due</SummaryLabel>
+                  <SummaryValue>{formatCurrency(totalDueAmount)}</SummaryValue>
                 </SummaryItem>
               </SummaryCard>
 
@@ -306,33 +343,47 @@ const BillAssignedToday = () => {
                     <BillCard key={bill._id}>
                       <BillHeader>
                         <BillNumber>Bill #{bill.billNumber}</BillNumber>
-                        <BillStatus status={bill.status}>
+                        <BillStatus
+                          status={bill.status.toLowerCase().replace(" ", "")}
+                        >
                           {bill.status}
                         </BillStatus>
                       </BillHeader>
                       <BillRetailer>{bill.retailer}</BillRetailer>
                       <BillDetails>
                         <DetailItem>
-                          <DetailLabel>Amount:</DetailLabel>
+                          <DetailLabel>Bill Amount:</DetailLabel>
                           <DetailValue>
                             {formatCurrency(bill.amount)}
                           </DetailValue>
                         </DetailItem>
                         <DetailItem>
-                          <DetailLabel>Due Amount:</DetailLabel>
+                          <DetailLabel>Amount Collected:</DetailLabel>
                           <DetailValue>
-                            {formatCurrency(bill.dueAmount || bill.amount)}
+                            {formatCurrency(bill.amountCollected || 0)}
+                          </DetailValue>
+                        </DetailItem>
+                        <DetailItem>
+                          <DetailLabel>Amount Due:</DetailLabel>
+                          <DetailValue>
+                          {formatCurrency(Math.max(0, (bill.dueAmount || bill.amount) - (bill.amountCollected || 0)))}
+                          </DetailValue>
+                        </DetailItem>
+                        <DetailItem>
+                          <DetailLabel>Status:</DetailLabel>
+                          <DetailValue>
+                            <BillStatus
+                              status={bill.status
+                                .toLowerCase()
+                                .replace(" ", "")}
+                            >
+                              {bill.status}
+                            </BillStatus>
                           </DetailValue>
                         </DetailItem>
                         <DetailItem>
                           <DetailLabel>Due Date:</DetailLabel>
                           <DetailValue>{formatDate(bill.dueDate)}</DetailValue>
-                        </DetailItem>
-                        <DetailItem>
-                          <DetailLabel>Assigned Date:</DetailLabel>
-                          <DetailValue>
-                            {formatDate(bill.assignedDate || bill.billDate)}
-                          </DetailValue>
                         </DetailItem>
                       </BillDetails>
                       <BillIcon>
@@ -355,101 +406,110 @@ const BillAssignedToday = () => {
           )}
         </ContentArea>
         {showCollectionModal && (
-  <ModalOverlay>
-    <Modal>
-      <ModalHeader>
-        <ModalTitle>Record New Collection</ModalTitle>
-        <CloseButton onClick={() => {
-          setShowCollectionModal(false);
-          setSelectedBill(null);
-          setPaymentAmount('');
-          setPaymentMode('cash');
-          setSubmitError('');
-        }}>
-          &times;
-        </CloseButton>
-      </ModalHeader>
-      <ModalBody>
-        {!selectedBill ? (
-          <>
-            <ModalSubtitle>Select a Bill</ModalSubtitle>
-            <BillSelection>
-              {bills.map(bill => (
-                <BillOption 
-                  key={bill._id} 
-                  onClick={() => setSelectedBill(bill)}
+          <ModalOverlay>
+            <Modal>
+              <ModalHeader>
+                <ModalTitle>Record New Collection</ModalTitle>
+                <CloseButton
+                  onClick={() => {
+                    setShowCollectionModal(false);
+                    setSelectedBill(null);
+                    setPaymentAmount("");
+                    setPaymentMode("cash");
+                    setSubmitError("");
+                  }}
                 >
-                  <div>Bill #{bill.billNumber}</div>
-                  <div>{bill.retailer}</div>
-                  <div>Due: {formatCurrency(bill.dueAmount || bill.amount)}</div>
-                </BillOption>
-              ))}
-            </BillSelection>
-          </>
-        ) : (
-          <>
-            <SelectedBillInfo>
-              <div>
-                <strong>Bill #:</strong> {selectedBill.billNumber}
-              </div>
-              <div>
-                <strong>Retailer:</strong> {selectedBill.retailer}
-              </div>
-              <div>
-                <strong>Due Amount:</strong> {formatCurrency(selectedBill.dueAmount || selectedBill.amount)}
-              </div>
-            </SelectedBillInfo>
-            
-            <FormGroup>
-              <Label htmlFor="paymentAmount">Amount Paid</Label>
-              <Input
-                type="number"
-                id="paymentAmount"
-                value={paymentAmount}
-                onChange={(e) => setPaymentAmount(e.target.value)}
-                placeholder="Enter amount paid"
-                max={selectedBill.dueAmount || selectedBill.amount}
-                min="1"
-              />
-            </FormGroup>
-            
-            <FormGroup>
-              <Label htmlFor="paymentMode">Payment Mode</Label>
-              <Select
-                id="paymentMode"
-                value={paymentMode}
-                onChange={(e) => setPaymentMode(e.target.value)}
-              >
-                <option value="cash">Cash</option>
-                <option value="cheque">Cheque</option>
-                <option value="bank_transfer">Bank Transfer</option>
-                <option value="upi">UPI</option>
-              </Select>
-            </FormGroup>
-            
-            {submitError && <ErrorText>{submitError}</ErrorText>}
-            
-            <ButtonGroup>
-              <BackButton onClick={() => {
-                setSelectedBill(null);
-                setPaymentAmount('');
-                setSubmitError('');
-              }}>
-                Back to Bill Selection
-              </BackButton>
-              <SubmitButton 
-                onClick={handleCollectionSubmit}
-                disabled={isSubmitting || !paymentAmount}
-              >
-                {isSubmitting ? 'Processing...' : 'Submit Collection'}
-              </SubmitButton>
-            </ButtonGroup>
-          </>
+                  &times;
+                </CloseButton>
+              </ModalHeader>
+              <ModalBody>
+                {!selectedBill ? (
+                  <>
+                    <ModalSubtitle>Select a Bill</ModalSubtitle>
+                    <BillSelection>
+                      {bills.map((bill) => (
+                        <BillOption
+                          key={bill._id}
+                          onClick={() => setSelectedBill(bill)}
+                        >
+                          <div>Bill #{bill.billNumber}</div>
+                          <div>{bill.retailer}</div>
+                          <div>
+                            Due: {formatCurrency(bill.dueAmount || bill.amount)}
+                          </div>
+                        </BillOption>
+                      ))}
+                    </BillSelection>
+                  </>
+                ) : (
+                  <>
+                    <SelectedBillInfo>
+                      <div>
+                        <strong>Bill #:</strong> {selectedBill.billNumber}
+                      </div>
+                      <div>
+                        <strong>Retailer:</strong> {selectedBill.retailer}
+                      </div>
+                      <div>
+                        <strong>Due Amount:</strong>{" "}
+                        {formatCurrency(
+                          selectedBill.dueAmount || selectedBill.amount
+                        )}
+                      </div>
+                    </SelectedBillInfo>
+
+                    <FormGroup>
+                      <Label htmlFor="paymentAmount">Amount Paid</Label>
+                      <Input
+                        type="number"
+                        id="paymentAmount"
+                        value={paymentAmount}
+                        onChange={(e) => setPaymentAmount(e.target.value)}
+                        placeholder="Enter amount paid"
+                        max={selectedBill.dueAmount || selectedBill.amount}
+                        min="1"
+                      />
+                    </FormGroup>
+
+                    <FormGroup>
+                      <Label htmlFor="paymentMode">Payment Mode</Label>
+                      <Select
+                        id="paymentMode"
+                        value={paymentMode}
+                        onChange={(e) => setPaymentMode(e.target.value)}
+                      >
+                        <option value="cash">Cash</option>
+                        <option value="cheque">Cheque</option>
+                        <option value="bank_transfer">Bank Transfer</option>
+                        <option value="upi">UPI</option>
+                      </Select>
+                    </FormGroup>
+
+                    {submitError && <ErrorText>{submitError}</ErrorText>}
+
+                    <ButtonGroup>
+                      <BackButton
+                        onClick={() => {
+                          setSelectedBill(null);
+                          setPaymentAmount("");
+                          setSubmitError("");
+                        }}
+                      >
+                        Back to Bill Selection
+                      </BackButton>
+                      <SubmitButton
+                        onClick={handleCollectionSubmit}
+                        disabled={isSubmitting || !paymentAmount}
+                      >
+                        {isSubmitting ? "Processing..." : "Submit Collection"}
+                      </SubmitButton>
+                    </ButtonGroup>
+                  </>
+                )}
+              </ModalBody>
+            </Modal>
+          </ModalOverlay>
         )}
-      </ModalBody>
-    </Modal>
-  </ModalOverlay>
-)}
       </MainContent>
     </DashboardLayout>
   );

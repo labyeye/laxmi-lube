@@ -22,6 +22,12 @@ const BillSchema = new mongoose.Schema(
       type: Number,
       required: [true, "Due amount is required"],
       min: [0, "Due amount cannot be negative"],
+      validate: {
+        validator: function(value) {
+          return value <= this.amount;
+        },
+        message: 'Due amount cannot exceed total bill amount'
+      }
     },
     dueDate: {
       type: Date,
@@ -43,10 +49,10 @@ const BillSchema = new mongoose.Schema(
     assignedDate: {
       type: Date,
     },
-    collectedBy: {
+    collections: [{
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
+      ref: 'Collection'
+    }],
     paymentDate: {
       type: Date,
     },
@@ -57,15 +63,7 @@ const BillSchema = new mongoose.Schema(
     notes: {
       type: String,
       trim: true,
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-    updatedAt: {
-      type: Date,
-      default: Date.now,
-    },
+    }
   },
   {
     timestamps: true,
@@ -74,57 +72,70 @@ const BillSchema = new mongoose.Schema(
   }
 );
 
-BillSchema.pre("save", function (next) {
-  this.updatedAt = Date.now();
+// Virtual for total collected amount
+BillSchema.virtual('collectedAmount').get(function() {
+  return this.amount - this.dueAmount;
+});
 
-  if (this.isModified("assignedTo") && this.assignedTo) {
-    this.assignedDate = new Date();
+// Virtual for checking if bill is overdue
+BillSchema.virtual('isOverdue').get(function() {
+  return this.status !== "Paid" && new Date() > this.dueDate;
+});
+
+// Pre-save hook to maintain data consistency
+BillSchema.pre("save", function (next) {
+  // Ensure dueAmount doesn't exceed amount
+  if (this.dueAmount > this.amount) {
+    this.dueAmount = this.amount;
   }
 
-  if (
-    this.isModified("status") &&
-    this.status === "Paid" &&
-    !this.paymentDate
-  ) {
-    this.paymentDate = new Date();
+  // Auto-update status based on payments
+  if (this.isModified('dueAmount')) {
+    if (this.dueAmount <= 0) {
+      this.status = "Paid";
+      this.paymentDate = this.paymentDate || new Date();
+    } else if (this.dueAmount < this.amount) {
+      this.status = "Partially Paid";
+    } else {
+      this.status = "Unpaid";
+    }
+  }
+
+  // Set assigned date when assigning staff
+  if (this.isModified("assignedTo") && this.assignedTo) {
+    this.assignedDate = new Date();
   }
 
   next();
 });
 
-BillSchema.virtual("remainingAmount").get(function () {
-  return this.dueAmount - (this.amount - this.dueAmount);
-});
-
-BillSchema.virtual("staffName", {
-  ref: "User",
-  localField: "assignedTo",
-  foreignField: "_id",
-  justOne: true,
-  options: { select: "name" },
-});
-
-BillSchema.methods.isOverdue = function () {
-  return this.status !== "Paid" && new Date() > this.dueDate;
+// Method to calculate remaining amount (more accurate version)
+BillSchema.methods.calculateRemainingAmount = async function() {
+  await this.populate('collections');
+  const totalCollected = this.collections.reduce(
+    (sum, collection) => sum + collection.amountCollected, 0
+  );
+  return Math.max(0, this.amount - totalCollected);
 };
 
-BillSchema.methods.assignToStaff = async function (staffId) {
-  this.assignedTo = staffId;
-  this.assignedDate = new Date();
+// Method to update payment status
+BillSchema.methods.updatePaymentStatus = async function() {
+  const remainingAmount = await this.calculateRemainingAmount();
+  
+  if (remainingAmount <= 0) {
+    this.status = "Paid";
+    this.paymentDate = new Date();
+  } else if (remainingAmount < this.amount) {
+    this.status = "Partially Paid";
+  } else {
+    this.status = "Unpaid";
+  }
+  
+  this.dueAmount = remainingAmount;
   return this.save();
 };
 
-BillSchema.methods.markAsPaid = async function (
-  userId,
-  paymentMethod = "Cash"
-) {
-  this.status = "Paid";
-  this.collectedBy = userId;
-  this.paymentDate = new Date();
-  this.paymentMethod = paymentMethod;
-  return this.save();
-};
-
+// Indexes
 BillSchema.index({ dueDate: 1 });
 BillSchema.index({ billNumber: 1 }, { unique: true });
 BillSchema.index({ retailer: 1 });

@@ -1,69 +1,79 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const multer = require('multer');
-const xlsx = require('xlsx');
-const fs = require('fs');
-const Bill = require('../models/Bill');
-const { protect, adminOnly } = require('../middleware/authMiddleware');
+const multer = require("multer");
+const xlsx = require("xlsx");
+const fs = require("fs");
+const Bill = require("../models/Bill");
+const Collection = require("../models/Collection");
+const { protect, adminOnly } = require("../middleware/authMiddleware");
 
 const storage = multer.diskStorage({
-  destination: function(req, file, cb) {
-    const uploadDir = 'uploads/';
+  destination: function (req, file, cb) {
+    const uploadDir = "uploads/";
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
     cb(null, uploadDir);
   },
-  filename: function(req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + '-' + file.originalname);
-  }
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, file.fieldname + "-" + uniqueSuffix + "-" + file.originalname);
+  },
 });
 
 const upload = multer({ storage: storage });
 
-router.post('/', protect, adminOnly, async (req, res) => {
+// Create new bill
+router.post("/", protect, adminOnly, async (req, res) => {
   try {
-    const { billNumber, retailer, amount, dueAmount, dueDate, billDate, status } = req.body;
-
-    const newBill = new Bill({
+    const {
       billNumber,
       retailer,
       amount,
       dueAmount,
       dueDate,
       billDate,
-      status: status || 'Unpaid',
+      status,
+    } = req.body;
+
+    const newBill = new Bill({
+      billNumber,
+      retailer,
+      amount,
+      dueAmount: dueAmount || amount, // Default to full amount if not specified
+      dueDate,
+      billDate,
+      status: status || "Unpaid",
     });
 
     await newBill.save();
     res.status(201).json(newBill);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to add bill', error: err.message });
+    res.status(500).json({ message: "Failed to add bill", error: err.message });
   }
 });
 
-router.put('/:billId/assign', protect, adminOnly, async (req, res) => {
+// Assign bill to staff
+router.put("/:billId/assign", protect, adminOnly, async (req, res) => {
   try {
     const { staffId } = req.body;
     if (!staffId) {
-      return res.status(400).json({ message: 'Staff ID is required' });
+      return res.status(400).json({ message: "Staff ID is required" });
     }
 
     const bill = await Bill.findByIdAndUpdate(
       req.params.billId,
-      { 
+      {
         assignedTo: staffId,
-        assignedDate: new Date()
+        assignedDate: new Date(),
       },
-      { new: true } // Return the updated document
-    ).populate('assignedTo', 'name'); // Only populate the name field
+      { new: true }
+    ).populate("assignedTo", "name");
 
     if (!bill) {
-      return res.status(404).json({ message: 'Bill not found' });
+      return res.status(404).json({ message: "Bill not found" });
     }
 
-    // Return a consistent response format
     res.json({
       _id: bill._id,
       billNumber: bill.billNumber,
@@ -72,75 +82,163 @@ router.put('/:billId/assign', protect, adminOnly, async (req, res) => {
       dueDate: bill.dueDate,
       status: bill.status,
       assignedTo: bill.assignedTo?._id || null,
-      assignedToName: bill.assignedTo?.name || null
+      assignedToName: bill.assignedTo?.name || null,
     });
   } catch (err) {
-    res.status(500).json({ message: 'Failed to assign bill', error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to assign bill", error: err.message });
   }
 });
 
-router.get('/', protect, async (req, res) => {
+// Get all bills with collections data
+router.get("/", protect, async (req, res) => {
   try {
-    let bills;
-    if (req.user.role === 'admin') {
-      bills = await Bill.find()
-        .populate('assignedTo', 'name') // Only populate necessary fields
-        .sort({ dueDate: 1 })
-        .lean(); // Convert to plain JavaScript objects
-    } else {
-      bills = await Bill.find({ assignedTo: req.user._id })
-        .populate('assignedTo', 'name')
-        .sort({ dueDate: 1 })
-        .lean();
+    let query = {};
+    if (req.user.role !== "admin") {
+      query.assignedTo = req.user._id;
     }
 
-    // Format the response consistently
-    const formattedBills = bills.map(bill => ({
-      ...bill,
-      assignedTo: bill.assignedTo?._id || null,
-      assignedToName: bill.assignedTo?.name || null
-    }));
+    const bills = await Bill.find(query)
+      .populate("assignedTo", "name")
+      .populate({
+        path: "collections",
+        select: "amountCollected paymentDate paymentMode",
+      })
+      .sort({ dueDate: 1 })
+      .lean();
 
-    res.json(formattedBills);
+    // Calculate collected and due amounts for each bill
+    const processedBills = bills.map((bill) => {
+      const collectedAmount =
+        bill.collections.reduce(
+          (sum, collection) => sum + (collection.amountCollected || 0),
+          0
+        ) || 0;
+
+      const dueAmount = Math.max(0, bill.amount - collectedAmount);
+
+      let status = bill.status;
+      if (collectedAmount >= bill.amount) {
+        status = "Paid";
+      } else if (collectedAmount > 0) {
+        status = "Partially Paid";
+      }
+
+      return {
+        ...bill,
+        amountCollected: collectedAmount,
+        dueAmount,
+        status,
+        assignedTo: bill.assignedTo?._id || null,
+        assignedToName: bill.assignedTo?.name || null,
+      };
+    });
+
+    res.json(processedBills);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch bills', error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to fetch bills", error: err.message });
   }
 });
-// Add this to your existing billRoutes.js
-// In your billRoutes.js
-router.put('/:id', protect, async (req, res) => {
+
+// Update bill status and due amount
+router.put("/:id", protect, async (req, res) => {
   try {
     const { status, dueAmount } = req.body;
-    
+
     const bill = await Bill.findById(req.params.id);
     if (!bill) {
-      return res.status(404).json({ message: 'Bill not found' });
+      return res.status(404).json({ message: "Bill not found" });
     }
 
-    // Update the fields if they're provided
+    // Prevent negative due amounts
+    if (dueAmount !== undefined && dueAmount < 0) {
+      return res.status(400).json({ message: "Due amount cannot be negative" });
+    }
+
+    // Update fields
     if (status !== undefined) bill.status = status;
     if (dueAmount !== undefined) bill.dueAmount = dueAmount;
 
     await bill.save();
-    
+
     res.json(bill);
   } catch (err) {
-    res.status(500).json({ 
-      message: 'Failed to update bill',
-      error: err.message 
+    res.status(500).json({
+      message: "Failed to update bill",
+      error: err.message,
     });
   }
 });
 
-router.delete('/:id', protect, adminOnly, async (req, res) => {
+// Delete bill
+router.delete("/:id", protect, adminOnly, async (req, res) => {
   try {
+    // First delete all associated collections
+    await Collection.deleteMany({ bill: req.params.id });
+
+    // Then delete the bill
     const bill = await Bill.findByIdAndDelete(req.params.id);
     if (!bill) {
-      return res.status(404).json({ message: 'Bill not found' });
+      return res.status(404).json({ message: "Bill not found" });
     }
-    res.json({ message: 'Bill deleted successfully' });
+    res.json({ message: "Bill deleted successfully" });
   } catch (err) {
-    res.status(500).json({ message: 'Failed to delete bill', error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to delete bill", error: err.message });
+  }
+});
+// In billRoutes.js - update the /staff/bills-assigned-today route
+// In billRoutes.js - update the bills-assigned-today endpoint
+router.get("/staff/bills-assigned-today", protect, async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const bills = await Bill.find({
+      assignedTo: req.user._id,
+      assignedDate: { $gte: today },
+    })
+      .populate({
+        path: "collections",
+        select: "amountCollected paymentDate paymentMode collectedBy",
+      })
+      .lean();
+
+    const processedBills = bills.map((bill) => {
+      const totalCollected = bill.collections.reduce(
+        (sum, collection) => sum + (collection.amountCollected || 0),
+        0
+      );
+
+      const dueAmount = Math.max(0, bill.amount - totalCollected);
+      
+      let status = bill.status;
+      if (totalCollected >= bill.amount) {
+        status = "Paid";
+      } else if (totalCollected > 0) {
+        status = "Partially Paid";
+      } else {
+        status = "Unpaid";
+      }
+
+      return {
+        ...bill,
+        amountCollected: totalCollected,
+        dueAmount,
+        status,
+      };
+    });
+
+    res.json(processedBills);
+  } catch (err) {
+    res.status(500).json({
+      message: "Failed to fetch bills",
+      error: err.message,
+    });
   }
 });
 

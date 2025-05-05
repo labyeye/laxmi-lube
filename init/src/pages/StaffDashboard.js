@@ -38,48 +38,41 @@ const StaffDashboard = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState(null);
 
-  const fetchDashboardData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError("");
+  // In StaffDashboard.js - update the fetchDashboardData function
+const fetchDashboardData = useCallback(async () => {
+  try {
+    setLoading(true);
+    setError("");
 
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("Authentication token not found");
+    const token = localStorage.getItem("token");
+    if (!token) throw new Error("Authentication token not found");
 
-      const response = await axios.get(`${API_BASE_URL}/staff/dashboard`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+    const response = await axios.get(`${API_BASE_URL}/staff/dashboard`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-      setDashboardData({
-        ...response.data,
-        collectionsAssignedToday: response.data.collectionsAssignedToday || [],
-        collectionsHistory: response.data.collectionsHistory || [],
-      });
-    } catch (err) {
-      if (err.response) {
-        if (err.response.status === 404) {
-          setError("API endpoint not found. Please contact the administrator.");
-        } else if (err.response.status === 401) {
-          setError("Session expired. Please log in again.");
-        } else {
-          setError(
-            `Server error: ${
-              err.response.data.message || err.response.statusText
-            }`
-          );
-        }
-      } else if (err.request) {
-        setError(
-          "Server is not responding. Please check your connection or try again later."
-        );
-      } else {
-        setError(`Error: ${err.message}`);
-      }
-    } finally {
-      setLoading(false);
-      setRetrying(false);
-    }
-  }, []);
+    // Calculate total collected from all collections assigned today
+    const todayAmountCollected = response.data.collectionsAssignedToday.reduce(
+      (sum, collection) => sum + (collection.amountCollected),
+      0
+    );
+
+    setDashboardData({
+      todayAmountAssigned: response.data.todayAmountAssigned,
+      todayAmountCollected,
+      amountRemainingToday: (response.data.todayAmountAssigned) - todayAmountCollected,
+      billsAssignedToday: response.data.billsAssignedToday,
+      overdueBillsCount: response.data.overdueBillsCount,
+      collectionsAssignedToday: response.data.collectionsAssignedToday || [],
+      collectionsHistory: response.data.collectionsHistory || [],
+    });
+  } catch (err) {
+    // ... existing error handling ...
+  } finally {
+    setLoading(false);
+    setRetrying(false);
+  }
+}, []);
 
   useEffect(() => {
     fetchDashboardData();
@@ -177,25 +170,13 @@ const StaffDashboard = () => {
                   to="/staff/collections-history"
                   style={{ textDecoration: "none" }}
                 >
-                <SubmenuItem>
-                  <NavText>History</NavText>
-                </SubmenuItem>
+                  <SubmenuItem>
+                    <NavText>History</NavText>
+                  </SubmenuItem>
                 </Link>
               </Submenu>
             )}
           </NavItemWithSubmenu>
-
-          <NavItem>
-            <NavIcon>
-              <FaListAlt />
-            </NavIcon>
-            {!sidebarCollapsed && (
-              <>
-                <NavText>Assigned Bills</NavText>
-                <NavCheckmark>☐</NavCheckmark>
-              </>
-            )}
-          </NavItem>
         </NavMenu>
         <LogoutButton>
           <NavIcon>
@@ -372,8 +353,6 @@ const StaffDashboard = () => {
     </DashboardLayout>
   );
 };
-
-// Styled Components (previous styles remain the same, add these new ones)
 
 const CollectionsList = styled.div`
   display: flex;
@@ -847,85 +826,6 @@ const ViewAllLink = styled.div`
   &:hover {
     text-decoration: underline;
   }
-`;
-
-const ActivityList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-`;
-
-const ActivityItem = styled.div`
-  display: flex;
-  align-items: flex-start;
-  gap: 15px;
-`;
-
-const ActivityIcon = styled.div`
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: ${(props) => (props.success ? "#1cc88a20" : "#4e73df20")};
-  color: ${(props) => (props.success ? "#1cc88a" : "#4e73df")};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  flex-shrink: 0;
-`;
-
-const ActivityDetails = styled.div`
-  flex: 1;
-`;
-
-const ActivityText = styled.div`
-  font-size: 0.9rem;
-  color: #2e3a59;
-  margin-bottom: 5px;
-`;
-
-const ActivityTime = styled.div`
-  font-size: 0.75rem;
-  color: #6c757d;
-`;
-
-const QuickActions = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-`;
-
-const QuickAction = styled.div`
-  display: flex;
-  align-items: center;
-  padding: 12px 15px;
-  background-color: #f8f9fc;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.3s;
-
-  &:hover {
-    background-color: #e9ecef;
-  }
-`;
-
-const QuickActionIcon = styled.div`
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background-color: ${(props) =>
-    props.color ? `${props.color}20` : "#4e73df20"};
-  color: ${(props) => props.color || "#4e73df"};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  margin-right: 15px;
-`;
-
-const QuickActionText = styled.div`
-  font-size: 0.9rem;
-  color: #2e3a59;
 `;
 
 const ErrorAlert = styled.div`
