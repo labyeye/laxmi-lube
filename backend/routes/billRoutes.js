@@ -185,7 +185,6 @@ router.delete("/:id", protect, adminOnly, async (req, res) => {
       .json({ message: "Failed to delete bill", error: err.message });
   }
 });
-
 router.post(
   "/import",
   protect,
@@ -196,6 +195,17 @@ router.post(
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
+
+      // Day abbreviations mapping
+      const dayAbbreviations = {
+        "MON": "Monday",
+        "TUE": "Tuesday",
+        "WED": "Wednesday",
+        "THU": "Thursday",
+        "FRI": "Friday",
+        "SAT": "Saturday",
+        "SUN": "Sunday"
+      };
 
       // Read file with cellDates option to properly handle Excel dates
       const workbook = xlsx.readFile(req.file.path, { cellDates: true });
@@ -252,7 +262,7 @@ router.post(
           const billRec = getValue(row, ["billrec", "received amount"]);
           const billBalance = getValue(row, ["billbalance", "balance"]);
           const staffName = getValue(row, ["staff name", "staff"]);
-          const collectionDay = getValue(row, ["day", "collectionday"]);
+          const collectionDayInput = getValue(row, ["day", "collectionday"]);
 
           // Skip if this is a header row or empty row
           if (!custName && !billNo && !billAmt) {
@@ -260,9 +270,23 @@ router.post(
           }
 
           // Validate required fields
-          if (!custName || !billNo || !billAmt || !billDateValue || !collectionDay) {
+          if (!custName || !billNo || !billAmt || !billDateValue) {
             errors.push(`Row ${index + 2}: Missing required fields`);
             continue;
+          }
+
+          // Process collection day (accept both full names and abbreviations)
+          // Set default to Sunday if missing or empty
+          let collectionDay = "Sunday"; // Default to Sunday if empty
+          
+          if (collectionDayInput) {
+            if (dayAbbreviations[collectionDayInput?.toUpperCase()]) {
+              collectionDay = dayAbbreviations[collectionDayInput.toUpperCase()];
+            } else if (["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].includes(collectionDayInput)) {
+              collectionDay = collectionDayInput;
+            } else {
+              errors.push(`Row ${index + 2}: Invalid collection day format "${collectionDayInput}" - defaulting to Sunday`);
+            }
           }
 
           // Check for duplicate bill number AND customer name in this import
@@ -306,12 +330,6 @@ router.post(
             continue;
           }
 
-          // Validate collection day
-          if (!["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].includes(collectionDay)) {
-            errors.push(`Row ${index + 2}: Invalid or missing collection day`);
-            continue;
-          }
-
           // Determine status
           let status = "Unpaid";
           if (balance <= 0) {
@@ -338,7 +356,7 @@ router.post(
               billNumber: billNo,
               retailer: custName
             });
-
+            
             if (existingBill) {
               errors.push(`Row ${index + 2}: Bill number ${billNo} for customer ${custName} already exists in database`);
               continue;
