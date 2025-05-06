@@ -10,6 +10,16 @@ const collectionSchema = new mongoose.Schema({
     required: [true, "Amount collected is required"],
     min: [1, "Amount collected must be at least 1"] 
   },
+  receiptNumber: {
+    type: String,
+    required: function() { return this.paymentMode === 'cash'; },
+    default: function() {
+      if (this.paymentMode === 'cash') {
+        return 'RC-' + Date.now().toString().slice(-6);
+      }
+      return null;
+    }
+  },
   paymentMode: { 
     type: String, 
     required: [true, "Payment mode is required"],

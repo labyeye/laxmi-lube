@@ -5,6 +5,7 @@ const xlsx = require("xlsx");
 const fs = require("fs");
 const Bill = require("../models/Bill");
 const Collection = require("../models/Collection");
+
 const {
   protect,
   adminOnly,
@@ -57,7 +58,21 @@ router.post("/", protect, adminOnly, async (req, res) => {
     res.status(500).json({ message: "Failed to add bill", error: err.message });
   }
 });
-
+router.post("/collections", protect, async (req, res) => {
+  try {
+    const collectionData = {
+      ...req.body,
+      collectedBy: req.user._id
+    };
+    
+    const newCollection = new Collection(collectionData);
+    await newCollection.save();
+    
+    res.status(201).json(newCollection);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to create collection", error: err.message });
+  }
+});
 router.put("/:billId/assign", protect, adminOnly, async (req, res) => {
   try {
     const { staffId } = req.body;
@@ -432,25 +447,17 @@ router.get("/by-collection-day/:day", protect, async (req, res) => {
       .json({ message: "Failed to fetch bills", error: err.message });
   }
 });
-
 router.get("/bills-assigned-today", protect, staffOnly, async (req, res) => {
   try {
-    const today = new Date();
-    const dayOfWeek = req.query.collectionDay || [
-      "Sunday",
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-      "Saturday",
-    ][today.getDay()];
-
     const query = {
       assignedTo: req.user._id,
-      collectionDay: dayOfWeek,
       status: { $ne: "Paid" }
     };
+
+    // Only add collectionDay filter if specific day is requested
+    if (req.query.collectionDay && req.query.collectionDay !== "All") {
+      query.collectionDay = req.query.collectionDay;
+    }
 
     const bills = await Bill.find(query)
       .populate("assignedTo", "name")
