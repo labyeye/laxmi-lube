@@ -423,13 +423,14 @@ const BillAssignedToday = () => {
                 <BillsList>
                   {(selectedCustomer ? customerBills : bills).map((bill) => (
                     <BillCard key={bill._id}>
+                      <BillRetailer>{bill.retailer}</BillRetailer>
+
                       <BillHeader>
                         <BillNumber>Bill #{bill.billNumber}</BillNumber>
                         <BillStatus status={bill.status}>
                           {bill.status}
                         </BillStatus>
                       </BillHeader>
-                      <BillRetailer>{bill.retailer}</BillRetailer>
                       <BillDetails>
                         <DetailItem>
                           <DetailLabel>Amount:</DetailLabel>
@@ -1387,7 +1388,7 @@ const BillHeader = styled.div`
 const BillNumber = styled.div`
   font-weight: 600;
   color: #2e3a59;
-  font-size: 1.1rem;
+  font-size: 0.9rem;
 `;
 
 const BillStatus = styled.div`
@@ -1410,8 +1411,8 @@ const BillStatus = styled.div`
 `;
 
 const BillRetailer = styled.div`
-  font-size: 0.9rem;
-  color: #6c757d;
+  font-size: 1.2rem;
+  color:rgb(16, 16, 236);
   margin-bottom: 15px;
 `;
 
