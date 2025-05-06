@@ -33,7 +33,7 @@ const CollectionsHistory = () => {
       setLoading(true);
       setError("");
       
-      const response = await axios.get("https://laxmi-lube.onrender.com/api/collections", {
+      const response = await axios.get("http://localhost:2500/api/collections", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       
