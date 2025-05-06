@@ -616,7 +616,7 @@ const BillAssignedToday = () => {
                             setPaymentAmount(selectedBill?.dueAmount.toFixed(2))
                           }
                         >
-                          Max
+                          All Dues
                         </MaxButton>
                       </AmountInputContainer>
                     </FormGroup>
