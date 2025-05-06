@@ -29,6 +29,8 @@ const BillAssignedToday = () => {
     bankTransactionId: "",
   });
   const [bills, setBills] = useState([]);
+  const [selectedDay, setSelectedDay] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [retrying, setRetrying] = useState(false);
@@ -46,6 +48,10 @@ const BillAssignedToday = () => {
   const [customers, setCustomers] = useState([]);
 
   const navigate = useNavigate();
+  const handleDaySelect = (day) => {
+    setSelectedDay(day === "All" ? null : day);
+    setSelectedCustomer(null);
+  };
 
   useEffect(() => {
     if (bills.length > 0) {
@@ -62,26 +68,42 @@ const BillAssignedToday = () => {
   const fetchBillsAssignedToday = async () => {
     try {
       setLoading(true);
-    setError("");
-    const today = new Date();
-    const dayOfWeek = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][today.getDay()];
-    const response = await axios.get(
-      "https://laxmi-lube.onrender.com/api/staff/bills-assigned-today",
-      {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        params: {
-          date: today.toISOString().split('T')[0],
-          collectionDay: dayOfWeek // Pass the day
-        }
+      setError("");
+      const today = new Date();
+      let dayOfWeek = null;
+
+      // If no day is selected, use today's day
+      if (!selectedDay) {
+        dayOfWeek = [
+          "Sunday",
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+        ][today.getDay()];
+      } else {
+        dayOfWeek = selectedDay;
       }
-    );
-  
+
+      const response = await axios.get(
+        "https://laxmi-lube.onrender.com/api/staff/bills-assigned-today",
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          params: {
+            date: today.toISOString().split("T")[0],
+            collectionDay: dayOfWeek,
+          },
+        }
+      );
+
       const billsWithDates = response.data.map((bill) => ({
         ...bill,
         billDate: new Date(bill.billDate),
         assignedDate: bill.assignedDate ? new Date(bill.assignedDate) : null,
       }));
-  
+
       setBills(billsWithDates);
     } catch (error) {
       console.error("Error fetching bills assigned today:", error);
@@ -94,7 +116,7 @@ const BillAssignedToday = () => {
 
   useEffect(() => {
     fetchBillsAssignedToday();
-  }, []);
+  }, [selectedDay]);
 
   const handleCollectionSubmit = async () => {
     try {
@@ -365,6 +387,32 @@ const BillAssignedToday = () => {
                   <SummaryValue>{formatCurrency(averageAmount)}</SummaryValue>
                 </SummaryItem>
               </SummaryCard>
+              <DayFilterContainer>
+                <DayButton
+                  active={!selectedDay}
+                  onClick={() => handleDaySelect("All")}
+                >
+                  All
+                </DayButton>
+                {[
+                  "Monday",
+                  "Tuesday",
+                  "Wednesday",
+                  "Thursday",
+                  "Friday",
+                  "Saturday",
+                  "Sunday",
+                ].map((day) => (
+                  <DayButton
+                    key={day}
+                    active={selectedDay === day}
+                    onClick={() => handleDaySelect(day)}
+                  >
+                    {day.substring(0, 3)}
+                  </DayButton>
+                ))}
+              </DayFilterContainer>
+
               <CustomerSelector>
                 <Label>Select Customer:</Label>
                 <Select
@@ -806,6 +854,31 @@ const CustomerBillsContainer = styled.div`
   border: 1px solid #eee;
   border-radius: 8px;
   padding: 10px;
+`;
+const DayFilterContainer = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+`;
+
+const DayButton = styled.button`
+  padding: 8px 12px;
+  border: 1px solid ${props => props.active ? '#4e73df' : '#ddd'};
+  border-radius: 20px;
+  background-color: ${props => props.active ? '#4e73df' : 'white'};
+  color: ${props => props.active ? 'white' : '#6c757d'};
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: ${props => props.active ? '#3a5bc7' : '#f8f9fc'};
+    border-color: ${props => props.active ? '#3a5bc7' : '#4e73df'};
+  }
 `;
 
 const OverdueBadge = styled.span`
