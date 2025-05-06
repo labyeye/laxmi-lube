@@ -178,7 +178,7 @@ const StaffDashboard = () => {
           {!sidebarCollapsed && (
             <UserInfo>
             <UserName>{staffInfo.name}</UserName>
-            <UserRole>{staffInfo.role === "Collections" ? `${staffInfo.name}'s Collections` : staffInfo.role}</UserRole>
+            <UserRole>DSR</UserRole>
           </UserInfo>
           )}
         </UserProfile>
