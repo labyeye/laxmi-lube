@@ -110,9 +110,12 @@ const BillsPage = () => {
 
     const token = localStorage.getItem("token");
     try {
-      await axios.delete(`https://laxmi-lube.onrender.com/api/bills/${billId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.delete(
+        `https://laxmi-lube.onrender.com/api/bills/${billId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       setBills(bills.filter((bill) => bill._id !== billId));
       setMessage("Bill successfully deleted");
@@ -184,43 +187,51 @@ const BillsPage = () => {
                     <th>Actions</th>
                   </tr>
                 </thead>
-<tbody>
-  {filteredBills.length > 0 ? (
-    filteredBills.map((bill) => (
-      <tr key={bill._id}>
-        <td>{bill.billNumber}</td>
-        <td>{bill.retailer}</td>
-        <td>{formatCurrency(bill.amount)}</td>
-        <td>{new Date(bill.billDate).toLocaleDateString()}</td> {/* Changed from dueDate to billDate */}
-        <td>
-          <StatusBadge status={bill.status}>
-            {bill.status}
-          </StatusBadge>
-        </td>
-        <td>{bill.assignedToName || "Not Assigned"}</td>
-        <td>
-          <ActionButtons>
-            <AssignButton onClick={() => openAssignModal(bill)}>
-              <FaUserPlus />
-            </AssignButton>
-            <EditButton onClick={() => handleEditBill(bill)}>
-              <FaEdit />
-            </EditButton>
-            <DeleteButton onClick={() => handleDeleteBill(bill._id)}>
-              <FaTrash />
-            </DeleteButton>
-          </ActionButtons>
-        </td>
-      </tr>
-    ))
-  ) : (
-    <tr>
-      <td colSpan="7" style={{ textAlign: "center", padding: "20px" }}>
-        No bills found matching your search
-      </td>
-    </tr>
-  )}
-</tbody>
+                <tbody>
+                  {filteredBills.length > 0 ? (
+                    filteredBills.map((bill) => (
+                      <tr key={bill._id}>
+                        <td>{bill.billNumber}</td>
+                        <td>{bill.retailer}</td>
+                        <td>{formatCurrency(bill.amount)}</td>
+                        <td>
+                          {new Date(bill.billDate).toLocaleDateString()}
+                        </td>{" "}
+                        {/* Changed from dueDate to billDate */}
+                        <td>
+                          <StatusBadge status={bill.status}>
+                            {bill.status}
+                          </StatusBadge>
+                        </td>
+                        <td>{bill.assignedToName || "Not Assigned"}</td>
+                        <td>
+                          <ActionButtons>
+                            <AssignButton onClick={() => openAssignModal(bill)}>
+                              <FaUserPlus />
+                            </AssignButton>
+                            <EditButton onClick={() => handleEditBill(bill)}>
+                              <FaEdit />
+                            </EditButton>
+                            <DeleteButton
+                              onClick={() => handleDeleteBill(bill._id)}
+                            >
+                              <FaTrash />
+                            </DeleteButton>
+                          </ActionButtons>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan="7"
+                        style={{ textAlign: "center", padding: "20px" }}
+                      >
+                        No bills found matching your search
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
               </BillsTable>
             </TableContainer>
 
