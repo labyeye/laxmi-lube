@@ -3,9 +3,9 @@ const router = express.Router();
 const Collection = require("../models/Collection");
 const Bill = require("../models/Bill");
 const { protect } = require("../middleware/authMiddleware");
-const { format } = require('date-fns');
-const {exceljs } = require('exceljs');
-router.get('/export/today-collections/excel', protect, async (req, res) => {
+const { format } = require("date-fns");
+const { exceljs } = require("exceljs");
+router.get("/export/today-collections/excel", protect, async (req, res) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -16,11 +16,11 @@ router.get('/export/today-collections/excel', protect, async (req, res) => {
     const collections = await Collection.find({
       collectedOn: {
         $gte: today,
-        $lt: tomorrow
-      }
+        $lt: tomorrow,
+      },
     })
-    .populate('bill', 'billNumber retailer amount')
-    .populate('collectedBy', 'name');
+      .populate("bill", "billNumber retailer amount")
+      .populate("collectedBy", "name");
 
     // Create workbook
     const workbook = new exceljs.Workbook();
@@ -28,91 +28,99 @@ router.get('/export/today-collections/excel', protect, async (req, res) => {
 
     // Set headers with styling
     worksheet.columns = [
-      { header: 'Bill Number', key: 'billNumber', width: 15 },
-      { header: 'Retailer', key: 'retailer', width: 25 },
-      { header: 'Bill Date', key: 'billDate', width: 15 },
-      { header: 'Amount', key: 'amount', width: 15 },
-      { header: 'Due Amount', key: 'dueAmount', width: 15 },
-      { header: 'Status', key: 'status', width: 15 },
-      { header: 'Assigned To', key: 'assignedTo', width: 20 },
-      { header: 'Collection Amount', key: 'collectionAmount', width: 20 },
-      { header: 'Payment Mode', key: 'paymentMode', width: 15 },
-      { header: 'Payment Date', key: 'paymentDate', width: 15 },
-      { header: 'Collected By', key: 'collectedBy', width: 20 },
-      { header: 'Payment Details', key: 'paymentDetails', width: 30 }
+      { header: "Bill Number", key: "billNumber", width: 15 },
+      { header: "Retailer", key: "retailer", width: 25 },
+      { header: "Bill Date", key: "billDate", width: 15 },
+      { header: "Amount", key: "amount", width: 15 },
+      { header: "Due Amount", key: "dueAmount", width: 15 },
+      { header: "Status", key: "status", width: 15 },
+      { header: "Assigned To", key: "assignedTo", width: 20 },
+      { header: "Collection Amount", key: "collectionAmount", width: 20 },
+      { header: "Payment Mode", key: "paymentMode", width: 15 },
+      { header: "Payment Date", key: "paymentDate", width: 15 },
+      { header: "Collected By", key: "collectedBy", width: 20 },
+      { header: "Payment Details", key: "paymentDetails", width: 30 },
     ];
 
     // Style headers
     worksheet.getRow(1).eachCell((cell) => {
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
       cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FF4F81BD' }
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF4F81BD" },
       };
-      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      cell.alignment = { vertical: "middle", horizontal: "center" };
     });
 
     // Add data rows
-    collections.forEach(collection => {
-      let paymentDetails = '';
+    collections.forEach((collection) => {
+      let paymentDetails = "";
       if (collection.paymentDetails) {
         paymentDetails = Object.entries(collection.paymentDetails)
           .map(([key, value]) => `${key}: ${value}`)
-          .join(', ');
+          .join(", ");
       }
 
       worksheet.addRow({
-        billNumber: collection.bill?.billNumber || 'N/A',
-        retailer: collection.bill?.retailer || 'N/A',
-        billDate: collection.bill?.billDate ? format(collection.bill.billDate, 'dd/MM/yyyy') : 'N/A',
+        billNumber: collection.bill?.billNumber || "N/A",
+        retailer: collection.bill?.retailer || "N/A",
+        billDate: collection.bill?.billDate
+          ? format(collection.bill.billDate, "dd/MM/yyyy")
+          : "N/A",
         amount: collection.bill?.amount || 0,
         dueAmount: collection.bill?.dueAmount || 0,
-        status: collection.bill?.status || 'N/A',
-        assignedTo: collection.bill?.assignedTo || 'N/A',
+        status: collection.bill?.status || "N/A",
+        assignedTo: collection.bill?.assignedTo || "N/A",
         collectionAmount: collection.amountCollected,
         paymentMode: collection.paymentMode,
-        paymentDate: format(collection.collectedOn, 'dd/MM/yyyy'),
-        collectedBy: collection.collectedBy?.name || 'System',
-        paymentDetails
+        paymentDate: format(collection.collectedOn, "dd/MM/yyyy"),
+        collectedBy: collection.collectedBy?.name || "System",
+        paymentDetails,
       });
     });
 
     // Format currency columns
-    [4, 5, 8].forEach(colNum => {
-      worksheet.columns[colNum].numFmt = '#,##0.00';
+    [4, 5, 8].forEach((colNum) => {
+      worksheet.columns[colNum].numFmt = "#,##0.00";
     });
 
     // Auto-fit columns
-    worksheet.columns.forEach(column => {
+    worksheet.columns.forEach((column) => {
       let maxLength = 0;
-      column.eachCell({ includeEmpty: true }, cell => {
+      column.eachCell({ includeEmpty: true }, (cell) => {
         const columnLength = cell.value ? cell.value.toString().length : 0;
         if (columnLength > maxLength) {
           maxLength = columnLength;
         }
       });
-      column.width = Math.min(Math.max(maxLength + 2, column.header.length + 2), 50);
+      column.width = Math.min(
+        Math.max(maxLength + 2, column.header.length + 2),
+        50
+      );
     });
 
     // Set response headers
     res.setHeader(
-      'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
     res.setHeader(
-      'Content-Disposition',
-      `attachment; filename=today_collections_${format(new Date(), 'yyyyMMdd')}.xlsx`
+      "Content-Disposition",
+      `attachment; filename=today_collections_${format(
+        new Date(),
+        "yyyyMMdd"
+      )}.xlsx`
     );
 
     // Send the workbook
     await workbook.xlsx.write(res);
     res.end();
   } catch (err) {
-    console.error('Excel export error:', err);
+    console.error("Excel export error:", err);
     res.status(500).json({
-      message: 'Failed to export today\'s collections',
-      error: err.message
+      message: "Failed to export today's collections",
+      error: err.message,
     });
   }
 });
@@ -167,6 +175,7 @@ router.post("/", protect, async (req, res) => {
             "UPI ID and Transaction ID are required for UPI payments";
         }
         break;
+      // In the POST route validation section
       case "cheque":
         if (!paymentDetails?.bankName || !paymentDetails?.chequeNumber) {
           validationError =

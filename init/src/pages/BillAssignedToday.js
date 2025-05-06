@@ -47,7 +47,39 @@ const BillAssignedToday = () => {
   const [customerBills, setCustomerBills] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [allAssignedCustomers, setAllAssignedCustomers] = useState([]);
-
+  const BANK_LIST = [
+    "ALLAHABAD BANK",
+    "ANDHRA BANK",
+    "AXIS BANK LTD",
+    "BANDHAN BANK",
+    "BANK OF BARODA",
+    "BANK OF INDIA",
+    "CANARA BANK",
+    "CENTRAL BANK OF INDIA",
+    "CORPORATION BANK",
+    "DENA BANK",
+    "FEDERAL BANK",
+    "HDFC BANK LTD",
+    "ICICI BANK",
+    "IDBI BANK",
+    "INDIAN OVERSEAS BANK",
+    "INDUSIND BANK",
+    "INDIAN BANK",
+    "ORIENTAL BANK OF COMMERCE",
+    "PUNJAB NATIONAL BANK",
+    "STATE BANK OF INDIA",
+    "STANDARD CHARTERED BANK",
+    "SYNDICATE BANK",
+    "UCO BANK",
+    "UNION BANK OF INDIA",
+    "UNITED BANK OF INDIA",
+    "UTKARSH SMALL FINANCE BANK",
+    "UTTAR BIHAR GRAMIN BANK",
+    "VIJAYA BANK",
+    "BANK OF MAHARASHTRA",
+    "KOTAK MAHINDRA BANK",
+    "UJJIVAN SMALL FINANCE BANK",
+  ];
 
   const navigate = useNavigate();
   const fetchAllAssignedCustomers = async () => {
@@ -83,14 +115,14 @@ const BillAssignedToday = () => {
     try {
       setLoading(true);
       setError("");
-      
+
       const response = await axios.get(
         "https://laxmi-lube.onrender.com/api/bills/bills-assigned-today",
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
           params: {
             collectionDay: selectedDay || null,
-          }
+          },
         }
       );
 
@@ -101,9 +133,11 @@ const BillAssignedToday = () => {
       }));
 
       setBills(billsWithDates);
-      
+
       // Extract unique customers from the bills
-      const uniqueCustomers = [...new Set(billsWithDates.map((bill) => bill.retailer))];
+      const uniqueCustomers = [
+        ...new Set(billsWithDates.map((bill) => bill.retailer)),
+      ];
       setCustomers(uniqueCustomers);
     } catch (error) {
       console.error("Error fetching bills assigned today:", error);
@@ -113,7 +147,6 @@ const BillAssignedToday = () => {
       setRetrying(false);
     }
   };
-
 
   useEffect(() => {
     fetchBillsAssignedToday();
@@ -126,7 +159,7 @@ const BillAssignedToday = () => {
       setSubmitError("");
       const paidAmount = parseFloat(Number(paymentAmount).toFixed(2));
       const dueAmount = parseFloat(Number(selectedBill.dueAmount).toFixed(2));
-      
+
       if (paidAmount <= 0 || paidAmount > dueAmount) {
         setSubmitError(
           `Please enter a valid amount between 0.01 and ${dueAmount}`
@@ -186,7 +219,6 @@ const BillAssignedToday = () => {
       setIsSubmitting(false);
     }
   };
-
 
   // Calculate summary values
   const totalBills = bills.length;
@@ -377,7 +409,7 @@ const BillAssignedToday = () => {
                   <SummaryValue>{formatCurrency(averageAmount)}</SummaryValue>
                 </SummaryItem>
               </SummaryCard>
-              
+
               <DayFilterContainer>
                 <DayButton
                   active={!selectedDay}
@@ -512,7 +544,9 @@ const BillAssignedToday = () => {
                 ) : !selectedBill ? (
                   // Step 2: Select Bill
                   <div>
-                    <ModalSubtitle>Select Bill for {selectedCustomer}</ModalSubtitle>
+                    <ModalSubtitle>
+                      Select Bill for {selectedCustomer}
+                    </ModalSubtitle>
                     <ButtonGroup>
                       <BackButton onClick={() => setSelectedCustomer(null)}>
                         Back to Customer Selection
@@ -520,9 +554,10 @@ const BillAssignedToday = () => {
                     </ButtonGroup>
                     <CustomerBillsContainer>
                       {bills
-                        .filter((bill) => 
-                          bill.retailer === selectedCustomer && 
-                          bill.dueAmount > 0
+                        .filter(
+                          (bill) =>
+                            bill.retailer === selectedCustomer &&
+                            bill.dueAmount > 0
                         )
                         .map((bill) => (
                           <BillOption
@@ -632,70 +667,60 @@ const BillAssignedToday = () => {
                       </>
                     )}
 
+                    {(paymentMode === "cheque" ||
+                      paymentMode === "bank_transfer") && (
+                      <FormGroup>
+                        <Label>Bank Name</Label>
+                        <Select
+                          value={paymentDetails.bankName}
+                          onChange={(e) =>
+                            setPaymentDetails({
+                              ...paymentDetails,
+                              bankName: e.target.value,
+                            })
+                          }
+                        >
+                          <option value="">Select Bank</option>
+                          {BANK_LIST.map((bank) => (
+                            <option key={bank} value={bank}>
+                              {bank}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormGroup>
+                    )}
                     {paymentMode === "cheque" && (
-                      <>
-                        <FormGroup>
-                          <Label>Bank Name</Label>
-                          <Input
-                            type="text"
-                            value={paymentDetails.bankName}
-                            onChange={(e) =>
-                              setPaymentDetails({
-                                ...paymentDetails,
-                                bankName: e.target.value,
-                              })
-                            }
-                            placeholder="Enter Bank Name"
-                          />
-                        </FormGroup>
-                        <FormGroup>
-                          <Label>Cheque Number</Label>
-                          <Input
-                            type="text"
-                            value={paymentDetails.chequeNumber}
-                            onChange={(e) =>
-                              setPaymentDetails({
-                                ...paymentDetails,
-                                chequeNumber: e.target.value,
-                              })
-                            }
-                            placeholder="Enter Cheque Number"
-                          />
-                        </FormGroup>
-                      </>
+                      <FormGroup>
+                        <Label>Cheque Number</Label>
+                        <Input
+                          type="text"
+                          value={paymentDetails.chequeNumber}
+                          onChange={(e) =>
+                            setPaymentDetails({
+                              ...paymentDetails,
+                              chequeNumber: e.target.value,
+                            })
+                          }
+                          placeholder="Enter Cheque Number"
+                        />
+                      </FormGroup>
                     )}
 
                     {paymentMode === "bank_transfer" && (
-                      <>
-                        <FormGroup>
-                          <Label>Bank Name</Label>
-                          <Input
-                            type="text"
-                            value={paymentDetails.bankName}
-                            onChange={(e) =>
-                              setPaymentDetails({
-                                ...paymentDetails,
-                                bankName: e.target.value,
-                              })
-                            }
-                            placeholder="Enter Bank Name"
-                          />
-                        </FormGroup>
-                        <FormGroup>
-                          <Label>Transaction ID</Label>
-                          <Input
-                            type="text"
-                            value={paymentDetails.bankTransactionId}
-                            onChange={(e) =>
-                              setPaymentDetails({
-                                ...paymentDetails,
-                                bankTransactionId: e.target.value,
-                              })
-                            }
-                            placeholder="Enter Bank Transaction ID"
-                          />
-                        </FormGroup>
-                      </>
+                      <FormGroup>
+                        <Label>Transaction ID</Label>
+                        <Input
+                          type="text"
+                          value={paymentDetails.bankTransactionId}
+                          onChange={(e) =>
+                            setPaymentDetails({
+                              ...paymentDetails,
+                              bankTransactionId: e.target.value,
+                            })
+                          }
+                          placeholder="Enter Bank Transaction ID"
+                        />
+                      </FormGroup>
                     )}
 
                     <FormGroup>
@@ -812,10 +837,10 @@ const DayFilterContainer = styled.div`
 
 const DayButton = styled.button`
   padding: 8px 12px;
-  border: 1px solid ${props => props.active ? '#4e73df' : '#ddd'};
+  border: 1px solid ${(props) => (props.active ? "#4e73df" : "#ddd")};
   border-radius: 20px;
-  background-color: ${props => props.active ? '#4e73df' : 'white'};
-  color: ${props => props.active ? 'white' : '#6c757d'};
+  background-color: ${(props) => (props.active ? "#4e73df" : "white")};
+  color: ${(props) => (props.active ? "white" : "#6c757d")};
   font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
@@ -823,8 +848,8 @@ const DayButton = styled.button`
   transition: all 0.2s;
 
   &:hover {
-    background-color: ${props => props.active ? '#3a5bc7' : '#f8f9fc'};
-    border-color: ${props => props.active ? '#3a5bc7' : '#4e73df'};
+    background-color: ${(props) => (props.active ? "#3a5bc7" : "#f8f9fc")};
+    border-color: ${(props) => (props.active ? "#3a5bc7" : "#4e73df")};
   }
 `;
 
@@ -1412,7 +1437,7 @@ const BillStatus = styled.div`
 
 const BillRetailer = styled.div`
   font-size: 1.2rem;
-  color:rgb(16, 16, 236);
+  color: rgb(16, 16, 236);
   margin-bottom: 15px;
 `;
 
