@@ -30,13 +30,13 @@ const BillsPage = () => {
         }
 
         const [billsResponse, staffResponse] = await Promise.all([
-          axios.get("https://laxmi-lube.onrender.com/api/bills", {
+          axios.get("http://localhost:2500/api/bills", {
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
           }),
-          axios.get("https://laxmi-lube.onrender.com/api/users/staff", {
+          axios.get("http://localhost:2500/api/users/staff", {
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
@@ -83,7 +83,7 @@ const BillsPage = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
-        `https://laxmi-lube.onrender.com/api/bills/${selectedBill._id}/assign`,
+        `http://localhost:2500/api/bills/${selectedBill._id}/assign`,
         { staffId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -110,7 +110,7 @@ const BillsPage = () => {
 
     const token = localStorage.getItem("token");
     try {
-      await axios.delete(`https://laxmi-lube.onrender.com/api/bills/${billId}`, {
+      await axios.delete(`http://localhost:2500/api/bills/${billId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -260,19 +260,26 @@ const BillsPage = () => {
     </Layout>
   );
 };
-
-// Styled Components
 const PageContainer = styled.div`
-  padding: 2rem;
+  padding: 1rem;
+
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
 `;
 
 const Header = styled.div`
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 1rem;
+  margin-bottom: 1.5rem;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
 `;
 
 const Title = styled.div`
@@ -281,13 +288,19 @@ const Title = styled.div`
   gap: 1rem;
 
   h1 {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
     color: #2d3748;
     margin: 0;
   }
 
   svg {
     color: #4a5568;
+  }
+
+  @media (min-width: 768px) {
+    h1 {
+      font-size: 1.8rem;
+    }
   }
 `;
 
@@ -298,7 +311,7 @@ const SearchBox = styled.div`
   border-radius: 8px;
   padding: 0.5rem 1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  width: 300px;
+  width: 100%;
 
   input {
     border: none;
@@ -312,18 +325,29 @@ const SearchBox = styled.div`
     color: #a0aec0;
     margin-right: 0.5rem;
   }
+
+  @media (min-width: 768px) {
+    width: 300px;
+  }
 `;
 
 const Message = styled.div`
-  padding: 1rem;
-  margin-bottom: 1.5rem;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
   border-radius: 0.375rem;
   font-weight: 500;
+  font-size: 0.875rem;
   background-color: ${(props) =>
     props.type === "error" ? "#fff5f5" : "#f0fff4"};
   color: ${(props) => (props.type === "error" ? "#e53e3e" : "#38a169")};
   border-left: 4px solid
     ${(props) => (props.type === "error" ? "#e53e3e" : "#38a169")};
+
+  @media (min-width: 768px) {
+    padding: 1rem;
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+  }
 `;
 
 const LoadingIndicator = styled.div`
@@ -358,37 +382,47 @@ const TableContainer = styled.div`
   background: white;
   border-radius: 0.5rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+  overflow-x: auto;
 `;
 
 const BillsTable = styled.table`
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
+  min-width: 600px;
 
   th {
     background-color: #f7fafc;
     color: #4a5568;
     font-weight: 600;
     text-align: left;
-    padding: 1rem;
+    padding: 0.75rem;
     border-bottom: 1px solid #e2e8f0;
+    font-size: 0.875rem;
   }
 
   td {
-    padding: 1rem;
+    padding: 0.75rem;
     border-bottom: 1px solid #e2e8f0;
     color: #2d3748;
+    font-size: 0.875rem;
   }
 
   tr:hover td {
     background-color: #f8fafc;
   }
+
+  @media (min-width: 768px) {
+    th, td {
+      padding: 1rem;
+      font-size: 1rem;
+    }
+  }
 `;
 
 const StatusBadge = styled.span`
   display: inline-block;
-  padding: 0.25rem 0.75rem;
+  padding: 0.25rem 0.5rem;
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 600;
@@ -405,12 +439,20 @@ const StatusBadge = styled.span`
       : props.status === "pending"
       ? "#e53e3e"
       : "#38a169"};
-`;
 
+  @media (min-width: 768px) {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+  }
+`;
 
 const ActionButtons = styled.div`
   display: flex;
-  gap: 0.5rem;
+  gap: 0.25rem;
+
+  @media (min-width: 768px) {
+    gap: 0.5rem;
+  }
 `;
 
 const AssignButton = styled.button`
@@ -418,12 +460,18 @@ const AssignButton = styled.button`
   color: #3182ce;
   border: none;
   border-radius: 0.25rem;
-  padding: 0.5rem;
+  padding: 0.4rem;
   cursor: pointer;
   transition: all 0.2s;
+  font-size: 0.75rem;
 
   &:hover {
     background-color: #bee3f8;
+  }
+
+  @media (min-width: 768px) {
+    padding: 0.5rem;
+    font-size: 1rem;
   }
 `;
 
@@ -432,12 +480,18 @@ const EditButton = styled.button`
   color: #38a169;
   border: none;
   border-radius: 0.25rem;
-  padding: 0.5rem;
+  padding: 0.4rem;
   cursor: pointer;
   transition: all 0.2s;
+  font-size: 0.75rem;
 
   &:hover {
     background-color: #c6f6d5;
+  }
+
+  @media (min-width: 768px) {
+    padding: 0.5rem;
+    font-size: 1rem;
   }
 `;
 
@@ -446,12 +500,18 @@ const DeleteButton = styled.button`
   color: #e53e3e;
   border: none;
   border-radius: 0.25rem;
-  padding: 0.5rem;
+  padding: 0.4rem;
   cursor: pointer;
   transition: all 0.2s;
+  font-size: 0.75rem;
 
   &:hover {
     background-color: #fed7d7;
+  }
+
+  @media (min-width: 768px) {
+    padding: 0.5rem;
+    font-size: 1rem;
   }
 `;
 
@@ -466,6 +526,7 @@ const ModalOverlay = styled.div`
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  padding: 1rem;
 `;
 
 const ModalContent = styled.div`
@@ -480,35 +541,52 @@ const ModalHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem;
+  padding: 1rem;
   border-bottom: 1px solid #e2e8f0;
 
   h3 {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     color: #2d3748;
+  }
+
+  @media (min-width: 768px) {
+    padding: 1.5rem;
+
+    h3 {
+      font-size: 1.25rem;
+    }
   }
 `;
 
 const CloseButton = styled.button`
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   cursor: pointer;
   color: #a0aec0;
-  padding: 0.5rem;
+  padding: 0.25rem;
 
   &:hover {
     color: #718096;
   }
+
+  @media (min-width: 768px) {
+    font-size: 1.5rem;
+    padding: 0.5rem;
+  }
 `;
 
 const Form = styled.form`
-  padding: 1.5rem;
+  padding: 1rem;
+
+  @media (min-width: 768px) {
+    padding: 1.5rem;
+  }
 `;
 
 const FormGroup = styled.div`
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 
   label {
     display: block;
@@ -517,14 +595,18 @@ const FormGroup = styled.div`
     font-weight: 500;
     color: #4a5568;
   }
+
+  @media (min-width: 768px) {
+    margin-bottom: 1.5rem;
+  }
 `;
 
 const Select = styled.select`
   width: 100%;
-  padding: 0.75rem;
+  padding: 0.5rem;
   border: 1px solid #e2e8f0;
   border-radius: 0.375rem;
-  font-size: 1rem;
+  font-size: 0.875rem;
   transition: all 0.2s;
 
   &:focus {
@@ -532,16 +614,27 @@ const Select = styled.select`
     border-color: #4299e1;
     box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
   }
+
+  @media (min-width: 768px) {
+    padding: 0.75rem;
+    font-size: 1rem;
+  }
 `;
 
 const ButtonGroup = styled.div`
   display: flex;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 0.5rem;
   margin-top: 1rem;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    gap: 1rem;
+  }
 `;
 
 const PrimaryButton = styled.button`
-  padding: 0.75rem 1.5rem;
+  padding: 0.5rem;
   background-color: #4299e1;
   color: white;
   border: none;
@@ -549,15 +642,21 @@ const PrimaryButton = styled.button`
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-  flex: 1;
+  font-size: 0.875rem;
 
   &:hover {
     background-color: #3182ce;
   }
+
+  @media (min-width: 768px) {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    flex: 1;
+  }
 `;
 
 const SecondaryButton = styled.button`
-  padding: 0.75rem 1.5rem;
+  padding: 0.5rem;
   background-color: white;
   color: #4299e1;
   border: 1px solid #4299e1;
@@ -565,10 +664,16 @@ const SecondaryButton = styled.button`
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-  flex: 1;
+  font-size: 0.875rem;
 
   &:hover {
     background-color: #ebf8ff;
+  }
+
+  @media (min-width: 768px) {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    flex: 1;
   }
 `;
 

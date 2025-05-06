@@ -259,10 +259,29 @@ router.post("/", protect, async (req, res) => {
   }
 });
 
-// Get all collections (protected)
 router.get("/", protect, async (req, res) => {
   try {
-    const collections = await Collection.find()
+    const { search, startDate, endDate } = req.query;
+    const filter = { collectedBy: req.user._id }; // Only show collections by current user
+
+    if (search) {
+      const bills = await Bill.find({
+        $or: [
+          { billNumber: { $regex: search, $options: "i" } },
+          { retailer: { $regex: search, $options: "i" } }
+        ]
+      }).select("_id");
+      
+      filter.bill = { $in: bills.map(b => b._id) };
+    }
+
+    if (startDate || endDate) {
+      filter.collectedOn = {};
+      if (startDate) filter.collectedOn.$gte = new Date(startDate);
+      if (endDate) filter.collectedOn.$lte = new Date(endDate);
+    }
+
+    const collections = await Collection.find(filter)
       .populate("bill", "billNumber retailer")
       .populate("collectedBy", "name")
       .sort({ collectedOn: -1 });

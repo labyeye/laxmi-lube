@@ -10,6 +10,7 @@ import {
   FaMoneyCheckAlt,
   FaSignOutAlt,
   FaUserCircle,
+  FaCheckCircle,
   FaChevronDown,
   FaChevronRight,
   FaCalendarDay,
@@ -18,21 +19,23 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const API_BASE_URL = "https://laxmi-lube.onrender.com/api";
+const API_BASE_URL = "http://localhost:2500/api";
 
 const StaffDashboard = () => {
   const [dashboardData, setDashboardData] = useState({
-    todayAmountAssigned: 0,
-    todayAmountCollected: 0,
-    amountRemainingToday: 0,
-    billsAssignedToday: 0,
+    staffName: "",
+    totalBillAmount: 0,
+    totalCollectedToday: 0,
+    totalBillsWithDue: 0,
+    totalCompletedBills: 0,
     overdueBillsCount: 0,
-    collectionsAssignedToday: [],
-    collectionsHistory: [],
+    collectionsToday: [],
+    collectionsHistory: []
   });
+
   const [staffInfo, setStaffInfo] = useState({
     name: "Loading...",
-    role: "Collections"
+    role: "Collections",
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -41,7 +44,6 @@ const StaffDashboard = () => {
   const [activeSubmenu, setActiveSubmenu] = useState(null);
   const navigate = useNavigate();
 
-  // Fetch user info (to get staff name)
   const fetchUserInfo = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
@@ -53,53 +55,33 @@ const StaffDashboard = () => {
 
       setStaffInfo({
         name: response.data.name || "Staff Member",
-        role: response.data.role || "Collections"
+        role: response.data.role || "Collections",
       });
     } catch (err) {
       console.error("Failed to fetch user info:", err);
-      // Don't set error state - we still want to fetch dashboard data
     }
   }, []);
 
-  // In StaffDashboard.js - update the fetchDashboardData function
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
-      const today = new Date();
-      const dayOfWeek = [
-        "Sunday",
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-      ][today.getDay()];
       const token = localStorage.getItem("token");
       if (!token) throw new Error("Authentication token not found");
-
+  
       const response = await axios.get(`${API_BASE_URL}/staff/dashboard`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { collectionDay: dayOfWeek },
+        headers: { Authorization: `Bearer ${token}` }
       });
-
-      // Safely calculate totals with default values
-      const collectionsToday = response.data.collectionsAssignedToday || [];
-      const todayAmountCollected = collectionsToday.reduce(
-        (sum, collection) => sum + (collection.amountCollected || 0),
-        0
-      );
-
+  
       setDashboardData({
-        todayAmountAssigned: response.data.todayAmountAssigned || 0,
-        todayAmountCollected,
-        amountRemainingToday:
-          (response.data.todayAmountAssigned || 0) - todayAmountCollected,
-        billsAssignedToday: response.data.billsAssignedToday || 0,
+        staffName: response.data.staffName || "",
+        totalBillAmount: response.data.totalBillAmount || 0,
+        totalCollectedToday: response.data.totalCollectedToday || 0,
+        totalBillsWithDue: response.data.totalBillsWithDue || 0,
+        totalCompletedBills: response.data.totalCompletedBills || 0,
         overdueBillsCount: response.data.overdueBillsCount || 0,
-        collectionsAssignedToday: collectionsToday,
-        collectionsHistory: response.data.collectionsHistory || [],
+        collectionsToday: response.data.collectionsToday || [],
+        collectionsHistory: response.data.recentCollections || []
       });
     } catch (err) {
       setError(
@@ -135,12 +117,12 @@ const StaffDashboard = () => {
     setRetrying(true);
     fetchDashboardData();
   };
-  
+
   const handleLogout = () => {
     localStorage.removeItem("token"); // Remove the authentication token
     navigate("/login"); // Redirect to the login page
   };
-  
+
   const toggleSubmenu = (menu) => {
     if (activeSubmenu === menu) {
       setActiveSubmenu(null);
@@ -177,9 +159,9 @@ const StaffDashboard = () => {
           </UserAvatar>
           {!sidebarCollapsed && (
             <UserInfo>
-            <UserName>{staffInfo.name}</UserName>
-            <UserRole>DSR</UserRole>
-          </UserInfo>
+              <UserName>{staffInfo.name}</UserName>
+              <UserRole>DSR</UserRole>
+            </UserInfo>
           )}
         </UserProfile>
         <NavMenu>
@@ -272,12 +254,9 @@ const StaffDashboard = () => {
                     <FaMoneyBillWave />
                   </StatIcon>
                   <StatInfo>
-                    <StatTitle>Today's Amount Assigned</StatTitle>
+                    <StatTitle>Total Bill Amount</StatTitle>
                     <StatValue>
-                      ₹
-                      {(
-                        dashboardData.todayAmountAssigned || 0
-                      ).toLocaleString()}
+                      ₹{(dashboardData.totalBillAmount || 0).toLocaleString()}
                     </StatValue>
                   </StatInfo>
                 </StatCard>
@@ -287,9 +266,12 @@ const StaffDashboard = () => {
                     <FaClipboardList />
                   </StatIcon>
                   <StatInfo>
-                    <StatTitle>Amount Collected</StatTitle>
+                    <StatTitle>Collected Today</StatTitle>
                     <StatValue>
-                      ₹{dashboardData.todayAmountCollected.toLocaleString()}
+                      ₹
+                      {(
+                        dashboardData.totalCollectedToday || 0
+                      ).toLocaleString()}
                     </StatValue>
                   </StatInfo>
                 </StatCard>
@@ -299,30 +281,30 @@ const StaffDashboard = () => {
                     <FaTasks />
                   </StatIcon>
                   <StatInfo>
-                    <StatTitle>Bills Assigned Today</StatTitle>
-                    <StatValue>{dashboardData.billsAssignedToday}</StatValue>
+                    <StatTitle>Bills With Due</StatTitle>
+                    <StatValue>{dashboardData.totalBillsWithDue}</StatValue>
                   </StatInfo>
                 </StatCard>
+
                 <StatCard>
-                  <StatIcon color="#e74a3b">
-                    <FaExclamationTriangle />
+                  <StatIcon color="#36b9cc">
+                    <FaCheckCircle />
                   </StatIcon>
                   <StatInfo>
-                    <StatTitle>Overdue Bills</StatTitle>
-                    <StatValue>{dashboardData.overdueBillsCount}</StatValue>
+                    <StatTitle>Completed Bills</StatTitle>
+                    <StatValue>{dashboardData.totalCompletedBills}</StatValue>
                   </StatInfo>
                 </StatCard>
               </StatsContainer>
-
               <DashboardContent>
                 <MainSection>
                   <SectionHeader>
                     <SectionTitle>Collections Assigned Today</SectionTitle>
                     <ViewAllLink>View All</ViewAllLink>
                   </SectionHeader>
-                  {dashboardData.collectionsAssignedToday.length > 0 ? (
+                  {dashboardData.collectionsToday.length > 0 ? (
                     <CollectionsList>
-                      {dashboardData.collectionsAssignedToday.map(
+                      {dashboardData.collectionsToday.map(
                         (collection, index) => (
                           <CollectionItem key={index}>
                             <CollectionIcon>
@@ -470,8 +452,6 @@ const CollectionText = styled.div`
   margin-bottom: 4px;
 `;
 
-
-
 const CollectionStatus = styled.div`
   padding: 4px 10px;
   border-radius: 12px;
@@ -519,7 +499,6 @@ const SubmenuItem = styled.div`
     margin-left: auto;
   }
 `;
-
 
 const HistoryIcon = styled.div`
   width: 40px;
@@ -613,7 +592,7 @@ const Sidebar = styled.div`
   flex-direction: column;
   position: relative;
   z-index: 1;
-  
+
   @media (min-width: 768px) {
     width: ${(props) => (props.collapsed ? "80px" : "250px")};
     height: 100vh;
@@ -762,7 +741,7 @@ const MainContent = styled.div`
   flex-direction: column;
   overflow: hidden;
   width: 100%;
-  
+
   @media (min-width: 768px) {
     overflow-y: auto;
     max-height: 100vh;

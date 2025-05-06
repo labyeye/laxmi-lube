@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import styled, { keyframes } from "styled-components";
 import {
@@ -10,7 +10,6 @@ import {
   FaChevronDown,
   FaChevronRight,
   FaSync,
-  FaCheckCircle,
   FaExclamationTriangle,
 } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
@@ -27,7 +26,11 @@ const BillAssignedToday = () => {
     bankName: "",
     chequeNumber: "",
     bankTransactionId: "",
-    receiptNumber: ""
+    receiptNumber: "",
+  });
+  const [staffInfo, setStaffInfo] = useState({
+    name: "Loading...",
+    role: "Collections",
   });
   const [bills, setBills] = useState([]);
   const [selectedDay, setSelectedDay] = useState(null);
@@ -82,11 +85,28 @@ const BillAssignedToday = () => {
     "UJJIVAN SMALL FINANCE BANK",
   ];
 
+  const fetchUserInfo = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Authentication token not found");
+
+      const response = await axios.get(`http://localhost:2500/api/users/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setStaffInfo({
+        name: response.data.name || "Staff Member",
+        role: response.data.role || "Collections",
+      });
+    } catch (err) {
+      console.error("Failed to fetch user info:", err);
+    }
+  }, []);
   const navigate = useNavigate();
   const fetchAllAssignedCustomers = async () => {
     try {
       const response = await axios.get(
-        "https://laxmi-lube.onrender.com/api/bills/assigned-customers",
+        "http://localhost:2500/api/bills/assigned-customers",
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
@@ -118,7 +138,7 @@ const BillAssignedToday = () => {
       setError("");
 
       const response = await axios.get(
-        "https://laxmi-lube.onrender.com/api/bills/bills-assigned-today",
+        "http://localhost:2500/api/bills/bills-assigned-today",
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
           params: {
@@ -148,64 +168,63 @@ const BillAssignedToday = () => {
       setRetrying(false);
     }
   };
-
+  useEffect(() => {
+    fetchUserInfo();
+  }, [fetchUserInfo]);
   useEffect(() => {
     fetchBillsAssignedToday();
     fetchAllAssignedCustomers();
   }, [selectedDay]);
 
+  // In BillAssignedToday.js, update the handleCollectionSubmit function:
   const handleCollectionSubmit = async () => {
     try {
       setIsSubmitting(true);
       setSubmitError("");
-      
+
       const paidAmount = parseFloat(paymentAmount);
       if (isNaN(paidAmount)) {
         setSubmitError("Please enter a valid amount");
         return;
       }
-  
+
       const roundedAmount = Math.round(paidAmount * 100) / 100;
       const dueAmount = parseFloat(selectedBill.dueAmount);
-  
+
       if (roundedAmount <= 0 || roundedAmount > dueAmount) {
-        setSubmitError(`Amount must be between ₹0.01 and ₹${dueAmount.toFixed(2)}`);
+        setSubmitError(
+          `Amount must be between ₹0.01 and ₹${dueAmount.toFixed(2)}`
+        );
         return;
       }
-  
-      // Prepare payload
-      const payload = {
+
+      // Prepare payload for collection
+      const collectionPayload = {
         bill: selectedBill._id,
         amountCollected: roundedAmount,
         paymentMode,
         remarks: paymentRemarks,
-        collectedOn: new Date(),
-        paymentDetails: {}
+        paymentDetails:
+          paymentMode === "cash"
+            ? {
+                receiptNumber: paymentDetails.receiptNumber || "Money Received",
+              }
+            : paymentDetails,
       };
-  
-      if (paymentMode === "cash") {
-        payload.paymentDetails = {
-          receiptNumber: paymentDetails.receiptNumber || "Money Received"
-        };
-       } else {
-        payload.paymentDetails = paymentDetails;
-      }
-  
-      const response = await axios.post(
-        "https://laxmi-lube.onrender.com/api/collections",
-        payload,
+
+      // First create the collection record
+      await axios.post(
+        "http://localhost:2500/api/collections",
+        collectionPayload,
         {
-          headers: { 
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-            'Content-Type': 'application/json'
-          }
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
       );
-  
-      // Update bill status
+
+      // Then update the bill status
       const newDueAmount = dueAmount - paidAmount;
       await axios.put(
-        `https://laxmi-lube.onrender.com/api/bills/${selectedBill._id}`,
+        `http://localhost:2500/api/bills/${selectedBill._id}`,
         {
           dueAmount: newDueAmount,
           status: newDueAmount <= 0 ? "Paid" : "Partially Paid",
@@ -214,10 +233,11 @@ const BillAssignedToday = () => {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
       );
-  
-      // Refresh data and close modal
+
+      // Refresh data
       await fetchBillsAssignedToday();
       setShowCollectionModal(false);
+      // Reset form
       setSelectedBill(null);
       setPaymentAmount("");
       setPaymentMode("cash");
@@ -228,33 +248,18 @@ const BillAssignedToday = () => {
         bankName: "",
         chequeNumber: "",
         bankTransactionId: "",
-        receiptNumber: ""
+        receiptNumber: "",
       });
-  
     } catch (err) {
       console.error("Collection error:", err);
-      
-      // Enhanced error handling
-      let errorMessage = "Failed to record collection";
-      if (err.response) {
-        if (err.response.data && err.response.data.message) {
-          errorMessage = err.response.data.message;
-        } else if (err.response.status === 400) {
-          errorMessage = "Validation error - please check your inputs";
-        } else if (err.response.status === 401) {
-          errorMessage = "Session expired - please login again";
-        }
-      } else if (err.request) {
-        errorMessage = "Network error - please check your connection";
-      }
-      
-      setSubmitError(errorMessage);
+      setSubmitError(
+        err.response?.data?.message || "Failed to record collection"
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Calculate summary values
   const totalBills = bills.length;
   const totalAmount = bills.reduce((sum, bill) => sum + (bill.amount || 0), 0);
   const totalDueAmount = bills.reduce(
@@ -330,8 +335,8 @@ const BillAssignedToday = () => {
           </UserAvatar>
           {!sidebarCollapsed && (
             <UserInfo>
-              <UserName>Staff Member</UserName>
-              <UserRole>Collections</UserRole>
+              <UserName>{staffInfo.name}</UserName>
+              <UserRole>DSR</UserRole>
             </UserInfo>
           )}
         </UserProfile>
@@ -488,13 +493,12 @@ const BillAssignedToday = () => {
               {bills.length > 0 ? (
                 <BillsList>
                   {(selectedCustomer ? customerBills : bills).map((bill) => (
-                    <BillCard key={bill._id}>
+                    <BillCard key={bill._id} paid={bill.dueAmount <= 0}>
                       <BillRetailer>{bill.retailer}</BillRetailer>
-
                       <BillHeader>
                         <BillNumber>Bill #{bill.billNumber}</BillNumber>
                         <BillStatus status={bill.status}>
-                          {bill.status}
+                          {bill.dueAmount <= 0 ? "Paid" : bill.status}
                         </BillStatus>
                       </BillHeader>
                       <BillDetails>
@@ -507,9 +511,11 @@ const BillAssignedToday = () => {
                         <DetailItem>
                           <DetailLabel>Due Amount:</DetailLabel>
                           <DetailValue>
-                            {bill.dueAmount <= 0
-                              ? "Cleared"
-                              : formatCurrency(bill.dueAmount.toFixed(2))}
+                            {bill.dueAmount <= 0 ? (
+                              <PaidText>Cleared</PaidText>
+                            ) : (
+                              formatCurrency(bill.dueAmount.toFixed(2))
+                            )}
                           </DetailValue>
                         </DetailItem>
                         <DetailItem>
@@ -526,6 +532,7 @@ const BillAssignedToday = () => {
                       <BillIcon>
                         <FaMoneyBillWave />
                       </BillIcon>
+                      {bill.dueAmount <= 0 && <PaidBadge>PAID</PaidBadge>}
                     </BillCard>
                   ))}
                 </BillsList>
@@ -890,6 +897,22 @@ const PageTitle = styled.h1`
   @media (min-width: 768px) {
     font-size: 1.5rem;
   }
+`;
+const PaidBadge = styled.div`
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #1cc88a;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+`;
+
+const PaidText = styled.span`
+  color: #1cc88a;
+  font-weight: bold;
 `;
 
 const HeaderActions = styled.div`
@@ -1264,7 +1287,6 @@ const Spinner = styled.div`
 `;
 // Styled Components (consistent with StaffDashboard)
 
-
 const SidebarHeader = styled.div`
   display: flex;
   justify-content: space-between;
@@ -1273,7 +1295,6 @@ const SidebarHeader = styled.div`
   height: 70px;
   border-bottom: 1px solid #f0f0f0;
 `;
-
 
 const MaxButton = styled.button`
   padding: 0 12px;
@@ -1304,8 +1325,6 @@ const OverdueBadge = styled.span`
   font-size: 0.75rem;
   margin-left: auto;
 `;
-
-
 
 const Logo = styled.div`
   font-size: 1.25rem;
@@ -1352,7 +1371,6 @@ const ModalOverlay = styled.div`
   align-items: center;
   z-index: 1000;
 `;
-
 
 const ModalHeader = styled.div`
   display: flex;
@@ -1432,7 +1450,6 @@ const SelectedBillInfo = styled.div`
     font-weight: 500;
   }
 `;
-
 
 const Label = styled.label`
   display: block;

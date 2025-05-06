@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import styled, { keyframes } from "styled-components";
 import {
@@ -10,7 +10,7 @@ import {
   FaChevronDown,
   FaChevronRight,
   FaSearch,
-  FaCalendarAlt
+  FaCalendarAlt,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
@@ -27,16 +27,52 @@ const CollectionsHistory = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const navigate = useNavigate();
+  const [staffInfo, setStaffInfo] = useState({
+    name: "Loading...",
+    role: "Collections",
+  });
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const fetchUserInfo = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Authentication token not found");
 
+      const response = await axios.get(`http://localhost:2500/api/users/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setStaffInfo({
+        name: response.data.name || "Staff Member",
+        role: response.data.role || "Collections",
+      });
+    } catch (err) {
+      console.error("Failed to fetch user info:", err);
+    }
+  }, []);
+  useEffect(() => {
+    fetchUserInfo();
+  }, [fetchUserInfo]);
   const fetchCollections = async () => {
     try {
       setLoading(true);
       setError("");
-      
-      const response = await axios.get("https://laxmi-lube.onrender.com/api/collections", {
+
+      let url = "http://localhost:2500/api/collections";
+      const params = new URLSearchParams();
+
+      if (searchTerm) params.append("search", searchTerm);
+      if (startDate) params.append("startDate", startDate);
+      if (endDate) params.append("endDate", endDate);
+
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+
+      const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
-      
+
       setCollections(response.data);
     } catch (err) {
       console.error("Error fetching collections:", err);
@@ -59,12 +95,12 @@ const CollectionsHistory = () => {
   };
 
   const formatDate = (dateString) => {
-    const options = { 
-      day: "numeric", 
-      month: "short", 
+    const options = {
+      day: "numeric",
+      month: "short",
       year: "numeric",
       hour: "2-digit",
-      minute: "2-digit"
+      minute: "2-digit",
     };
     return new Date(dateString).toLocaleDateString("en-US", options);
   };
@@ -83,14 +119,18 @@ const CollectionsHistory = () => {
     navigate("/login");
   };
 
-  const filteredCollections = collections.filter(collection => {
-    const matchesSearch = collection.bill?.billNumber?.toString().includes(searchTerm) || 
-                         collection.bill?.retailer?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesDate = dateFilter ? 
-      new Date(collection.collectedOn).toISOString().split('T')[0] === dateFilter : 
-      true;
-    
+  const filteredCollections = collections.filter((collection) => {
+    const matchesSearch =
+      collection.bill?.billNumber?.toString().includes(searchTerm) ||
+      collection.bill?.retailer
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase());
+
+    const matchesDate = dateFilter
+      ? new Date(collection.collectedOn).toISOString().split("T")[0] ===
+        dateFilter
+      : true;
+
     return matchesSearch && matchesDate;
   });
 
@@ -119,8 +159,8 @@ const CollectionsHistory = () => {
           </UserAvatar>
           {!sidebarCollapsed && (
             <UserInfo>
-              <UserName>Staff Member</UserName>
-              <UserRole>Collections</UserRole>
+              <UserName>{staffInfo.name}</UserName>
+              <UserRole>DSR</UserRole>
             </UserInfo>
           )}
         </UserProfile>
@@ -141,7 +181,11 @@ const CollectionsHistory = () => {
                 <>
                   <NavText>Collections</NavText>
                   <NavArrow>
-                    {activeSubmenu === "collections" ? <FaChevronDown /> : <FaChevronRight />}
+                    {activeSubmenu === "collections" ? (
+                      <FaChevronDown />
+                    ) : (
+                      <FaChevronRight />
+                    )}
                   </NavArrow>
                 </>
               )}
@@ -149,7 +193,9 @@ const CollectionsHistory = () => {
 
             {!sidebarCollapsed && activeSubmenu === "collections" && (
               <Submenu>
-                <SubmenuItem onClick={() => navigate("/staff/bill-assigned-today")}>
+                <SubmenuItem
+                  onClick={() => navigate("/staff/bill-assigned-today")}
+                >
                   <NavText>Assigned Today</NavText>
                 </SubmenuItem>
                 <SubmenuItem active>
@@ -188,8 +234,20 @@ const CollectionsHistory = () => {
               </CalendarIcon>
               <DateInput
                 type="date"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                placeholder="From Date"
+              />
+            </DateFilterContainer>
+            <DateFilterContainer>
+              <CalendarIcon>
+                <FaCalendarAlt />
+              </CalendarIcon>
+              <DateInput
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                placeholder="To Date"
               />
             </DateFilterContainer>
           </HeaderActions>
@@ -217,7 +275,9 @@ const CollectionsHistory = () => {
                   <TableRow key={collection._id}>
                     <TableCell>#{collection.bill?.billNumber}</TableCell>
                     <TableCell>{collection.bill?.retailer}</TableCell>
-                    <TableCell>{formatCurrency(collection.amountCollected)}</TableCell>
+                    <TableCell>
+                      {formatCurrency(collection.amountCollected)}
+                    </TableCell>
                     <TableCell>
                       <PaymentMode mode={collection.paymentMode}>
                         {collection.paymentMode}
@@ -240,60 +300,74 @@ const CollectionsHistory = () => {
     </DashboardLayout>
   );
 };
-
-const CollectionsTable = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  background-color: #fff;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
-`;
-
-const TableHeader = styled.thead`
+// Responsive Styles
+const DashboardLayout = styled.div`
+  display: flex;
+  min-height: 100vh;
   background-color: #f8f9fc;
-`;
+  flex-direction: column;
 
-const TableHeaderCell = styled.th`
-  padding: 15px;
-  text-align: left;
-  font-weight: 600;
-  color: #4e73df;
-`;
-
-const TableBody = styled.tbody``;
-
-const TableRow = styled.tr`
-  border-bottom: 1px solid #eee;
-  
-  &:last-child {
-    border-bottom: none;
-  }
-  
-  &:hover {
-    background-color: #f8f9fc;
+  @media (min-width: 768px) {
+    flex-direction: row;
   }
 `;
 
-const TableCell = styled.td`
-  padding: 15px;
-  color: #6c757d;
+const Sidebar = styled.div`
+  width: 100%;
+  background-color: #fff;
+  box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 10;
+
+  @media (min-width: 768px) {
+    width: ${(props) => (props.collapsed ? "80px" : "250px")};
+    height: 100vh;
+    position: sticky;
+    top: 0;
+  }
 `;
 
-const PaymentMode = styled.span`
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background-color: ${(props) =>
-    props.mode === "cash" ? "#1cc88a20" : 
-     props.mode === "upi" ? "#4e73df20" : 
-     props.mode === "bank_transfer" ? "#36b9cc20" : "#f6c23e20"};
-  color: ${(props) =>
-    props.mode === "cash" ? "#1cc88a" : 
-     props.mode === "upi" ? "#4e73df" : 
-     props.mode === "bank_transfer" ? "#36b9cc" : "#f6c23e"};
+const MainContent = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: calc(100vh - 70px);
+
+  @media (min-width: 768px) {
+    min-height: 100vh;
+  }
+`;
+
+const TopBar = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 15px;
+  background-color: #fff;
+  box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    height: 70px;
+    padding: 0 20px;
+  }
+`;
+
+const HeaderActions = styled.div`
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  @media (min-width: 576px) {
+    gap: 15px;
+    flex-wrap: nowrap;
+  }
 `;
 
 const SearchContainer = styled.div`
@@ -303,18 +377,19 @@ const SearchContainer = styled.div`
   border-radius: 4px;
   padding: 8px 15px;
   border: 1px solid #ddd;
-`;
-
-const SearchIcon = styled.div`
-  color: #6c757d;
-  margin-right: 10px;
+  flex: 1;
+  min-width: 200px;
 `;
 
 const SearchInput = styled.input`
   border: none;
   outline: none;
-  width: 250px;
+  width: 100%;
   font-size: 0.9rem;
+
+  @media (min-width: 576px) {
+    width: 250px;
+  }
 `;
 
 const DateFilterContainer = styled.div`
@@ -324,6 +399,147 @@ const DateFilterContainer = styled.div`
   border-radius: 4px;
   padding: 8px 15px;
   border: 1px solid #ddd;
+  flex: 1;
+`;
+
+const CollectionsTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+
+  @media (min-width: 992px) {
+    display: table;
+    white-space: normal;
+  }
+`;
+
+const TableHeaderCell = styled.th`
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #4e73df;
+
+  @media (min-width: 768px) {
+    padding: 15px;
+  }
+`;
+
+const TableCell = styled.td`
+  padding: 12px;
+  color: #6c757d;
+
+  @media (min-width: 768px) {
+    padding: 15px;
+  }
+`;
+
+const ContentArea = styled.div`
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
+
+  @media (min-width: 768px) {
+    padding: 20px;
+  }
+`;
+
+const EmptyState = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
+
+  @media (min-width: 768px) {
+    padding: 60px 20px;
+  }
+`;
+
+const PageTitle = styled.h1`
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #2e3a59;
+  margin: 0;
+
+  @media (min-width: 768px) {
+    font-size: 1.5rem;
+  }
+`;
+
+// For mobile devices, you might want to hide some columns
+const ResponsiveTableCell = styled(TableCell)`
+  @media (max-width: 768px) {
+    &:nth-child(4),
+    &:nth-child(6) {
+      display: none;
+    }
+  }
+`;
+
+const ResponsiveTableHeaderCell = styled(TableHeaderCell)`
+  @media (max-width: 768px) {
+    &:nth-child(4),
+    &:nth-child(6) {
+      display: none;
+    }
+  }
+`;
+
+const TableHeader = styled.thead`
+  background-color: #f8f9fc;
+`;
+
+const TableBody = styled.tbody``;
+
+const TableRow = styled.tr`
+  border-bottom: 1px solid #eee;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background-color: #f8f9fc;
+  }
+`;
+
+const PaymentMode = styled.span`
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background-color: ${(props) =>
+    props.mode === "cash"
+      ? "#1cc88a20"
+      : props.mode === "upi"
+      ? "#4e73df20"
+      : props.mode === "bank_transfer"
+      ? "#36b9cc20"
+      : "#f6c23e20"};
+  color: ${(props) =>
+    props.mode === "cash"
+      ? "#1cc88a"
+      : props.mode === "upi"
+      ? "#4e73df"
+      : props.mode === "bank_transfer"
+      ? "#36b9cc"
+      : "#f6c23e"};
+`;
+
+const SearchIcon = styled.div`
+  color: #6c757d;
+  margin-right: 10px;
 `;
 
 const CalendarIcon = styled.div`
@@ -335,23 +551,6 @@ const DateInput = styled.input`
   border: none;
   outline: none;
   font-size: 0.9rem;
-`;
-
-const DashboardLayout = styled.div`
-  display: flex;
-  min-height: 100vh;
-  background-color: #f8f9fc;
-`;
-
-const Sidebar = styled.div`
-  width: ${(props) => (props.collapsed ? "80px" : "250px")};
-  background-color: #fff;
-  box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
-  transition: width 0.3s ease;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  z-index: 1;
 `;
 
 const SidebarHeader = styled.div`
@@ -468,7 +667,6 @@ const NavArrow = styled.div`
   font-size: 0.8rem;
 `;
 
-
 const Submenu = styled.div`
   padding-left: 40px;
 `;
@@ -504,42 +702,6 @@ const LogoutButton = styled.div`
   }
 `;
 
-const MainContent = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-`;
-
-const TopBar = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 20px;
-  height: 70px;
-  background-color: #fff;
-  box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
-`;
-
-const PageTitle = styled.h1`
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #2e3a59;
-  margin: 0;
-`;
-
-const HeaderActions = styled.div`
-  display: flex;
-  gap: 15px;
-`;
-
-
-const ContentArea = styled.div`
-  flex: 1;
-  padding: 20px;
-  overflow-y: auto;
-`;
-
 const ErrorAlert = styled.div`
   background-color: #fff5f5;
   border: 1px solid #ffd6d6;
@@ -553,14 +715,11 @@ const ErrorAlert = styled.div`
   margin-bottom: 30px;
 `;
 
-
 const ErrorMessage = styled.div`
   font-size: 1rem;
   color: #e74a3b;
   margin-bottom: 20px;
 `;
-
-
 
 const LoadingContainer = styled.div`
   display: flex;
@@ -581,24 +740,10 @@ const Spinner = styled.div`
   margin-bottom: 20px;
 `;
 
-const EmptyState = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  text-align: center;
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
-`;
-
 const EmptyMessage = styled.p`
   font-size: 1rem;
   color: #6c757d;
   margin: 20px 0;
 `;
-// Reuse your existing styled components from BillAssignedToday.js
-// (DashboardLayout, Sidebar, MainContent, etc.)
 
 export default CollectionsHistory;

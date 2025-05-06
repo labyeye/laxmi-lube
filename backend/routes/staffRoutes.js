@@ -4,88 +4,75 @@ const { protect, staffOnly } = require("../middleware/authMiddleware");
 const Bill = require("../models/Bill");
 const Collection = require("../models/Collection");
 
+
 router.get("/dashboard", protect, async (req, res) => {
   try {
     const today = new Date();
-    const dayOfWeek = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][today.getDay()];
     today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Get bills assigned today AND matching collection day
-    const bills = await Bill.find({
-      assignedTo: req.user._id,
-      collectionDay: dayOfWeek,
-      assignedDate: { $gte: today }
-    }).lean();
+    // Get all bills assigned to this staff member
+    const allBills = await Bill.find({ assignedTo: req.user._id });
 
-    // Get today's collections
-    const collections = await Collection.find({
-      collectedOn: { $gte: today },
-      collectedBy: req.user._id
-    });
-
-    // Calculate totals
-    const todayAmountAssigned = bills.reduce(
+    // Calculate totals from all bills
+    const totalBillAmount = allBills.reduce(
       (sum, bill) => sum + (bill.amount || 0), 
       0
     );
-    
-    const totalCollected = collections.reduce(
+
+    // Get today's collections
+    const todayCollections = await Collection.find({
+      collectedOn: { $gte: today, $lt: tomorrow },
+      collectedBy: req.user._id
+    }).populate("bill", "billNumber retailer amount");
+
+    const totalCollectedToday = todayCollections.reduce(
       (sum, c) => sum + (c.amountCollected || 0), 
       0
     );
 
-    // Get number of bills with outstanding amounts
-    const billsWithDueAmount = bills.filter(bill => 
+    // Get bills with due amount
+    const billsWithDue = allBills.filter(bill => 
       (bill.dueAmount || bill.amount) > 0
-    ).length;
+    );
 
-    // Get overdue bills count (bills with due date before today)
+    // Get completed bills (paid in full)
+    const completedBills = allBills.filter(bill => 
+      (bill.dueAmount || 0) <= 0
+    );
+
+    // Get overdue bills
     const overdueBillsCount = await Bill.countDocuments({
       assignedTo: req.user._id,
-      collectionDay: dayOfWeek,
       dueDate: { $lt: today },
       dueAmount: { $gt: 0 }
     });
 
-    // Format collections for frontend display
-    const collectionsAssignedToday = collections.map(c => ({
+    // Format collections for response
+    const formattedCollections = todayCollections.map(c => ({
       billNumber: c.bill?.billNumber || "Unknown",
       retailer: c.bill?.retailer || "Unknown",
-      amount: c.amountCollected || 0,
-      status: "Completed",
-      dueDate: c.bill?.dueDate || new Date()
-    }));
-
-    // Get recent collection history (last 5)
-    const recentCollections = await Collection.find({
-      collectedBy: req.user._id
-    })
-    .sort({ collectedOn: -1 })
-    .limit(5)
-    .populate('bill', 'billNumber retailer');
-
-    const collectionsHistory = recentCollections.map(c => ({
-      billNumber: c.bill?.billNumber || "Unknown",
-      retailer: c.bill?.retailer || "Unknown",
-      amount: c.amountCollected || 0,
-      collectionDate: c.collectedOn
+      amount: c.amountCollected,
+      date: c.collectedOn,
+      status: "Completed"
     }));
 
     res.json({
-      todayAmountAssigned,
-      todayAmountCollected: totalCollected,
-      amountRemainingToday: todayAmountAssigned - totalCollected,
-      billsAssignedToday: billsWithDueAmount,
+      staffName: req.user.name,
+      totalBillAmount,
+      totalCollectedToday,
+      totalBillsWithDue: billsWithDue.length,
+      totalCompletedBills: completedBills.length,
       overdueBillsCount,
-      collectionsAssignedToday,
-      collectionsHistory
+      collectionsToday: formattedCollections,
+      recentCollections: formattedCollections.slice(0, 5)
     });
   } catch (err) {
     console.error("Dashboard error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
-
 router.get("/bills-history", protect, staffOnly, async (req, res) => {
   try {
     const { page = 1, limit = 10, status } = req.query;
