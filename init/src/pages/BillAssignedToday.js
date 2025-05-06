@@ -595,20 +595,30 @@ const BillAssignedToday = () => {
 
                     <FormGroup>
                       <Label>Amount Paid</Label>
-                      <Input
-                        type="number"
-                        value={paymentAmount}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (/^\d*\.?\d{0,2}$/.test(value) || value === "") {
-                            setPaymentAmount(value);
+                      <AmountInputContainer>
+                        <Input
+                          type="number"
+                          value={paymentAmount}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (/^\d*\.?\d{0,2}$/.test(value) || value === "") {
+                              setPaymentAmount(value);
+                            }
+                          }}
+                          placeholder="0.00"
+                          step="0.01"
+                          min="0.01"
+                          max={selectedBill?.dueAmount}
+                        />
+                        <MaxButton
+                          type="button"
+                          onClick={() =>
+                            setPaymentAmount(selectedBill?.dueAmount.toFixed(2))
                           }
-                        }}
-                        placeholder="0.00"
-                        step="0.01"
-                        min="0.01"
-                        max={selectedBill?.dueAmount}
-                      />
+                        >
+                          Max
+                        </MaxButton>
+                      </AmountInputContainer>
                     </FormGroup>
 
                     <FormGroup>
@@ -834,7 +844,32 @@ const DayFilterContainer = styled.div`
   overflow-x: auto;
   padding-bottom: 10px;
 `;
+const AmountInputContainer = styled.div`
+  display: flex;
+  gap: 8px;
+`;
 
+const MaxButton = styled.button`
+  padding: 0 12px;
+  background-color: #f8f9fc;
+  color: #4e73df;
+  border: 1px solid #4e73df;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+
+  &:hover {
+    background-color: #4e73df;
+    color: white;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+`;
 const DayButton = styled.button`
   padding: 8px 12px;
   border: 1px solid ${(props) => (props.active ? "#4e73df" : "#ddd")};
