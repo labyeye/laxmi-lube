@@ -42,8 +42,8 @@ const ImageSection = styled.div`
 
 const LoginImage = styled.div`
   width: 100%;
-  height: 100%;
-  background-image: url('https://images.unsplash.com/photo-1633356122544-f134324a6cee?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80');
+  height: 400px;
+  background-image: url('https://www.reuters.com/resizer/v2/EU6AFEL2QFP7ZGPN3E6AWXE5LI.jpg?auth=8486956e1d4a506b94571daa93fc60a33e9ed951b6c61e218ad9f52cab631a2a&width=6324&quality=80');
   background-size: cover;
   background-position: center;
   border-radius: 10px;

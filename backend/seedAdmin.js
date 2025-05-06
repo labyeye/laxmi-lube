@@ -7,8 +7,8 @@ mongoose.connect(process.env.MONGO_URI)
     await User.deleteMany({}); 
     const admin = new User({
       name: 'Admin User',
-      email: 'admin@example.com',
-      password: 'admin123', 
+      email: 'admin@kh.com',
+      password: 'Pankaj@2025', 
       role: 'admin'
     });
     await admin.save();
