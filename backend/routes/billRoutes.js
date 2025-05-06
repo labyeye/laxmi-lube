@@ -424,7 +424,7 @@ router.get("/by-collection-day/:day", protect, async (req, res) => {
 router.get("/bills-assigned-today", protect, staffOnly, async (req, res) => {
   try {
     const today = new Date();
-    const dayOfWeek = [
+    const dayOfWeek = req.query.collectionDay || [
       "Sunday",
       "Monday",
       "Tuesday",
@@ -434,14 +434,15 @@ router.get("/bills-assigned-today", protect, staffOnly, async (req, res) => {
       "Saturday",
     ][today.getDay()];
 
-    const bills = await Bill.find({
+    // Remove the assignedDate filter to show all bills for the day
+    const query = {
       assignedTo: req.user._id,
       collectionDay: dayOfWeek,
-      assignedDate: {
-        $gte: new Date(today.setHours(0, 0, 0, 0)),
-        $lt: new Date(today.setHours(23, 59, 59, 999)),
-      },
-    })
+      // Removed the assignedDate filter
+      status: { $ne: "Paid" } // Only if you want to exclude paid bills
+    };
+
+    const bills = await Bill.find(query)
       .populate("assignedTo", "name")
       .lean();
 

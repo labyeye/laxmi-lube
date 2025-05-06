@@ -92,9 +92,8 @@ const BillAssignedToday = () => {
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
           params: {
-            date: today.toISOString().split("T")[0],
-            collectionDay: dayOfWeek,
-          },
+            collectionDay: dayOfWeek, // Just send the day parameter
+          }
         }
       );
 
