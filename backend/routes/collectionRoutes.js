@@ -4,7 +4,41 @@ const Collection = require("../models/Collection");
 const Bill = require("../models/Bill");
 const { protect } = require("../middleware/authMiddleware");
 const { format } = require("date-fns");
-const { exceljs } = require("exceljs");
+const exceljs = require("exceljs");
+
+// Helper function to filter payment details by payment mode
+const getFilteredPaymentDetails = (paymentMode, paymentDetails) => {
+  if (!paymentDetails) {
+    return paymentMode === "cash" 
+      ? { receiptNumber: "Money Received" } 
+      : null;
+  }
+
+  const modeSpecificDetails = {
+    upi: ["upiId", "transactionId"],
+    cash: ["receiptNumber"],
+    cheque: ["chequeNumber", "bankName"],
+    bank_transfer: ["transactionId", "bankName"],
+  };
+
+  const relevantKeys = modeSpecificDetails[paymentMode] || [];
+  const filteredDetails = {};
+
+  relevantKeys.forEach((key) => {
+    if (paymentDetails[key] && paymentDetails[key] !== "undefined") {
+      filteredDetails[key] = paymentDetails[key];
+    }
+  });
+
+  // Special handling for cash payments
+  if (paymentMode === "cash" && !filteredDetails.receiptNumber) {
+    filteredDetails.receiptNumber = "Money Received";
+  }
+
+  return Object.keys(filteredDetails).length > 0 ? filteredDetails : null;
+};
+
+// Export today's collections to Excel
 router.get("/export/today-collections/excel", protect, async (req, res) => {
   try {
     const today = new Date();
@@ -12,34 +46,35 @@ router.get("/export/today-collections/excel", protect, async (req, res) => {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Get today's collections
+    // Get today's collections with populated data
     const collections = await Collection.find({
       collectedOn: {
         $gte: today,
         $lt: tomorrow,
       },
     })
-      .populate("bill", "billNumber retailer amount")
+      .populate("bill", "billNumber retailer amount dueAmount billDate")
       .populate("collectedBy", "name");
 
-    // Create workbook
+    // Create workbook and worksheet
     const workbook = new exceljs.Workbook();
     const worksheet = workbook.addWorksheet("Today's Collections");
 
-    // Set headers with styling
+    // Set columns
     worksheet.columns = [
-      { header: "Bill Number", key: "billNumber", width: 15 },
       { header: "Retailer", key: "retailer", width: 25 },
+      { header: "Bill Number", key: "billNumber", width: 15 },
       { header: "Bill Date", key: "billDate", width: 15 },
-      { header: "Amount", key: "amount", width: 15 },
-      { header: "Due Amount", key: "dueAmount", width: 15 },
-      { header: "Status", key: "status", width: 15 },
-      { header: "Assigned To", key: "assignedTo", width: 20 },
       { header: "Collection Amount", key: "collectionAmount", width: 20 },
+      { header: "Due Amount", key: "dueAmount", width: 15 },
       { header: "Payment Mode", key: "paymentMode", width: 15 },
       { header: "Payment Date", key: "paymentDate", width: 15 },
       { header: "Collected By", key: "collectedBy", width: 20 },
-      { header: "Payment Details", key: "paymentDetails", width: 30 },
+      { header: "Cheque No", key: "chequeNumber", width: 15 },
+      { header: "Bank Name", key: "bankName", width: 20 },
+      { header: "UPI ID", key: "upiId", width: 25 },
+      { header: "Transaction ID", key: "transactionId", width: 25 },
+      { header: "Receipt No", key: "receiptNumber", width: 15 },
     ];
 
     // Style headers
@@ -55,28 +90,26 @@ router.get("/export/today-collections/excel", protect, async (req, res) => {
 
     // Add data rows
     collections.forEach((collection) => {
-      let paymentDetails = "";
-      if (collection.paymentDetails) {
-        paymentDetails = Object.entries(collection.paymentDetails)
-          .map(([key, value]) => `${key}: ${value}`)
-          .join(", ");
-      }
-
+      const paymentDetails = collection.paymentDetails || {};
+      
       worksheet.addRow({
-        billNumber: collection.bill?.billNumber || "N/A",
         retailer: collection.bill?.retailer || "N/A",
+        billNumber: collection.bill?.billNumber || "N/A",
         billDate: collection.bill?.billDate
-          ? format(collection.bill.billDate, "dd/MM/yyyy")
+          ? format(new Date(collection.bill.billDate), "dd/MM/yyyy")
           : "N/A",
-        amount: collection.bill?.amount || 0,
-        dueAmount: collection.bill?.dueAmount || 0,
-        status: collection.bill?.status || "N/A",
-        assignedTo: collection.bill?.assignedTo || "N/A",
         collectionAmount: collection.amountCollected,
+        dueAmount: collection.bill?.dueAmount || 0,
         paymentMode: collection.paymentMode,
-        paymentDate: format(collection.collectedOn, "dd/MM/yyyy"),
+        paymentDate: format(new Date(collection.collectedOn), "dd/MM/yyyy"),
         collectedBy: collection.collectedBy?.name || "System",
-        paymentDetails,
+        chequeNumber: paymentDetails.chequeNumber || "",
+        bankName: paymentDetails.bankName || "",
+        upiId: paymentDetails.upiId || "",
+        transactionId: paymentDetails.transactionId || paymentDetails.upiTransactionId || "",
+        receiptNumber: collection.paymentMode === "cash" 
+          ? (paymentDetails.receiptNumber || "Money Received")
+          : ""
       });
     });
 
@@ -124,10 +157,11 @@ router.get("/export/today-collections/excel", protect, async (req, res) => {
     });
   }
 });
+
+// Create a new collection
 router.post("/", protect, async (req, res) => {
   try {
-    const { bill, amountCollected, paymentMode, remarks, paymentDetails } =
-      req.body;
+    const { bill, amountCollected, paymentMode, remarks, paymentDetails } = req.body;
 
     // Validate required fields
     if (!bill || !amountCollected || !paymentMode) {
@@ -137,7 +171,6 @@ router.post("/", protect, async (req, res) => {
     }
 
     // Validate amount
-    // Replace the existing amount validation with:
     const amount = parseFloat(amountCollected);
     if (isNaN(amount) || amount <= 0 || amount > 1000000) {
       return res.status(400).json({
@@ -145,12 +178,13 @@ router.post("/", protect, async (req, res) => {
       });
     }
 
-    // Add decimal places validation separately
+    // Validate decimal places
     if (!/^\d+(\.\d{1,2})?$/.test(amountCollected)) {
       return res.status(400).json({
         message: "Amount must have up to 2 decimal places",
       });
     }
+
     // Check if bill exists
     const existingBill = await Bill.findById(bill);
     if (!existingBill) {
@@ -160,9 +194,7 @@ router.post("/", protect, async (req, res) => {
     // Validate amount against due amount
     if (amount > existingBill.dueAmount) {
       return res.status(400).json({
-        message: `Amount cannot exceed due amount of ${existingBill.dueAmount.toFixed(
-          2
-        )}`,
+        message: `Amount cannot exceed due amount of ${existingBill.dueAmount.toFixed(2)}`,
       });
     }
 
@@ -170,22 +202,18 @@ router.post("/", protect, async (req, res) => {
     let validationError;
     switch (paymentMode) {
       case "upi":
-        if (!paymentDetails?.upiId || !paymentDetails?.upiTransactionId) {
-          validationError =
-            "UPI ID and Transaction ID are required for UPI payments";
+        if (!paymentDetails?.upiId) {
+          validationError = "UPI ID is required for UPI payments";
         }
         break;
-      // In the POST route validation section
       case "cheque":
-        if (!paymentDetails?.bankName || !paymentDetails?.chequeNumber) {
-          validationError =
-            "Bank name and cheque number are required for cheque payments";
+        if (!paymentDetails?.chequeNumber || !paymentDetails?.bankName) {
+          validationError = "Cheque number and bank name are required for cheque payments";
         }
         break;
       case "bank_transfer":
-        if (!paymentDetails?.bankName || !paymentDetails?.bankTransactionId) {
-          validationError =
-            "Bank name and transaction ID are required for bank transfers";
+        if (!paymentDetails?.transactionId || !paymentDetails?.bankName) {
+          validationError = "Transaction ID and bank name are required for bank transfers";
         }
         break;
     }
@@ -194,12 +222,14 @@ router.post("/", protect, async (req, res) => {
       return res.status(400).json({ message: validationError });
     }
 
-    // Create collection
+    // Create collection with properly structured paymentDetails
     const collection = new Collection({
       bill,
       amountCollected: amount,
       paymentMode,
-      paymentDetails: paymentMode === "cash" ? null : paymentDetails,
+      paymentDetails: paymentMode === "cash" 
+        ? { receiptNumber: paymentDetails?.receiptNumber || "Money Received" }
+        : paymentDetails,
       collectedBy: req.user._id,
       remarks,
       collectedOn: new Date(),

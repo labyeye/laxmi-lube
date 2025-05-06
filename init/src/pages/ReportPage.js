@@ -4,7 +4,6 @@ import axios from "axios";
 import { saveAs } from "file-saver";
 import {
   FaFileExcel,
-  FaFilePdf,
   FaSearch,
   FaCalendarAlt,
   FaHistory,
@@ -13,7 +12,7 @@ import { DateRangePicker } from "react-date-range";
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
 import Layout from "../components/Layout";
-import { format, startOfDay, endOfDay, isToday } from "date-fns";
+import { format } from "date-fns";
 
 const API_BASE_URL = "https://laxmi-lube.onrender.com/api/admin/reports";
 
@@ -32,38 +31,34 @@ const ReportPage = () => {
     },
   ]);
 
-  useEffect(() => {
-    fetchReports();
-  }, [showHistory]); // Refetch when history view changes
-
   const fetchReports = async () => {
     try {
       setLoading(true);
       setError(null);
-  
+
       const token = localStorage.getItem("token");
       if (!token) return;
-  
+
       let url = `${API_BASE_URL}`;
       let params = {};
-      
+
       if (!showHistory) {
         url = `${API_BASE_URL}/today-collections`;
       } else if (dateRange[0].startDate && dateRange[0].endDate) {
         url = `${API_BASE_URL}`;
         params = {
           startDate: format(dateRange[0].startDate, "yyyy-MM-dd"),
-          endDate: format(dateRange[0].endDate, "yyyy-MM-dd")
+          endDate: format(dateRange[0].endDate, "yyyy-MM-dd"),
         };
       }
-  
+
       const response = await axios.get(url, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        params
+        params,
       });
-  
+
       setReports(response.data);
     } catch (error) {
       console.error("Error fetching reports:", error);
@@ -72,7 +67,9 @@ const ReportPage = () => {
       setLoading(false);
     }
   };
-  
+  useEffect(() => {
+    fetchReports();
+  }, [showHistory]);
 
   const toggleHistoryView = () => {
     setShowHistory(!showHistory);
@@ -216,71 +213,104 @@ const ReportPage = () => {
           <ReportTable>
             <thead>
               <tr>
-                <th>Bill No.</th>
                 <th>Retailer</th>
+                <th>Bill Number</th>
                 <th>Bill Date</th>
-                <th>Bill Amount</th>
-                <th>Status</th>
-                <th>Assigned To</th>
-                <th>Collections</th>
+                <th>Collection Amount</th>
+                <th>Due Amount</th>
+                <th>Payment Mode</th>
+                <th>Collection Date</th>
+                <th>Collected By</th>
+                <th>Payment Details</th>
               </tr>
             </thead>
             <tbody>
               {filteredReports.length > 0 ? (
-                filteredReports.map((report) => (
-                  <tr key={report._id}>
-                    <td>{report.billNumber}</td>
-                    <td>{report.retailer}</td>
-                    <td>{format(new Date(report.billDate), "dd/MM/yyyy")}</td>
-                    <td>₹{report.amount.toLocaleString()}</td>
-                    <td>
-                      <StatusBadge status={report.status}>
-                        {report.status}
-                      </StatusBadge>
-                    </td>
-                    <td>{report.assignedToName || "Not assigned"}</td>
-                    <td>
-                      {report.collections.length > 0 ? (
-                        <CollectionsList>
-                          {report.collections.map((collection) => (
-                            <CollectionItem key={collection._id}>
-                              <div>
-                                <strong>Amount:</strong> ₹
-                                {collection.amountCollected.toLocaleString()}
-                              </div>
-                              <div>
-                                <strong>Mode:</strong> {collection.paymentMode}
-                              </div>
-                              <div>
-                                <strong>Date:</strong>{" "}
-                                {format(
-                                  new Date(collection.paymentDate),
-                                  "dd/MM/yyyy"
-                                )}
-                              </div>
-                              {collection.paymentDetails && (
-                                <PaymentDetails>
-                                  {Object.entries(
+                filteredReports.flatMap((report) =>
+                  report.collections.length > 0
+                    ? report.collections.map((collection) => (
+                        <tr key={`${report._id}-${collection._id}`}>
+                          <td>{report.retailer}</td>
+                          <td>{report.billNumber}</td>
+                          <td>
+                            {format(new Date(report.billDate), "dd/MM/yyyy")}
+                          </td>
+                          <td>
+                            ₹
+                            {collection.amountCollected?.toLocaleString() ||
+                              "0"}
+                          </td>
+                          <td>₹{report.dueAmount?.toLocaleString() || "0"}</td>
+                          <td>{collection.paymentMode}</td>
+                          <td>
+                            {format(
+                              new Date(collection.paymentDate),
+                              "dd/MM/yyyy"
+                            )}
+                          </td>
+                          <td>{collection.collectedByName || "System"}</td>
+                          <td>
+                            <PaymentDetails>
+                            {collection.paymentMode === "cash" ? (
+    <div>
+      <strong>Receipt:</strong>{" "}
+      {collection.paymentDetails?.receiptNumber || "Money Received"}
+    </div>
+  )  : collection.paymentMode === "upi" ? (
+                                <div>
+                                  <strong>Transaction ID:</strong>{" "}
+                                  {collection.paymentDetails?.transactionId ||
                                     collection.paymentDetails
-                                  ).map(([key, value]) => (
+                                      ?.upiTransactionId ||
+                                    "N/A"}
+                                </div>
+                              ) : collection.paymentMode === "cheque" ? (
+                                <>
+                                  <div>
+                                    <strong>Cheque No:</strong>{" "}
+                                    {collection.paymentDetails?.chequeNumber ||
+                                      "N/A"}
+                                  </div>
+                                  <div>
+                                    <strong>Bank:</strong>{" "}
+                                    {collection.paymentDetails?.bankName ||
+                                      "N/A"}
+                                  </div>
+                                </>
+                              ) : collection.paymentDetails ? (
+                                Object.entries(collection.paymentDetails).map(
+                                  ([key, value]) => (
                                     <div key={key}>
-                                      <strong>{key}:</strong> {value}
+                                      <strong>{key}:</strong> {value || "N/A"}
                                     </div>
-                                  ))}
-                                </PaymentDetails>
+                                  )
+                                )
+                              ) : (
+                                <div>No payment details</div>
                               )}
-                            </CollectionItem>
-                          ))}
-                        </CollectionsList>
-                      ) : (
-                        "No collections"
-                      )}
-                    </td>
-                  </tr>
-                ))
+                            </PaymentDetails>
+                          </td>
+                        </tr>
+                      ))
+                    : [
+                        <tr key={report._id}>
+                          <td>{report.retailer}</td>
+                          <td>{report.billNumber}</td>
+                          <td>
+                            {format(new Date(report.billDate), "dd/MM/yyyy")}
+                          </td>
+                          <td>₹0</td>
+                          <td>₹{report.dueAmount?.toLocaleString() || "0"}</td>
+                          <td>N/A</td>
+                          <td>N/A</td>
+                          <td>N/A</td>
+                          <td>No collections</td>
+                        </tr>,
+                      ]
+                )
               ) : (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: "center" }}>
+                  <td colSpan="9" style={{ textAlign: "center" }}>
                     No reports found
                   </td>
                 </tr>
@@ -485,51 +515,28 @@ const ReportTable = styled.table`
   }
 `;
 
-const StatusBadge = styled.span`
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background-color: ${(props) =>
-    props.status === "Paid"
-      ? "#e3faf0"
-      : props.status === "Partially Paid"
-      ? "#fff8e6"
-      : "#f8d7da"};
-  color: ${(props) =>
-    props.status === "Paid"
-      ? "#20c997"
-      : props.status === "Partially Paid"
-      ? "#ffc107"
-      : "#dc3545"};
-`;
-const CollectionsList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-`;
-const CollectionItem = styled.div`
-  padding: 10px;
-  background-color: #f8f9fc;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  div {
-    margin-bottom: 5px;
-
-    &:last-child {
-      margin-bottom: 0;
-    }
-  }
-`;
 const PaymentDetails = styled.div`
   margin-top: 5px;
-  padding-top: 5px;
-  border-top: 1px dashed #ddd;
+  padding: 8px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
   font-size: 0.8rem;
+  border-left: 3px solid #4e73df;
 
   div {
-    margin-bottom: 3px;
+    margin-bottom: 5px;
+    display: flex;
+    gap: 8px;
+
+    strong {
+      min-width: 120px;
+      display: inline-block;
+      color: #6e707e;
+    }
+  }
+
+  &:empty {
+    display: none;
   }
 `;
 const LoadingIndicator = styled.div`

@@ -6,7 +6,32 @@ const { protect, adminOnly } = require("../middleware/authMiddleware");
 const exceljs = require("exceljs");
 const PDFDocument = require("pdfkit");
 const { format } = require("date-fns");
-// Add this near the startOfDay function in reportRoutes.js
+// Update the getFilteredPaymentDetails function:
+const getFilteredPaymentDetails = (paymentMode, paymentDetails) => {
+  if (!paymentDetails) {
+    return paymentMode === "cash" ? { receiptNumber: "Money Received" } : null;
+  }
+
+  const modeSpecificDetails = {
+    upi: ["upiId", "transactionId"],
+    cash: ["receiptNumber"],
+    cheque: ["chequeNumber", "bankName"],
+    bank_transfer: ["transactionId", "bankName"],
+  };
+
+  const relevantKeys = modeSpecificDetails[paymentMode] || [];
+  const filteredDetails = {};
+
+  relevantKeys.forEach((key) => {
+    if (paymentDetails[key] && paymentDetails[key] !== "undefined") {
+      filteredDetails[key] = paymentDetails[key];
+    }
+  });
+
+  return Object.keys(filteredDetails).length > 0 ? filteredDetails : null;
+};
+
+
 function endOfDay(date) {
   const newDate = new Date(date);
   newDate.setHours(23, 59, 59, 999);
@@ -17,6 +42,7 @@ function startOfDay(date) {
   newDate.setHours(0, 0, 0, 0);
   return newDate;
 }
+
 router.get(
   "/export/today-collections/excel",
   protect,
@@ -27,8 +53,17 @@ router.get(
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
+      const cleanPaymentDetails = (paymentDetails) => {
+        if (!paymentDetails) return {};
 
-      // Get today's collections with proper population
+        const cleaned = {};
+        Object.entries(paymentDetails).forEach(([key, value]) => {
+          if (value && value !== "undefined" && value !== "null") {
+            cleaned[key] = value;
+          }
+        });
+        return cleaned;
+      };
       const collections = await Collection.find({
         collectedOn: {
           $gte: today,
@@ -45,26 +80,25 @@ router.get(
           },
         })
         .populate("collectedBy", "name");
-      // Create workbook
       const workbook = new exceljs.Workbook();
       const worksheet = workbook.addWorksheet("Today's Collections");
 
-      // Set headers with styling
       worksheet.columns = [
         { header: "Retailer", key: "retailer", width: 25 },
         { header: "Bill Number", key: "billNumber", width: 15 },
         { header: "Bill Date", key: "billDate", width: 15 },
-        // { header: "Amount", key: "amount", width: 15 },
         { header: "Collection Amount", key: "collectionAmount", width: 20 },
         { header: "Due Amount", key: "dueAmount", width: 15 },
-        // { header: "Status", key: "status", width: 15 },
         { header: "Payment Mode", key: "paymentMode", width: 15 },
         { header: "Payment Date", key: "paymentDate", width: 15 },
         { header: "Collected By", key: "collectedBy", width: 20 },
-        { header: "Payment Details", key: "paymentDetails", width: 30 },
+        { header: "Cheque No", key: "chequeNumber", width: 15 },
+        { header: "Bank Name", key: "bankName", width: 20 },
+        { header: "UPI ID", key: "upiId", width: 25 },
+        { header: "Transaction ID", key: "transactionId", width: 25 },
+        { header: "Receipt No", key: "receiptNumber", width: 15 },
       ];
 
-      // Style headers
       worksheet.getRow(1).eachCell((cell) => {
         cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
         cell.fill = {
@@ -75,39 +109,35 @@ router.get(
         cell.alignment = { vertical: "middle", horizontal: "center" };
       });
 
-      // Add data rows
-      collections.forEach((collection) => {
-        let paymentDetails = "";
-        if (collection.paymentDetails) {
-          paymentDetails = Object.entries(collection.paymentDetails)
-            .map(([key, value]) => `${key}: ${value}`)
-            .join(", ");
-        }
 
+      collections.forEach((collection) => {
+        const paymentDetails = collection.paymentDetails || {};
+        
         worksheet.addRow({
-          billNumber: collection.bill?.billNumber || "N/A",
           retailer: collection.bill?.retailer || "N/A",
+          billNumber: collection.bill?.billNumber || "N/A",
           billDate: collection.bill?.billDate
-            ? format(collection.bill.billDate, "dd/MM/yyyy")
+            ? format(new Date(collection.bill.billDate), "dd/MM/yyyy")
             : "N/A",
-          amount: collection.bill?.amount || 0,
-          dueAmount: collection.bill?.dueAmount || 0,
-          status: collection.bill?.status || "N/A",
-          assignedTo: collection.bill?.assignedTo || "N/A",
           collectionAmount: collection.amountCollected,
+          dueAmount: collection.bill?.dueAmount || 0,
           paymentMode: collection.paymentMode,
-          paymentDate: format(collection.collectedOn, "dd/MM/yyyy"),
+          paymentDate: format(new Date(collection.collectedOn), "dd/MM/yyyy"),
           collectedBy: collection.collectedBy?.name || "System",
-          paymentDetails,
+          chequeNumber: paymentDetails.chequeNumber || "",
+          bankName: paymentDetails.bankName || "",
+          upiId: paymentDetails.upiId || "",
+          transactionId: paymentDetails.transactionId || paymentDetails.upiTransactionId || "",
+          receiptNumber: collection.paymentMode === "cash" 
+      ? (paymentDetails.receiptNumber || "Money Received")
+      : ""
         });
       });
 
-      // Format currency columns
       [4, 5, 8].forEach((colNum) => {
         worksheet.columns[colNum].numFmt = "#,##0.00";
       });
 
-      // Auto-fit columns
       worksheet.columns.forEach((column) => {
         let maxLength = 0;
         column.eachCell({ includeEmpty: true }, (cell) => {
@@ -122,7 +152,6 @@ router.get(
         );
       });
 
-      // Set response headers
       res.setHeader(
         "Content-Type",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -135,7 +164,6 @@ router.get(
         )}.xlsx`
       );
 
-      // Send the workbook
       await workbook.xlsx.write(res);
       res.end();
     } catch (err) {
@@ -148,7 +176,7 @@ router.get(
   }
 );
 // Add a new route for today's collections
-router.get('/today-collections', protect, adminOnly, async (req, res) => {
+router.get("/today-collections", protect, adminOnly, async (req, res) => {
   try {
     const todayStart = startOfDay(new Date());
     const todayEnd = endOfDay(new Date());
@@ -157,48 +185,47 @@ router.get('/today-collections', protect, adminOnly, async (req, res) => {
     const todayCollections = await Collection.find({
       collectedOn: {
         $gte: todayStart,
-        $lte: todayEnd
-      }
-    }).populate('collectedBy', 'name');
+        $lte: todayEnd,
+      },
+    }).populate("collectedBy", "name");
 
     // Then find bills associated with these collections
-    const billIds = todayCollections.map(c => c.bill);
+    const billIds = todayCollections.map((c) => c.bill);
     const reports = await Bill.find({
-      _id: { $in: billIds }
+      _id: { $in: billIds },
     })
-    .populate('assignedTo', 'name')
-    .sort({ billDate: -1 });
+      .populate("assignedTo", "name")
+      .sort({ billDate: -1 });
 
     // Combine the data
-    const formattedReports = reports.map(report => {
-      const billCollections = todayCollections.filter(c => c.bill.toString() === report._id.toString());
-      
+    const formattedReports = reports.map((report) => {
+      const billCollections = todayCollections.filter(
+        (c) => c.bill.toString() === report._id.toString()
+      );
+
       return {
         _id: report._id,
-        billNumber: report.billNumber,
         retailer: report.retailer,
+        billNumber: report.billNumber,
         billDate: report.billDate,
-        amount: report.amount,
         dueAmount: report.dueAmount,
-        status: report.status,
-        assignedToName: report.assignedTo?.name || null,
-        collections: billCollections.map(collection => ({
+        collections: billCollections.map((collection) => ({
           _id: collection._id,
           amountCollected: collection.amountCollected,
           paymentMode: collection.paymentMode,
           paymentDate: collection.collectedOn,
           paymentDetails: collection.paymentDetails,
-          collectedByName: collection.collectedBy?.name || 'System',
+          collectedByName: collection.collectedBy?.name || "System",
         })),
       };
     });
 
     res.json(formattedReports);
   } catch (err) {
-    console.error('Today collections error:', err);
-    res.status(500).json({ 
-      message: 'Error fetching today\'s collections',
-      error: err.message 
+    console.error("Today collections error:", err);
+    res.status(500).json({
+      message: "Error fetching today's collections",
+      error: err.message,
     });
   }
 });
@@ -229,13 +256,9 @@ router.get("/", protect, adminOnly, async (req, res) => {
 
     const formattedReports = reports.map((report) => ({
       _id: report._id,
-      billNumber: report.billNumber,
       retailer: report.retailer,
+      billNumber: report.billNumber,
       billDate: report.billDate,
-      amount: report.amount,
-      dueAmount: report.dueAmount,
-      status: report.status,
-      assignedToName: report.assignedTo?.name || null,
       collections: report.collections.map((collection) => ({
         _id: collection._id,
         amountCollected: collection.amountCollected,
@@ -244,6 +267,7 @@ router.get("/", protect, adminOnly, async (req, res) => {
         paymentDetails: collection.paymentDetails,
         collectedByName: collection.collectedBy?.name || "System",
       })),
+      dueAmount: report.dueAmount,
     }));
 
     res.json(formattedReports);
@@ -287,14 +311,11 @@ router.get("/export/excel", protect, adminOnly, async (req, res) => {
 
     // Add headers
     worksheet.columns = [
-      { header: "Bill Number", key: "billNumber", width: 15 },
       { header: "Retailer", key: "retailer", width: 25 },
+      { header: "Bill Number", key: "billNumber", width: 15 },
       { header: "Bill Date", key: "billDate", width: 15 },
-      { header: "Amount", key: "amount", width: 15 },
-      { header: "Due Amount", key: "dueAmount", width: 15 },
-      { header: "Status", key: "status", width: 15 },
-      { header: "Assigned To", key: "assignedTo", width: 20 },
       { header: "Collection Amount", key: "collectionAmount", width: 20 },
+      { header: "Due Amount", key: "dueAmount", width: 15 },
       { header: "Payment Mode", key: "paymentMode", width: 15 },
       { header: "Payment Date", key: "paymentDate", width: 15 },
       { header: "Collected By", key: "collectedBy", width: 20 },
@@ -313,34 +334,34 @@ router.get("/export/excel", protect, adminOnly, async (req, res) => {
           }
 
           worksheet.addRow({
-            billNumber: report.billNumber,
             retailer: report.retailer,
+            billNumber: report.billNumber,
             billDate: format(new Date(report.billDate), "dd/MM/yyyy"),
-            amount: report.amount,
-            dueAmount: report.dueAmount,
-            status: report.status,
-            assignedTo: report.assignedTo?.name || "Not assigned",
             collectionAmount: collection.amountCollected,
+            dueAmount: report.dueAmount,
             paymentMode: collection.paymentMode,
             paymentDate: format(new Date(collection.collectedOn), "dd/MM/yyyy"),
             collectedBy: collection.collectedBy?.name || "System",
-            paymentDetails,
+            paymentDetails: getFilteredPaymentDetails(
+              collection.paymentMode,
+              collection.paymentDetails
+            ),
           });
         });
       } else {
         worksheet.addRow({
-          billNumber: report.billNumber,
           retailer: report.retailer,
+          billNumber: report.billNumber,
           billDate: format(new Date(report.billDate), "dd/MM/yyyy"),
-          amount: report.amount,
+          collectionAmount: collection.amountCollected,
           dueAmount: report.dueAmount,
-          status: report.status,
-          assignedTo: report.assignedTo?.name || "Not assigned",
-          collectionAmount: "No collections",
-          paymentMode: "",
-          paymentDate: "",
-          collectedBy: "",
-          paymentDetails: "",
+          paymentMode: collection.paymentMode,
+          paymentDate: format(new Date(collection.collectedOn), "dd/MM/yyyy"),
+          collectedBy: collection.collectedBy?.name || "System",
+          paymentDetails: getFilteredPaymentDetails(
+            collection.paymentMode,
+            collection.paymentDetails
+          ),
         });
       }
     });
@@ -459,14 +480,11 @@ router.get("/export/excel", protect, adminOnly, async (req, res) => {
           }
 
           worksheet.addRow({
-            billNumber: report.billNumber,
             retailer: report.retailer,
+            billNumber: report.billNumber,
             billDate: format(new Date(report.billDate), "dd/MM/yyyy"),
-            amount: report.amount,
-            dueAmount: report.dueAmount,
-            status: report.status,
-            assignedTo: report.assignedTo?.name || "Not assigned",
             collectionAmount: collection.amountCollected,
+            dueAmount: report.dueAmount,
             paymentMode: collection.paymentMode,
             paymentDate: format(new Date(collection.collectedOn), "dd/MM/yyyy"),
             collectedBy: collection.collectedBy?.name || "System",
@@ -475,13 +493,10 @@ router.get("/export/excel", protect, adminOnly, async (req, res) => {
         });
       } else {
         worksheet.addRow({
-          billNumber: report.billNumber,
           retailer: report.retailer,
+          billNumber: report.billNumber,
           billDate: format(new Date(report.billDate), "dd/MM/yyyy"),
-          amount: report.amount,
           dueAmount: report.dueAmount,
-          status: report.status,
-          assignedTo: report.assignedTo?.name || "Not assigned",
           collectionAmount: 0,
           paymentMode: "N/A",
           paymentDate: "N/A",

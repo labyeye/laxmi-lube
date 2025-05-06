@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+
 const collectionSchema = new mongoose.Schema({
   bill: { 
     type: mongoose.Schema.Types.ObjectId, 
@@ -10,16 +11,6 @@ const collectionSchema = new mongoose.Schema({
     required: [true, "Amount collected is required"],
     min: [1, "Amount collected must be at least 1"] 
   },
-  receiptNumber: {
-    type: String,
-    required: function() { return this.paymentMode === 'cash'; },
-    default: function() {
-      if (this.paymentMode === 'cash') {
-        return 'RC-' + Date.now().toString().slice(-6);
-      }
-      return null;
-    }
-  },
   paymentMode: { 
     type: String, 
     required: [true, "Payment mode is required"],
@@ -29,30 +20,9 @@ const collectionSchema = new mongoose.Schema({
     },
     default: "cash"
   },
-  // New fields for payment details
   paymentDetails: {
-    upiId: {
-      type: String,
-      required: function() { return this.paymentMode === 'upi'; }
-    },
-    upiTransactionId: {
-      type: String,
-      required: function() { return this.paymentMode === 'upi'; }
-    },
-    bankName: {
-      type: String,
-      required: function() { 
-        return this.paymentMode === 'cheque' || this.paymentMode === 'bank_transfer'; 
-      }
-    },
-    chequeNumber: {
-      type: String,
-      required: function() { return this.paymentMode === 'cheque'; }
-    },
-    bankTransactionId: {
-      type: String,
-      required: function() { return this.paymentMode === 'bank_transfer'; }
-    }
+    type: Object,
+    default: null
   },
   collectedBy: { 
     type: mongoose.Schema.Types.ObjectId, 
@@ -70,4 +40,5 @@ const collectionSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
 module.exports = mongoose.model("Collection", collectionSchema);

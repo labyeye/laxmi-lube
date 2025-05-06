@@ -27,6 +27,7 @@ const BillAssignedToday = () => {
     bankName: "",
     chequeNumber: "",
     bankTransactionId: "",
+    receiptNumber: ""
   });
   const [bills, setBills] = useState([]);
   const [selectedDay, setSelectedDay] = useState(null);
@@ -157,33 +158,51 @@ const BillAssignedToday = () => {
     try {
       setIsSubmitting(true);
       setSubmitError("");
-      const paidAmount = parseFloat(Number(paymentAmount).toFixed(2));
-      const dueAmount = parseFloat(Number(selectedBill.dueAmount).toFixed(2));
-
-      if (paidAmount <= 0 || paidAmount > dueAmount) {
-        setSubmitError(
-          `Please enter a valid amount between 0.01 and ${dueAmount}`
-        );
+      
+      const paidAmount = parseFloat(paymentAmount);
+      if (isNaN(paidAmount)) {
+        setSubmitError("Please enter a valid amount");
         return;
       }
-
-      const collectionData = {
+  
+      const roundedAmount = Math.round(paidAmount * 100) / 100;
+      const dueAmount = parseFloat(selectedBill.dueAmount);
+  
+      if (roundedAmount <= 0 || roundedAmount > dueAmount) {
+        setSubmitError(`Amount must be between ₹0.01 and ₹${dueAmount.toFixed(2)}`);
+        return;
+      }
+  
+      // Prepare payload
+      const payload = {
         bill: selectedBill._id,
-        amountCollected: paidAmount,
+        amountCollected: roundedAmount,
         paymentMode,
         remarks: paymentRemarks,
         collectedOn: new Date(),
-        ...(paymentMode !== "cash" && { paymentDetails }),
+        paymentDetails: {}
       };
-
-      await axios.post(
+  
+      if (paymentMode === "cash") {
+        payload.paymentDetails = {
+          receiptNumber: paymentDetails.receiptNumber || "Money Received"
+        };
+       } else {
+        payload.paymentDetails = paymentDetails;
+      }
+  
+      const response = await axios.post(
         "https://laxmi-lube.onrender.com/api/collections",
-        collectionData,
+        payload,
         {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          headers: { 
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            'Content-Type': 'application/json'
+          }
         }
       );
-
+  
+      // Update bill status
       const newDueAmount = dueAmount - paidAmount;
       await axios.put(
         `https://laxmi-lube.onrender.com/api/bills/${selectedBill._id}`,
@@ -195,7 +214,8 @@ const BillAssignedToday = () => {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
       );
-
+  
+      // Refresh data and close modal
       await fetchBillsAssignedToday();
       setShowCollectionModal(false);
       setSelectedBill(null);
@@ -208,13 +228,27 @@ const BillAssignedToday = () => {
         bankName: "",
         chequeNumber: "",
         bankTransactionId: "",
+        receiptNumber: ""
       });
+  
     } catch (err) {
       console.error("Collection error:", err);
-      setSubmitError(
-        err.response?.data?.message ||
-          `Failed to record collection: ${err.message}`
-      );
+      
+      // Enhanced error handling
+      let errorMessage = "Failed to record collection";
+      if (err.response) {
+        if (err.response.data && err.response.data.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.response.status === 400) {
+          errorMessage = "Validation error - please check your inputs";
+        } else if (err.response.status === 401) {
+          errorMessage = "Session expired - please login again";
+        }
+      } else if (err.request) {
+        errorMessage = "Network error - please check your connection";
+      }
+      
+      setSubmitError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -642,7 +676,22 @@ const BillAssignedToday = () => {
                         <option value="upi">UPI</option>
                       </Select>
                     </FormGroup>
-
+                    {paymentMode === "cash" && (
+                      <FormGroup>
+                        <Label>Receipt Number</Label>
+                        <Input
+                          type="text"
+                          value={paymentDetails.receiptNumber}
+                          onChange={(e) =>
+                            setPaymentDetails({
+                              ...paymentDetails,
+                              receiptNumber: e.target.value,
+                            })
+                          }
+                          placeholder="Enter receipt number"
+                        />
+                      </FormGroup>
+                    )}
                     {/* Payment mode specific fields */}
                     {paymentMode === "upi" && (
                       <>
