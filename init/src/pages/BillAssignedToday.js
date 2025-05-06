@@ -46,13 +46,32 @@ const BillAssignedToday = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [customerBills, setCustomerBills] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const [allAssignedCustomers, setAllAssignedCustomers] = useState([]);
+
 
   const navigate = useNavigate();
+  const fetchAllAssignedCustomers = async () => {
+    try {
+      const response = await axios.get(
+        "http://localhost:2500/api/bills/assigned-customers",
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+      setAllAssignedCustomers(response.data);
+    } catch (error) {
+      console.error("Error fetching assigned customers:", error);
+    }
+  };
   const handleDaySelect = (day) => {
     setSelectedDay(day === "All" ? null : day);
     setSelectedCustomer(null);
   };
 
+  const handleCustomerSelect = (customer) => {
+    setSelectedCustomer(customer);
+    setCustomerBills(bills.filter((bill) => bill.retailer === customer));
+  };
   useEffect(() => {
     if (bills.length > 0) {
       const uniqueCustomers = [...new Set(bills.map((bill) => bill.retailer))];
@@ -60,85 +79,72 @@ const BillAssignedToday = () => {
     }
   }, [bills]);
 
-  const handleCustomerSelect = (customer) => {
-    setSelectedCustomer(customer);
-    setCustomerBills(bills.filter((bill) => bill.retailer === customer));
+  const fetchBillsAssignedToday = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      
+      const response = await axios.get(
+        "http://localhost:2500/api/staff/bills-assigned-today",
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          params: {
+            collectionDay: selectedDay || null,
+          }
+        }
+      );
+
+      const billsWithDates = response.data.map((bill) => ({
+        ...bill,
+        billDate: new Date(bill.billDate),
+        assignedDate: bill.assignedDate ? new Date(bill.assignedDate) : null,
+      }));
+
+      setBills(billsWithDates);
+      
+      // Extract unique customers from the bills
+      const uniqueCustomers = [...new Set(billsWithDates.map((bill) => bill.retailer))];
+      setCustomers(uniqueCustomers);
+    } catch (error) {
+      console.error("Error fetching bills assigned today:", error);
+      setError("Failed to fetch bills assigned today. Please try again.");
+    } finally {
+      setLoading(false);
+      setRetrying(false);
+    }
   };
 
-  // Modify the fetchBillsAssignedToday function:
-const fetchBillsAssignedToday = async () => {
-  try {
-    setLoading(true);
-    setError("");
-    
-    const response = await axios.get(
-      "https://laxmi-lube.onrender.com/api/staff/bills-assigned-today",
-      {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        params: {
-          collectionDay: selectedDay || null, // Send selected day or null for all
-        }
-      }
-    );
-
-    const billsWithDates = response.data.map((bill) => ({
-      ...bill,
-      billDate: new Date(bill.billDate),
-      assignedDate: bill.assignedDate ? new Date(bill.assignedDate) : null,
-    }));
-
-    setBills(billsWithDates);
-  } catch (error) {
-    console.error("Error fetching bills assigned today:", error);
-    setError("Failed to fetch bills assigned today. Please try again.");
-  } finally {
-    setLoading(false);
-    setRetrying(false);
-  }
-};
 
   useEffect(() => {
     fetchBillsAssignedToday();
+    fetchAllAssignedCustomers();
   }, [selectedDay]);
 
   const handleCollectionSubmit = async () => {
     try {
       setIsSubmitting(true);
       setSubmitError("");
-      const paidAmount = parseFloat(Number(paymentAmount).toFixed(2)); // Ensure two decimal places
-      const dueAmount = parseFloat(Number(selectedBill.dueAmount).toFixed(2)); // Ensure due amount has 2 decimal places
-      if (
-        selectedBill.billDate &&
-        selectedBill._originalBillDate &&
-        selectedBill.billDate.getTime() !==
-          selectedBill._originalBillDate.getTime()
-      ) {
-        await axios.put(
-          `https://laxmi-lube.onrender.com/api/bills/${selectedBill._id}`,
-          { billDate: selectedBill.billDate },
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
-      }
+      const paidAmount = parseFloat(Number(paymentAmount).toFixed(2));
+      const dueAmount = parseFloat(Number(selectedBill.dueAmount).toFixed(2));
+      
       if (paidAmount <= 0 || paidAmount > dueAmount) {
         setSubmitError(
           `Please enter a valid amount between 0.01 and ${dueAmount}`
         );
         return;
       }
+
       const collectionData = {
         bill: selectedBill._id,
         amountCollected: paidAmount,
         paymentMode,
         remarks: paymentRemarks,
-        collectedOn: new Date(), // Use current date
+        collectedOn: new Date(),
         ...(paymentMode !== "cash" && { paymentDetails }),
       };
+
       await axios.post(
-        "https://laxmi-lube.onrender.com/api/collections",
+        "http://localhost:2500/api/collections",
         collectionData,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -147,7 +153,7 @@ const fetchBillsAssignedToday = async () => {
 
       const newDueAmount = dueAmount - paidAmount;
       await axios.put(
-        `https://laxmi-lube.onrender.com/api/bills/${selectedBill._id}`,
+        `http://localhost:2500/api/bills/${selectedBill._id}`,
         {
           dueAmount: newDueAmount,
           status: newDueAmount <= 0 ? "Paid" : "Partially Paid",
@@ -180,6 +186,7 @@ const fetchBillsAssignedToday = async () => {
       setIsSubmitting(false);
     }
   };
+
 
   // Calculate summary values
   const totalBills = bills.length;
@@ -370,6 +377,7 @@ const fetchBillsAssignedToday = async () => {
                   <SummaryValue>{formatCurrency(averageAmount)}</SummaryValue>
                 </SummaryItem>
               </SummaryCard>
+              
               <DayFilterContainer>
                 <DayButton
                   active={!selectedDay}
@@ -410,6 +418,7 @@ const fetchBillsAssignedToday = async () => {
                   ))}
                 </Select>
               </CustomerSelector>
+
               {bills.length > 0 ? (
                 <BillsList>
                   {(selectedCustomer ? customerBills : bills).map((bill) => (
@@ -466,15 +475,13 @@ const fetchBillsAssignedToday = async () => {
             </>
           )}
         </ContentArea>
+
+        {/* Updated Collection Modal */}
         {showCollectionModal && (
           <ModalOverlay>
             <Modal>
               <ModalHeader>
-                <ModalTitle>
-                  {selectedCustomer
-                    ? `Collections for ${selectedCustomer}`
-                    : "Record New Collection"}
-                </ModalTitle>
+                <ModalTitle>Record New Collection</ModalTitle>
                 <CloseButton
                   onClick={() => {
                     setShowCollectionModal(false);
@@ -486,62 +493,56 @@ const fetchBillsAssignedToday = async () => {
                 </CloseButton>
               </ModalHeader>
               <ModalBody>
-                {!selectedCustomer && !selectedBill ? (
-                  // Customer selection step
+                {!selectedCustomer ? (
+                  // Step 1: Select Customer
                   <div>
-                    <ModalSubtitle>Select a Customer</ModalSubtitle>
+                    <ModalSubtitle>Select Customer</ModalSubtitle>
                     <CustomerBillsContainer>
-                      {customers.map((customer) => (
+                      {allAssignedCustomers.map((customer) => (
                         <BillOption
                           key={customer}
-                          onClick={() => handleCustomerSelect(customer)}
+                          onClick={() => setSelectedCustomer(customer)}
                         >
                           <div>{customer}</div>
-                          <div>
-                            Bills:{" "}
-                            {
-                              bills.filter((bill) => bill.retailer === customer)
-                                .length
-                            }
-                          </div>
                         </BillOption>
                       ))}
                     </CustomerBillsContainer>
                   </div>
-                ) : selectedCustomer && !selectedBill ? (
-                  // Bill selection step
-                  <CustomerBillsContainer>
-                    <h4>Select Bill to Collect Payment</h4>
-                    {customerBills
-                      .filter((bill) => bill.dueAmount > 0)
-                      .map((bill) => (
-                        <BillOption
-                          key={bill._id}
-                          onClick={() => setSelectedBill(bill)}
-                          selected={selectedBill?._id === bill._id}
-                        >
-                          <div>Bill #{bill.billNumber}</div>
-                          <div>Amount: {formatCurrency(bill.amount)}</div>
-                          <div>Due: {formatCurrency(bill.dueAmount)}</div>
-                          <div>Due Date: {formatDate(bill.dueDate)}</div>
-                          {bill.outstandingDays > 0 && (
-                            <OverdueBadge>
-                              Overdue: {bill.outstandingDays} days
-                            </OverdueBadge>
-                          )}
-                        </BillOption>
-                      ))}
-                    {customerBills.filter((bill) => bill.dueAmount > 0)
-                      .length === 0 && (
-                      <NoBillsMessage>
-                        <FaCheckCircle size={32} />
-                        <p>No pending bills for this customer</p>
-                        <p>All bills have been paid</p>
-                      </NoBillsMessage>
-                    )}
-                  </CustomerBillsContainer>
-                ) : selectedBill ? (
-                  // Payment collection step
+                ) : !selectedBill ? (
+                  // Step 2: Select Bill
+                  <div>
+                    <ModalSubtitle>Select Bill for {selectedCustomer}</ModalSubtitle>
+                    <ButtonGroup>
+                      <BackButton onClick={() => setSelectedCustomer(null)}>
+                        Back to Customer Selection
+                      </BackButton>
+                    </ButtonGroup>
+                    <CustomerBillsContainer>
+                      {bills
+                        .filter((bill) => 
+                          bill.retailer === selectedCustomer && 
+                          bill.dueAmount > 0
+                        )
+                        .map((bill) => (
+                          <BillOption
+                            key={bill._id}
+                            onClick={() => setSelectedBill(bill)}
+                          >
+                            <div>Bill #{bill.billNumber}</div>
+                            <div>Amount: {formatCurrency(bill.amount)}</div>
+                            <div>Due: {formatCurrency(bill.dueAmount)}</div>
+                            <div>Bill Date: {formatDate(bill.billDate)}</div>
+                            {bill.outstandingDays > 0 && (
+                              <OverdueBadge>
+                                Overdue: {bill.outstandingDays} days
+                              </OverdueBadge>
+                            )}
+                          </BillOption>
+                        ))}
+                    </CustomerBillsContainer>
+                  </div>
+                ) : (
+                  // Step 3: Payment Details
                   <>
                     <SelectedBillInfo>
                       <div>
@@ -555,38 +556,11 @@ const fetchBillsAssignedToday = async () => {
                         {formatCurrency(selectedBill.dueAmount.toFixed(2))}
                       </div>
                     </SelectedBillInfo>
+
                     <FormGroup>
-                      <Label>Collection Date</Label>
-                      <DateInput
-                        type="date"
-                        value={new Date().toISOString().split("T")[0]}
-                        disabled
-                      />
-                    </FormGroup>
-                    <FormGroup>
-                      <Label>Days Overdue</Label>
-                      <Input
-                        type="text"
-                        value={
-                          selectedBill && selectedBill.billDate
-                            ? Math.max(
-                                0,
-                                Math.floor(
-                                  (new Date() -
-                                    new Date(selectedBill.billDate)) /
-                                    (1000 * 60 * 60 * 24)
-                                )
-                              ) + " days"
-                            : "0 days"
-                        }
-                        disabled
-                      />
-                    </FormGroup>
-                    <FormGroup>
-                      <Label htmlFor="paymentAmount">Amount Paid</Label>
+                      <Label>Amount Paid</Label>
                       <Input
                         type="number"
-                        id="paymentAmount"
                         value={paymentAmount}
                         onChange={(e) => {
                           const value = e.target.value;
@@ -602,13 +576,11 @@ const fetchBillsAssignedToday = async () => {
                     </FormGroup>
 
                     <FormGroup>
-                      <Label htmlFor="paymentMode">Payment Mode</Label>
+                      <Label>Payment Mode</Label>
                       <Select
-                        id="paymentMode"
                         value={paymentMode}
                         onChange={(e) => {
                           setPaymentMode(e.target.value);
-                          // Reset payment details when mode changes
                           setPaymentDetails({
                             upiId: "",
                             upiTransactionId: "",
@@ -624,13 +596,14 @@ const fetchBillsAssignedToday = async () => {
                         <option value="upi">UPI</option>
                       </Select>
                     </FormGroup>
+
+                    {/* Payment mode specific fields */}
                     {paymentMode === "upi" && (
                       <>
                         <FormGroup>
-                          <Label htmlFor="upiId">UPI ID</Label>
+                          <Label>UPI ID</Label>
                           <Input
                             type="text"
-                            id="upiId"
                             value={paymentDetails.upiId}
                             onChange={(e) =>
                               setPaymentDetails({
@@ -642,12 +615,9 @@ const fetchBillsAssignedToday = async () => {
                           />
                         </FormGroup>
                         <FormGroup>
-                          <Label htmlFor="upiTransactionId">
-                            Transaction ID
-                          </Label>
+                          <Label>Transaction ID</Label>
                           <Input
                             type="text"
-                            id="upiTransactionId"
                             value={paymentDetails.upiTransactionId}
                             onChange={(e) =>
                               setPaymentDetails({
@@ -664,10 +634,9 @@ const fetchBillsAssignedToday = async () => {
                     {paymentMode === "cheque" && (
                       <>
                         <FormGroup>
-                          <Label htmlFor="bankName">Bank Name</Label>
+                          <Label>Bank Name</Label>
                           <Input
                             type="text"
-                            id="bankName"
                             value={paymentDetails.bankName}
                             onChange={(e) =>
                               setPaymentDetails({
@@ -679,10 +648,9 @@ const fetchBillsAssignedToday = async () => {
                           />
                         </FormGroup>
                         <FormGroup>
-                          <Label htmlFor="chequeNumber">Cheque Number</Label>
+                          <Label>Cheque Number</Label>
                           <Input
                             type="text"
-                            id="chequeNumber"
                             value={paymentDetails.chequeNumber}
                             onChange={(e) =>
                               setPaymentDetails({
@@ -699,10 +667,9 @@ const fetchBillsAssignedToday = async () => {
                     {paymentMode === "bank_transfer" && (
                       <>
                         <FormGroup>
-                          <Label htmlFor="bankName">Bank Name</Label>
+                          <Label>Bank Name</Label>
                           <Input
                             type="text"
-                            id="bankName"
                             value={paymentDetails.bankName}
                             onChange={(e) =>
                               setPaymentDetails({
@@ -714,12 +681,9 @@ const fetchBillsAssignedToday = async () => {
                           />
                         </FormGroup>
                         <FormGroup>
-                          <Label htmlFor="bankTransactionId">
-                            Transaction ID
-                          </Label>
+                          <Label>Transaction ID</Label>
                           <Input
                             type="text"
-                            id="bankTransactionId"
                             value={paymentDetails.bankTransactionId}
                             onChange={(e) =>
                               setPaymentDetails({
@@ -734,10 +698,9 @@ const fetchBillsAssignedToday = async () => {
                     )}
 
                     <FormGroup>
-                      <Label htmlFor="paymentRemarks">Remarks (Optional)</Label>
+                      <Label>Remarks (Optional)</Label>
                       <Input
                         as="textarea"
-                        id="paymentRemarks"
                         value={paymentRemarks}
                         onChange={(e) => setPaymentRemarks(e.target.value)}
                         placeholder="Add any additional notes..."
@@ -765,7 +728,7 @@ const fetchBillsAssignedToday = async () => {
                       </SubmitButton>
                     </ButtonGroup>
                   </>
-                ) : null}
+                )}
               </ModalBody>
             </Modal>
           </ModalOverlay>

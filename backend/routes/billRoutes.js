@@ -402,6 +402,18 @@ router.post(
     }
   }
 );
+// Add this route to billRoutes.js
+router.get("/assigned-customers", protect, staffOnly, async (req, res) => {
+  try {
+    const bills = await Bill.find({ assignedTo: req.user._id }).distinct("retailer");
+    res.json(bills);
+  } catch (err) {
+    res.status(500).json({ 
+      message: "Failed to fetch assigned customers", 
+      error: err.message 
+    });
+  }
+});
 
 router.get("/by-collection-day/:day", protect, async (req, res) => {
   try {
