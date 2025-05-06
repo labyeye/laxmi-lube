@@ -251,12 +251,13 @@ const ReportPage = () => {
                           <td>{collection.collectedByName || "System"}</td>
                           <td>
                             <PaymentDetails>
-                            {collection.paymentMode === "cash" ? (
-    <div>
-      <strong>Receipt:</strong>{" "}
-      {collection.paymentDetails?.receiptNumber || "Money Received"}
-    </div>
-  )  : collection.paymentMode === "upi" ? (
+                              {collection.paymentMode === "cash" ? (
+                                <div>
+                                  <strong>Receipt:</strong>{" "}
+                                  {collection.paymentDetails?.receiptNumber ||
+                                    "Money Received"}
+                                </div>
+                              ) : collection.paymentMode === "upi" ? (
                                 <div>
                                   <strong>Transaction ID:</strong>{" "}
                                   {collection.paymentDetails?.transactionId ||
@@ -323,11 +324,15 @@ const ReportPage = () => {
   );
 };
 
-// Styled components (extending AdminDashboard styles)
+// Styled components (responsive version)
 const MainContent = styled.div`
   flex: 1;
-  padding: 20px;
+  padding: 15px;
   overflow-x: auto;
+
+  @media (min-width: 768px) {
+    padding: 20px;
+  }
 
   @media (min-width: 1200px) {
     padding: 30px;
@@ -336,43 +341,71 @@ const MainContent = styled.div`
 
 const Header = styled.header`
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 20px;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+  }
 
   h1 {
     color: #2e3a59;
-    font-size: 1.8rem;
+    font-size: 1.5rem;
     margin: 0;
     font-weight: 600;
+    
+    @media (min-width: 768px) {
+      font-size: 1.8rem;
+    }
   }
 `;
+
+const ActionsContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+
+  @media (min-width: 576px) {
+    flex-direction: row;
+    gap: 15px;
+    width: auto;
+  }
+`;
+
 const HistoryButton = styled.button`
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 10px 15px;
-  background-color: #6c757d; // Changed from theme.colors.secondary
+  background-color: #6c757d;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   font-weight: 500;
   transition: background-color 0.2s;
-  margin-right: 15px;
+  font-size: 0.9rem;
 
   &:hover {
-    background-color: #5a6268; // Changed from theme.colors.secondaryDark
+    background-color: #5a6268;
   }
-`;
-const ActionsContainer = styled.div`
-  display: flex;
-  gap: 15px;
+
+  @media (min-width: 576px) {
+    margin-right: 15px;
+    justify-content: flex-start;
+  }
 `;
 
 const ExportButton = styled.button`
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 10px 15px;
   background-color: #4e73df;
@@ -382,26 +415,27 @@ const ExportButton = styled.button`
   cursor: pointer;
   font-weight: 500;
   transition: background-color 0.2s;
+  font-size: 0.9rem;
 
   &:hover {
     background-color: #3a5bc7;
   }
 
-  &:last-child {
-    background-color: #e74a3b;
-
-    &:hover {
-      background-color: #d62c1a;
-    }
+  @media (min-width: 576px) {
+    justify-content: flex-start;
   }
 `;
 
 const ControlsContainer = styled.div`
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 15px;
+  margin-bottom: 20px;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    justify-content: space-between;
+  }
 `;
 
 const SearchContainer = styled.div`
@@ -411,7 +445,11 @@ const SearchContainer = styled.div`
   border-radius: 4px;
   padding: 8px 12px;
   border: 1px solid #d1d3e2;
-  width: 300px;
+  width: 100%;
+
+  @media (min-width: 576px) {
+    width: 300px;
+  }
 
   svg {
     color: #b7b9cc;
@@ -425,6 +463,7 @@ const SearchInput = styled.input`
   width: 100%;
   outline: none;
   color: #6e707e;
+  font-size: 0.9rem;
 
   &::placeholder {
     color: #b7b9cc;
@@ -433,11 +472,17 @@ const SearchInput = styled.input`
 
 const DateFilterContainer = styled.div`
   position: relative;
+  width: 100%;
+
+  @media (min-width: 576px) {
+    width: auto;
+  }
 `;
 
 const DateFilterButton = styled.button`
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 8px 15px;
   background-color: #f8f9fc;
@@ -447,9 +492,16 @@ const DateFilterButton = styled.button`
   cursor: pointer;
   font-weight: 500;
   transition: all 0.2s;
+  width: 100%;
+  font-size: 0.9rem;
 
   &:hover {
     background-color: #eaecf4;
+  }
+
+  @media (min-width: 576px) {
+    width: auto;
+    justify-content: flex-start;
   }
 `;
 
@@ -463,6 +515,11 @@ const DatePickerContainer = styled.div`
   border-radius: 4px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   margin-top: 5px;
+  width: 100%;
+
+  @media (min-width: 576px) {
+    width: auto;
+  }
 `;
 
 const ApplyDateFilter = styled.button`
@@ -475,6 +532,7 @@ const ApplyDateFilter = styled.button`
   cursor: pointer;
   font-weight: 500;
   transition: background-color 0.2s;
+  font-size: 0.9rem;
 
   &:hover {
     background-color: #3a5bc7;
@@ -485,28 +543,40 @@ const ReportTable = styled.table`
   width: 100%;
   border-collapse: collapse;
   margin-top: 20px;
+  font-size: 0.8rem;
+
+  @media (min-width: 768px) {
+    font-size: 0.9rem;
+  }
 
   th,
   td {
-    padding: 12px 15px;
+    padding: 8px 10px;
     text-align: left;
     border-bottom: 1px solid #eee;
+
+    @media (min-width: 768px) {
+      padding: 12px 15px;
+    }
   }
 
   th {
     color: #6e707e;
     font-weight: 600;
-    font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     background-color: #f8f9fc;
     position: sticky;
     top: 0;
+    font-size: 0.7rem;
+
+    @media (min-width: 768px) {
+      font-size: 0.8rem;
+    }
   }
 
   td {
     color: #2e3a59;
-    font-size: 0.9rem;
     vertical-align: top;
   }
 
@@ -517,21 +587,36 @@ const ReportTable = styled.table`
 
 const PaymentDetails = styled.div`
   margin-top: 5px;
-  padding: 8px;
+  padding: 6px;
   background-color: #f8f9fa;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   border-left: 3px solid #4e73df;
+
+  @media (min-width: 768px) {
+    padding: 8px;
+    font-size: 0.8rem;
+  }
 
   div {
     margin-bottom: 5px;
     display: flex;
-    gap: 8px;
+    flex-direction: column;
+    gap: 4px;
+
+    @media (min-width: 576px) {
+      flex-direction: row;
+      gap: 8px;
+    }
 
     strong {
-      min-width: 120px;
+      min-width: 80px;
       display: inline-block;
       color: #6e707e;
+
+      @media (min-width: 768px) {
+        min-width: 120px;
+      }
     }
   }
 
@@ -539,17 +624,32 @@ const PaymentDetails = styled.div`
     display: none;
   }
 `;
+
 const LoadingIndicator = styled.div`
-  padding: 40px;
+  padding: 20px;
   text-align: center;
   color: #6e707e;
+  font-size: 0.9rem;
+
+  @media (min-width: 768px) {
+    padding: 40px;
+    font-size: 1rem;
+  }
 `;
+
 const ErrorMessage = styled.div`
-  padding: 20px;
+  padding: 15px;
   background-color: #f8d7da;
   color: #721c24;
   border-radius: 4px;
-  margin: 20px 0;
+  margin: 15px 0;
   text-align: center;
+  font-size: 0.9rem;
+
+  @media (min-width: 768px) {
+    padding: 20px;
+    margin: 20px 0;
+  }
 `;
+
 export default ReportPage;

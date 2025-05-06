@@ -822,45 +822,448 @@ const BillAssignedToday = () => {
     </DashboardLayout>
   );
 };
-
-// Styled Components (consistent with StaffDashboard)
-const NoBillsMessage = styled.div`
-  text-align: center;
-  padding: 20px;
-  color: #1cc88a;
-
-  svg {
-    margin-bottom: 15px;
-    color: #1cc88a;
-  }
-
-  p {
-    margin: 5px 0;
-    font-size: 0.95rem;
-
-    &:first-of-type {
-      font-weight: 500;
-      font-size: 1.1rem;
-    }
-  }
-`;
-
+// Responsive Styled Components for BillAssignedToday
 const DashboardLayout = styled.div`
   display: flex;
   min-height: 100vh;
   background-color: #f8f9fc;
+  flex-direction: column;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+  }
 `;
 
 const Sidebar = styled.div`
-  width: ${(props) => (props.collapsed === "true" ? "80px" : "250px")};
+  width: 100%;
   background-color: #fff;
   box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
-  transition: width 0.3s ease;
+  transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
   position: relative;
-  z-index: 1;
+  z-index: 10;
+
+  @media (min-width: 768px) {
+    width: ${(props) => (props.collapsed === "true" ? "80px" : "250px")};
+    height: 100vh;
+    position: sticky;
+    top: 0;
+  }
 `;
+
+const MainContent = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: calc(100vh - 70px);
+
+  @media (min-width: 768px) {
+    min-height: 100vh;
+  }
+`;
+
+const TopBar = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 15px;
+  background-color: #fff;
+  box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    height: 70px;
+    padding: 0 20px;
+  }
+`;
+
+const PageTitle = styled.h1`
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #2e3a59;
+  margin: 0;
+
+  @media (min-width: 768px) {
+    font-size: 1.5rem;
+  }
+`;
+
+const HeaderActions = styled.div`
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  @media (min-width: 768px) {
+    gap: 15px;
+    flex-wrap: nowrap;
+  }
+`;
+
+const ContentArea = styled.div`
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
+
+  @media (min-width: 768px) {
+    padding: 20px;
+  }
+`;
+
+const SummaryCard = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 15px;
+  margin-bottom: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
+
+  @media (min-width: 576px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (min-width: 992px) {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    padding: 20px;
+    margin-bottom: 30px;
+  }
+`;
+
+const DayFilterContainer = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-bottom: 15px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+
+  &::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+
+  @media (min-width: 768px) {
+    margin-bottom: 20px;
+  }
+`;
+
+const CustomerSelector = styled.div`
+  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  @media (min-width: 576px) {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+`;
+
+const BillsList = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 15px;
+
+  @media (min-width: 576px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (min-width: 992px) {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+`;
+
+const BillCard = styled.div`
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s;
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  }
+
+  @media (min-width: 768px) {
+    padding: 20px;
+  }
+`;
+
+const Modal = styled.div`
+  background-color: white;
+  border-radius: 8px;
+  width: 95%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+  margin: 20px auto;
+
+  @media (min-width: 576px) {
+    width: 90%;
+  }
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+
+  @media (min-width: 576px) {
+    flex-direction: row;
+    gap: 10px;
+    margin-top: 30px;
+  }
+`;
+
+const FormGroup = styled.div`
+  margin-bottom: 15px;
+
+  @media (min-width: 768px) {
+    margin-bottom: 20px;
+  }
+`;
+
+const CustomerBillsContainer = styled.div`
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 15px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 10px;
+
+  @media (min-width: 768px) {
+    margin-bottom: 20px;
+  }
+`;
+
+const AmountInputContainer = styled.div`
+  display: flex;
+  gap: 8px;
+  flex-direction: column;
+
+  @media (min-width: 576px) {
+    flex-direction: row;
+    align-items: center;
+  }
+`;
+
+const EmptyState = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
+
+  @media (min-width: 768px) {
+    padding: 60px 20px;
+  }
+`;
+
+// Update existing components with responsive styles
+const NewCollectionButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #1cc88a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  width: 100%;
+
+  &:hover {
+    background-color: #17a673;
+  }
+
+  @media (min-width: 576px) {
+    width: auto;
+    padding: 8px 16px;
+  }
+`;
+
+const RefreshButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #4e73df;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  width: 100%;
+
+  &:hover {
+    background-color: #3a5bc7;
+  }
+
+  &:disabled {
+    background-color: #b0b7d4;
+    cursor: not-allowed;
+  }
+
+  .spinning {
+    animation: ${spin} 1s linear infinite;
+  }
+
+  @media (min-width: 576px) {
+    width: auto;
+    padding: 8px 16px;
+  }
+`;
+
+const DayButton = styled.button`
+  padding: 6px 10px;
+  border: 1px solid ${(props) => (props.active ? "#4e73df" : "#ddd")};
+  border-radius: 20px;
+  background-color: ${(props) => (props.active ? "#4e73df" : "white")};
+  color: ${(props) => (props.active ? "white" : "#6c757d")};
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  flex-shrink: 0;
+
+  &:hover {
+    background-color: ${(props) => (props.active ? "#3a5bc7" : "#f8f9fc")};
+    border-color: ${(props) => (props.active ? "#3a5bc7" : "#4e73df")};
+  }
+
+  @media (min-width: 576px) {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+`;
+
+const Select = styled.select`
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background-color: white;
+
+  &:focus {
+    outline: none;
+    border-color: #4e73df;
+  }
+
+  @media (min-width: 576px) {
+    width: auto;
+    min-width: 200px;
+  }
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+
+  &:focus {
+    outline: none;
+    border-color: #4e73df;
+  }
+`;
+
+const SubmitButton = styled.button`
+  width: 100%;
+  padding: 10px;
+  background-color: #4e73df;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+
+  &:hover {
+    background-color: #3a5bc7;
+  }
+
+  &:disabled {
+    background-color: #b0b7d4;
+    cursor: not-allowed;
+  }
+
+  @media (min-width: 576px) {
+    width: auto;
+    flex: 1;
+  }
+`;
+
+const BackButton = styled.button`
+  width: 100%;
+  padding: 10px;
+  background-color: #f8f9fc;
+  color: #6c757d;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+
+  &:hover {
+    background-color: #e9ecef;
+  }
+
+  @media (min-width: 576px) {
+    width: auto;
+    flex: 1;
+  }
+`;
+
+const LoadingContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: #f8f9fc;
+  padding: 20px;
+  text-align: center;
+`;
+
+const Spinner = styled.div`
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(78, 115, 223, 0.1);
+  border-radius: 50%;
+  border-top-color: #4e73df;
+  animation: ${spin} 1s linear infinite;
+  margin-bottom: 20px;
+
+  @media (min-width: 768px) {
+    width: 50px;
+    height: 50px;
+  }
+`;
+// Styled Components (consistent with StaffDashboard)
+
 
 const SidebarHeader = styled.div`
   display: flex;
@@ -871,32 +1274,6 @@ const SidebarHeader = styled.div`
   border-bottom: 1px solid #f0f0f0;
 `;
 
-const CustomerSelector = styled.div`
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-`;
-
-const CustomerBillsContainer = styled.div`
-  max-height: 300px;
-  overflow-y: auto;
-  margin-bottom: 20px;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 10px;
-`;
-const DayFilterContainer = styled.div`
-  display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
-  overflow-x: auto;
-  padding-bottom: 10px;
-`;
-const AmountInputContainer = styled.div`
-  display: flex;
-  gap: 8px;
-`;
 
 const MaxButton = styled.button`
   padding: 0 12px;
@@ -919,24 +1296,6 @@ const MaxButton = styled.button`
     transform: scale(0.98);
   }
 `;
-const DayButton = styled.button`
-  padding: 8px 12px;
-  border: 1px solid ${(props) => (props.active ? "#4e73df" : "#ddd")};
-  border-radius: 20px;
-  background-color: ${(props) => (props.active ? "#4e73df" : "white")};
-  color: ${(props) => (props.active ? "white" : "#6c757d")};
-  font-size: 0.8rem;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.2s;
-
-  &:hover {
-    background-color: ${(props) => (props.active ? "#3a5bc7" : "#f8f9fc")};
-    border-color: ${(props) => (props.active ? "#3a5bc7" : "#4e73df")};
-  }
-`;
-
 const OverdueBadge = styled.span`
   background-color: #e74a3b;
   color: white;
@@ -946,13 +1305,7 @@ const OverdueBadge = styled.span`
   margin-left: auto;
 `;
 
-const DateInput = styled.input`
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  width: 100%;
-`;
+
 
 const Logo = styled.div`
   font-size: 1.25rem;
@@ -987,25 +1340,6 @@ const UserInfo = styled.div`
   flex-direction: column;
 `;
 
-const NewCollectionButton = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background-color: #1cc88a;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 16px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-
-  &:hover {
-    background-color: #17a673;
-  }
-`;
-
 const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
@@ -1019,15 +1353,6 @@ const ModalOverlay = styled.div`
   z-index: 1000;
 `;
 
-const Modal = styled.div`
-  background-color: white;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 500px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
-`;
 
 const ModalHeader = styled.div`
   display: flex;
@@ -1108,9 +1433,6 @@ const SelectedBillInfo = styled.div`
   }
 `;
 
-const FormGroup = styled.div`
-  margin-bottom: 20px;
-`;
 
 const Label = styled.label`
   display: block;
@@ -1120,78 +1442,10 @@ const Label = styled.label`
   font-weight: 500;
 `;
 
-const Input = styled.input`
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 0.9rem;
-
-  &:focus {
-    outline: none;
-    border-color: #4e73df;
-  }
-`;
-
-const Select = styled.select`
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  background-color: white;
-
-  &:focus {
-    outline: none;
-    border-color: #4e73df;
-  }
-`;
-
 const ErrorText = styled.div`
   color: #e74a3b;
   font-size: 0.9rem;
   margin-bottom: 20px;
-`;
-
-const ButtonGroup = styled.div`
-  display: flex;
-  gap: 10px;
-  margin-top: 30px;
-`;
-
-const BackButton = styled.button`
-  flex: 1;
-  padding: 10px;
-  background-color: #f8f9fc;
-  color: #6c757d;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s;
-
-  &:hover {
-    background-color: #e9ecef;
-  }
-`;
-
-const SubmitButton = styled.button`
-  flex: 1;
-  padding: 10px;
-  background-color: #4e73df;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s;
-
-  &:hover {
-    background-color: #3a5bc7;
-  }
-
-  &:disabled {
-    background-color: #b0b7d4;
-    cursor: not-allowed;
-  }
 `;
 
 const UserName = styled.div`
@@ -1307,69 +1561,6 @@ const LogoutButton = styled.div`
   }
 `;
 
-const MainContent = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-`;
-
-const TopBar = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 20px;
-  height: 70px;
-  background-color: #fff;
-  box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
-`;
-
-const PageTitle = styled.h1`
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #2e3a59;
-  margin: 0;
-`;
-
-const HeaderActions = styled.div`
-  display: flex;
-  gap: 15px;
-`;
-
-const RefreshButton = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background-color: #4e73df;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 16px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-
-  &:hover {
-    background-color: #3a5bc7;
-  }
-
-  &:disabled {
-    background-color: #b0b7d4;
-    cursor: not-allowed;
-  }
-
-  .spinning {
-    animation: ${spin} 1s linear infinite;
-  }
-`;
-
-const ContentArea = styled.div`
-  flex: 1;
-  padding: 20px;
-  overflow-y: auto;
-`;
-
 const ErrorAlert = styled.div`
   background-color: #fff5f5;
   border: 1px solid #ffd6d6;
@@ -1416,37 +1607,6 @@ const RetryButton = styled.button`
   }
 `;
 
-const LoadingContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  background-color: #f8f9fc;
-`;
-
-const Spinner = styled.div`
-  width: 50px;
-  height: 50px;
-  border: 4px solid rgba(78, 115, 223, 0.1);
-  border-radius: 50%;
-  border-top-color: #4e73df;
-  animation: ${spin} 1s linear infinite;
-  margin-bottom: 20px;
-`;
-
-// New styled components for the Bills page
-const SummaryCard = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
-  background-color: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
-`;
-
 const SummaryItem = styled.div`
   display: flex;
   flex-direction: column;
@@ -1464,27 +1624,6 @@ const SummaryValue = styled.div`
   font-size: 1.5rem;
   font-weight: 600;
   color: #4e73df;
-`;
-
-const BillsList = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-`;
-
-const BillCard = styled.div`
-  background-color: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s;
-
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-  }
 `;
 
 const BillHeader = styled.div`
@@ -1554,18 +1693,6 @@ const BillIcon = styled.div`
   color: rgba(78, 115, 223, 0.1);
   font-size: 3rem;
   z-index: 0;
-`;
-
-const EmptyState = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  text-align: center;
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
 `;
 
 const EmptyMessage = styled.p`
