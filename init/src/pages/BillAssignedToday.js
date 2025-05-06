@@ -65,53 +65,37 @@ const BillAssignedToday = () => {
     setCustomerBills(bills.filter((bill) => bill.retailer === customer));
   };
 
-  const fetchBillsAssignedToday = async () => {
-    try {
-      setLoading(true);
-      setError("");
-      const today = new Date();
-      let dayOfWeek = null;
-
-      // If no day is selected, use today's day
-      if (!selectedDay) {
-        dayOfWeek = [
-          "Sunday",
-          "Monday",
-          "Tuesday",
-          "Wednesday",
-          "Thursday",
-          "Friday",
-          "Saturday",
-        ][today.getDay()];
-      } else {
-        dayOfWeek = selectedDay;
-      }
-
-      const response = await axios.get(
-        "https://laxmi-lube.onrender.com/api/staff/bills-assigned-today",
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          params: {
-            collectionDay: dayOfWeek, // Just send the day parameter
-          }
+  // Modify the fetchBillsAssignedToday function:
+const fetchBillsAssignedToday = async () => {
+  try {
+    setLoading(true);
+    setError("");
+    
+    const response = await axios.get(
+      "http://localhost:2500/api/staff/bills-assigned-today",
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        params: {
+          collectionDay: selectedDay || null, // Send selected day or null for all
         }
-      );
+      }
+    );
 
-      const billsWithDates = response.data.map((bill) => ({
-        ...bill,
-        billDate: new Date(bill.billDate),
-        assignedDate: bill.assignedDate ? new Date(bill.assignedDate) : null,
-      }));
+    const billsWithDates = response.data.map((bill) => ({
+      ...bill,
+      billDate: new Date(bill.billDate),
+      assignedDate: bill.assignedDate ? new Date(bill.assignedDate) : null,
+    }));
 
-      setBills(billsWithDates);
-    } catch (error) {
-      console.error("Error fetching bills assigned today:", error);
-      setError("Failed to fetch bills assigned today. Please try again.");
-    } finally {
-      setLoading(false);
-      setRetrying(false);
-    }
-  };
+    setBills(billsWithDates);
+  } catch (error) {
+    console.error("Error fetching bills assigned today:", error);
+    setError("Failed to fetch bills assigned today. Please try again.");
+  } finally {
+    setLoading(false);
+    setRetrying(false);
+  }
+};
 
   useEffect(() => {
     fetchBillsAssignedToday();
@@ -130,7 +114,7 @@ const BillAssignedToday = () => {
           selectedBill._originalBillDate.getTime()
       ) {
         await axios.put(
-          `https://laxmi-lube.onrender.com/api/bills/${selectedBill._id}`,
+          `http://localhost:2500/api/bills/${selectedBill._id}`,
           { billDate: selectedBill.billDate },
           {
             headers: {
@@ -154,7 +138,7 @@ const BillAssignedToday = () => {
         ...(paymentMode !== "cash" && { paymentDetails }),
       };
       await axios.post(
-        "https://laxmi-lube.onrender.com/api/collections",
+        "http://localhost:2500/api/collections",
         collectionData,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -163,7 +147,7 @@ const BillAssignedToday = () => {
 
       const newDueAmount = dueAmount - paidAmount;
       await axios.put(
-        `https://laxmi-lube.onrender.com/api/bills/${selectedBill._id}`,
+        `http://localhost:2500/api/bills/${selectedBill._id}`,
         {
           dueAmount: newDueAmount,
           status: newDueAmount <= 0 ? "Paid" : "Partially Paid",
@@ -407,7 +391,7 @@ const BillAssignedToday = () => {
                     active={selectedDay === day}
                     onClick={() => handleDaySelect(day)}
                   >
-                    {day.substring(0, 3)}
+                    {day.substring(0, 10)}
                   </DayButton>
                 ))}
               </DayFilterContainer>

@@ -291,11 +291,11 @@ router.post(
 
           // Check for duplicate bill number AND customer name in this import
           const billKey = `${billNo}_${custName}`.toUpperCase();
-          if (processedBills[billKey]) {
-            errors.push(`Row ${index + 2}: Duplicate bill ${billNo} for customer ${custName} in this file`);
-            continue;
-          }
-          processedBills[billKey] = true;
+      if (processedBills[billKey]) {
+        errors.push(`Row ${index + 2}: Duplicate bill ${billNo} for customer ${custName} in this file`);
+        continue;
+      }
+      processedBills[billKey] = true;
 
           // Parse date - handle Excel date objects and strings
           let billDate;
@@ -434,12 +434,10 @@ router.get("/bills-assigned-today", protect, staffOnly, async (req, res) => {
       "Saturday",
     ][today.getDay()];
 
-    // Remove the assignedDate filter to show all bills for the day
     const query = {
       assignedTo: req.user._id,
       collectionDay: dayOfWeek,
-      // Removed the assignedDate filter
-      status: { $ne: "Paid" } // Only if you want to exclude paid bills
+      status: { $ne: "Paid" }
     };
 
     const bills = await Bill.find(query)
