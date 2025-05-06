@@ -30,12 +30,36 @@ const StaffDashboard = () => {
     collectionsAssignedToday: [],
     collectionsHistory: [],
   });
+  const [staffInfo, setStaffInfo] = useState({
+    name: "Loading...",
+    role: "Collections"
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [retrying, setRetrying] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState(null);
-  const navigate = useNavigate(); // Initialize the navigate function
+  const navigate = useNavigate();
+
+  // Fetch user info (to get staff name)
+  const fetchUserInfo = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Authentication token not found");
+
+      const response = await axios.get(`${API_BASE_URL}/users/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setStaffInfo({
+        name: response.data.name || "Staff Member",
+        role: response.data.role || "Collections"
+      });
+    } catch (err) {
+      console.error("Failed to fetch user info:", err);
+      // Don't set error state - we still want to fetch dashboard data
+    }
+  }, []);
 
   // In StaffDashboard.js - update the fetchDashboardData function
   const fetchDashboardData = useCallback(async () => {
@@ -91,17 +115,32 @@ const StaffDashboard = () => {
   }, []);
 
   useEffect(() => {
+    fetchUserInfo();
     fetchDashboardData();
-  }, [fetchDashboardData]);
+    if (window.innerWidth < 768) {
+      setSidebarCollapsed(true);
+    }
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setSidebarCollapsed(true);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [fetchDashboardData, fetchUserInfo]);
 
   const handleRetry = () => {
     setRetrying(true);
     fetchDashboardData();
   };
+  
   const handleLogout = () => {
     localStorage.removeItem("token"); // Remove the authentication token
     navigate("/login"); // Redirect to the login page
   };
+  
   const toggleSubmenu = (menu) => {
     if (activeSubmenu === menu) {
       setActiveSubmenu(null);
@@ -138,9 +177,9 @@ const StaffDashboard = () => {
           </UserAvatar>
           {!sidebarCollapsed && (
             <UserInfo>
-              <UserName>Staff Member</UserName>
-              <UserRole>Collections</UserRole>
-            </UserInfo>
+            <UserName>{staffInfo.name}</UserName>
+            <UserRole>{staffInfo.role === "Collections" ? `${staffInfo.name}'s Collections` : staffInfo.role}</UserRole>
+          </UserInfo>
           )}
         </UserProfile>
         <NavMenu>
@@ -255,18 +294,6 @@ const StaffDashboard = () => {
                   </StatInfo>
                 </StatCard>
 
-                {/* <StatCard>
-                  <StatIcon color="#36b9cc">
-                    <FaHandHoldingUsd />
-                  </StatIcon>
-                  <StatInfo>
-                    <StatTitle>Amount Remaining</StatTitle>
-                    <StatValue>
-                      ₹{dashboardData.amountRemainingToday.toLocaleString()}
-                    </StatValue>
-                  </StatInfo>
-                </StatCard> */}
-
                 <StatCard>
                   <StatIcon color="#f6c23e">
                     <FaTasks />
@@ -374,7 +401,6 @@ const StaffDashboard = () => {
     </DashboardLayout>
   );
 };
-
 const CollectionsList = styled.div`
   display: flex;
   flex-direction: column;
@@ -383,14 +409,41 @@ const CollectionsList = styled.div`
 
 const CollectionItem = styled.div`
   display: flex;
-  align-items: center;
+  flex-direction: column;
   padding: 12px;
   background-color: #f8f9fc;
   border-radius: 6px;
   transition: all 0.3s;
+  gap: 8px;
 
   &:hover {
     background-color: #e9ecef;
+  }
+
+  @media (min-width: 480px) {
+    flex-direction: row;
+    align-items: center;
+    gap: 0;
+  }
+`;
+
+const HistoryItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  background-color: #f8f9fc;
+  border-radius: 6px;
+  transition: all 0.3s;
+  gap: 8px;
+
+  &:hover {
+    background-color: #e9ecef;
+  }
+
+  @media (min-width: 480px) {
+    flex-direction: row;
+    align-items: center;
+    gap: 0;
   }
 `;
 
@@ -417,12 +470,7 @@ const CollectionText = styled.div`
   margin-bottom: 4px;
 `;
 
-const CollectionMeta = styled.div`
-  display: flex;
-  gap: 15px;
-  font-size: 0.75rem;
-  color: #6c757d;
-`;
+
 
 const CollectionStatus = styled.div`
   padding: 4px 10px;
@@ -471,18 +519,7 @@ const SubmenuItem = styled.div`
     margin-left: auto;
   }
 `;
-const HistoryItem = styled.div`
-  display: flex;
-  align-items: center;
-  padding: 12px;
-  background-color: #f8f9fc;
-  border-radius: 6px;
-  transition: all 0.3s;
 
-  &:hover {
-    background-color: #e9ecef;
-  }
-`;
 
 const HistoryIcon = styled.div`
   width: 40px;
@@ -507,11 +544,30 @@ const HistoryText = styled.div`
   margin-bottom: 4px;
 `;
 
-const HistoryMeta = styled.div`
+const CollectionMeta = styled.div`
   display: flex;
-  gap: 15px;
+  flex-direction: column;
+  gap: 5px;
   font-size: 0.75rem;
   color: #6c757d;
+
+  @media (min-width: 480px) {
+    flex-direction: row;
+    gap: 15px;
+  }
+`;
+
+const HistoryMeta = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: #6c757d;
+
+  @media (min-width: 480px) {
+    flex-direction: row;
+    gap: 15px;
+  }
 `;
 
 const EmptyState = styled.div`
@@ -542,19 +598,29 @@ const DashboardLayout = styled.div`
   display: flex;
   min-height: 100vh;
   background-color: #f8f9fc;
-`;
+  flex-direction: column;
 
+  @media (min-width: 768px) {
+    flex-direction: row;
+  }
+`;
 const Sidebar = styled.div`
-  width: ${(props) => (props.collapsed ? "80px" : "250px")};
+  width: 100%;
   background-color: #fff;
   box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
-  transition: width 0.3s ease;
+  transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
   position: relative;
   z-index: 1;
+  
+  @media (min-width: 768px) {
+    width: ${(props) => (props.collapsed ? "80px" : "250px")};
+    height: 100vh;
+    position: sticky;
+    top: 0;
+  }
 `;
-
 const SidebarHeader = styled.div`
   display: flex;
   justify-content: space-between;
@@ -695,6 +761,12 @@ const MainContent = styled.div`
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  width: 100%;
+  
+  @media (min-width: 768px) {
+    overflow-y: auto;
+    max-height: 100vh;
+  }
 `;
 
 const TopBar = styled.div`
@@ -755,9 +827,17 @@ const ContentArea = styled.div`
 
 const StatsContainer = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: 1fr;
   gap: 20px;
   margin-bottom: 30px;
+
+  @media (min-width: 480px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
 `;
 
 const StatCard = styled.div`
@@ -801,11 +881,11 @@ const StatValue = styled.div`
 
 const DashboardContent = styled.div`
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 1fr;
   gap: 20px;
 
-  @media (max-width: 992px) {
-    grid-template-columns: 1fr;
+  @media (min-width: 992px) {
+    grid-template-columns: 2fr 1fr;
   }
 `;
 
