@@ -114,30 +114,6 @@ router.get("/bills-history", protect, staffOnly, async (req, res) => {
   }
 });
 
-router.get("/bills-assigned-today", protect, staffOnly, async (req, res) => {
-  try {
-    const today = new Date();
-    const dayOfWeek = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][today.getDay()];
-    
-    const bills = await Bill.find({
-      assignedTo: req.user._id,
-      collectionDay: dayOfWeek,
-      assignedDate: { 
-        $gte: new Date(today.setHours(0, 0, 0, 0)),
-        $lt: new Date(today.setHours(23, 59, 59, 999))
-      }
-    })
-    .populate("assignedTo", "name")
-    .lean();
-
-    res.json(bills);
-  } catch (err) {
-    res.status(500).json({
-      message: "Error fetching bills assigned today",
-      error: err.message,
-    });
-  }
-});
 
 router.put("/mark-paid/:id", protect, staffOnly, async (req, res) => {
   try {

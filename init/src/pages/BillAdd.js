@@ -19,7 +19,7 @@ const BillsAdd = () => {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
 
-  const API_URL = "http://localhost:2500/api";
+  const API_URL = "https://laxmi-lube.onrender.com/api";
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];

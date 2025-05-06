@@ -53,7 +53,7 @@ const BillAssignedToday = () => {
   const fetchAllAssignedCustomers = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:2500/api/bills/assigned-customers",
+        "https://laxmi-lube.onrender.com/api/bills/assigned-customers",
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
@@ -85,7 +85,7 @@ const BillAssignedToday = () => {
       setError("");
       
       const response = await axios.get(
-        "http://localhost:2500/api/bills/bills-assigned-today",
+        "https://laxmi-lube.onrender.com/api/bills/bills-assigned-today",
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
           params: {
@@ -144,7 +144,7 @@ const BillAssignedToday = () => {
       };
 
       await axios.post(
-        "http://localhost:2500/api/collections",
+        "https://laxmi-lube.onrender.com/api/collections",
         collectionData,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -153,7 +153,7 @@ const BillAssignedToday = () => {
 
       const newDueAmount = dueAmount - paidAmount;
       await axios.put(
-        `http://localhost:2500/api/bills/${selectedBill._id}`,
+        `https://laxmi-lube.onrender.com/api/bills/${selectedBill._id}`,
         {
           dueAmount: newDueAmount,
           status: newDueAmount <= 0 ? "Paid" : "Partially Paid",
