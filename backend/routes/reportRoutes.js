@@ -51,14 +51,13 @@ router.get(
 
       // Set headers with styling
       worksheet.columns = [
-        { header: "Bill Number", key: "billNumber", width: 15 },
         { header: "Retailer", key: "retailer", width: 25 },
+        { header: "Bill Number", key: "billNumber", width: 15 },
         { header: "Bill Date", key: "billDate", width: 15 },
-        { header: "Amount", key: "amount", width: 15 },
-        { header: "Due Amount", key: "dueAmount", width: 15 },
-        { header: "Status", key: "status", width: 15 },
-        { header: "Assigned To", key: "assignedTo", width: 20 },
+        // { header: "Amount", key: "amount", width: 15 },
         { header: "Collection Amount", key: "collectionAmount", width: 20 },
+        { header: "Due Amount", key: "dueAmount", width: 15 },
+        // { header: "Status", key: "status", width: 15 },
         { header: "Payment Mode", key: "paymentMode", width: 15 },
         { header: "Payment Date", key: "paymentDate", width: 15 },
         { header: "Collected By", key: "collectedBy", width: 20 },
