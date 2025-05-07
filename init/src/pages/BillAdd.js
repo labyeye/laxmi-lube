@@ -29,29 +29,28 @@ const BillsAdd = () => {
     setError("");
     setMessage("");
     setImportProgress({ current: 0, total: 0 });
-
+  
     if (!file) {
       setError("Please select a file to upload");
       return;
     }
-
-    const validationError = await validateExcelStructure(file);
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
     setLoading(true);
     const formData = new FormData();
     formData.append("file", file);
-
+  
+    const validationError = await validateExcelStructure(file);
+    if (validationError) {
+      setError(validationError);
+      setLoading(false);
+      return;
+    }
+  
     try {
       const token = localStorage.getItem("token");
       if (!token) {
         throw new Error("Authentication token not found. Please log in again.");
       }
-
-      // Use fetch instead of axios for better stream handling
+  
       const response = await fetch(`${API_URL}/bills/import`, {
         method: "POST",
         headers: {
@@ -59,16 +58,26 @@ const BillsAdd = () => {
         },
         body: formData,
       });
-
+      const responseText = await response.text();
+  
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        let errorData;
+        try {
+          errorData = JSON.parse(responseText);
+        } catch (e) {
+          errorData = { message: responseText };
+        }
+        
+        console.error("Full error response:", errorData);
+        throw new Error(
+          `HTTP error! status: ${response.status}. Message: ${errorData.message || 'No error details provided'}`
+        );
       }
-
-      // Handle the streaming response
+  
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let result = "";
-
+  
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -76,9 +85,8 @@ const BillsAdd = () => {
         const textChunk = decoder.decode(value);
         result += textChunk;
       
-        // Process each line
         const lines = result.split("\n");
-        result = lines.pop(); // Keep incomplete line for next chunk
+        result = lines.pop();
       
         for (const line of lines) {
           if (!line.trim()) continue;
@@ -103,21 +111,20 @@ const BillsAdd = () => {
                   }`
                 );
               }
-              // Reset progress after final result
               setImportProgress({ current: 0, total: 0 });
+              setLoading(false); // Move setLoading here
             }
           } catch (e) {
             console.error("Error parsing progress update:", e);
           }
         }
       }
-
+  
       setFile(null);
       document.getElementById("fileInput").value = "";
     } catch (error) {
       console.error("Error importing file:", error);
       setError(error.message || "Failed to import bills");
-    } finally {
       setLoading(false);
     }
   };
@@ -548,7 +555,7 @@ const ProgressBar = styled.div`
 const ProgressFill = styled.div`
   height: 100%;
   background: #4299e1;
-  width: ${props => props.width};
+  width: ${(props) => props.width};
   transition: width 0.3s ease;
 `;
 const FormGrid = styled.div`
