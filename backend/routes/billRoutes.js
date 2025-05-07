@@ -62,15 +62,17 @@ router.post("/collections", protect, async (req, res) => {
   try {
     const collectionData = {
       ...req.body,
-      collectedBy: req.user._id
+      collectedBy: req.user._id,
     };
-    
+
     const newCollection = new Collection(collectionData);
     await newCollection.save();
-    
+
     res.status(201).json(newCollection);
   } catch (err) {
-    res.status(500).json({ message: "Failed to create collection", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to create collection", error: err.message });
   }
 });
 router.put("/:billId/assign", protect, adminOnly, async (req, res) => {
@@ -213,13 +215,21 @@ router.post(
 
       // Day abbreviations mapping
       const dayAbbreviations = {
-        "MON": "Monday",
-        "TUE": "Tuesday",
-        "WED": "Wednesday",
-        "THU": "Thursday",
-        "FRI": "Friday",
-        "SAT": "Saturday",
-        "SUN": "Sunday"
+        MON: "Monday",
+        TUE: "Tuesday",
+        WED: "Wednesday",
+        THU: "Thursday",
+        FRI: "Friday",
+        SAT: "Saturday",
+        SUN: "Sunday",
+      };
+      const totalRows =
+        jsonData.length - (jsonData[0].BillNo === "BillNo" ? 1 : 0);
+      let processedRows = 0;
+      const updateProgress = () => {
+        processedRows++;
+        // Send progress update through the response stream
+        res.write(`\nPROGRESS:${processedRows}:${totalRows}`);
       };
 
       // Read file with cellDates option to properly handle Excel dates
@@ -256,7 +266,10 @@ router.post(
       for (const [index, row] of jsonData.entries()) {
         try {
           // Skip header row if present
-          if (index === 0 && (row.CustName === "CustName" || row.BillNo === "BillNo")) {
+          if (
+            index === 0 &&
+            (row.CustName === "CustName" || row.BillNo === "BillNo")
+          ) {
             continue;
           }
 
@@ -293,24 +306,43 @@ router.post(
           // Process collection day (accept both full names and abbreviations)
           // Set default to Sunday if missing or empty
           let collectionDay = "Sunday"; // Default to Sunday if empty
-          
+
           if (collectionDayInput) {
             if (dayAbbreviations[collectionDayInput?.toUpperCase()]) {
-              collectionDay = dayAbbreviations[collectionDayInput.toUpperCase()];
-            } else if (["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].includes(collectionDayInput)) {
+              collectionDay =
+                dayAbbreviations[collectionDayInput.toUpperCase()];
+            } else if (
+              [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+                "Sunday",
+              ].includes(collectionDayInput)
+            ) {
               collectionDay = collectionDayInput;
             } else {
-              errors.push(`Row ${index + 2}: Invalid collection day format "${collectionDayInput}" - defaulting to Sunday`);
+              errors.push(
+                `Row ${
+                  index + 2
+                }: Invalid collection day format "${collectionDayInput}" - defaulting to Sunday`
+              );
             }
           }
 
           // Check for duplicate bill number AND customer name in this import
           const billKey = `${billNo}_${custName}`.toUpperCase();
-      if (processedBills[billKey]) {
-        errors.push(`Row ${index + 2}: Duplicate bill ${billNo} for customer ${custName} in this file`);
-        continue;
-      }
-      processedBills[billKey] = true;
+          if (processedBills[billKey]) {
+            errors.push(
+              `Row ${
+                index + 2
+              }: Duplicate bill ${billNo} for customer ${custName} in this file`
+            );
+            continue;
+          }
+          processedBills[billKey] = true;
 
           // Parse date - handle Excel date objects and strings
           let billDate;
@@ -324,12 +356,16 @@ router.post(
             billDate = new Date(billDateValue);
             if (isNaN(billDate.getTime())) {
               // Try alternative date formats if the first attempt fails
-              billDate = new Date(billDateValue.replace(/(\d{2})-(\d{2})-(\d{4})/, "$2/$1/$3"));
+              billDate = new Date(
+                billDateValue.replace(/(\d{2})-(\d{2})-(\d{4})/, "$2/$1/$3")
+              );
             }
           }
 
           if (isNaN(billDate.getTime())) {
-            errors.push(`Row ${index + 2}: Invalid date format for ${billDateValue}`);
+            errors.push(
+              `Row ${index + 2}: Invalid date format for ${billDateValue}`
+            );
             continue;
           }
 
@@ -362,18 +398,24 @@ router.post(
             billDate: billDate,
             collectionDay: collectionDay,
             status: status,
-            assignedTo: staffName ? staffMap.get(staffName.toUpperCase()) : null,
+            assignedTo: staffName
+              ? staffMap.get(staffName.toUpperCase())
+              : null,
           };
 
           try {
             // Check if bill already exists in database
             const existingBill = await Bill.findOne({
               billNumber: billNo,
-              retailer: custName
+              retailer: custName,
             });
-            
+
             if (existingBill) {
-              errors.push(`Row ${index + 2}: Bill number ${billNo} for customer ${custName} already exists in database`);
+              errors.push(
+                `Row ${
+                  index + 2
+                }: Bill number ${billNo} for customer ${custName} already exists in database`
+              );
               continue;
             }
 
@@ -384,6 +426,7 @@ router.post(
           } catch (saveError) {
             errors.push(`Row ${index + 2}: ${saveError.message}`);
           }
+          updateProgress();
         } catch (error) {
           errors.push(`Row ${index + 2}: ${error.message}`);
         }
@@ -417,15 +460,16 @@ router.post(
     }
   }
 );
-// Add this route to billRoutes.js
 router.get("/assigned-customers", protect, staffOnly, async (req, res) => {
   try {
-    const bills = await Bill.find({ assignedTo: req.user._id }).distinct("retailer");
+    const bills = await Bill.find({ assignedTo: req.user._id }).distinct(
+      "retailer"
+    );
     res.json(bills);
   } catch (err) {
-    res.status(500).json({ 
-      message: "Failed to fetch assigned customers", 
-      error: err.message 
+    res.status(500).json({
+      message: "Failed to fetch assigned customers",
+      error: err.message,
     });
   }
 });
@@ -451,7 +495,7 @@ router.get("/bills-assigned-today", protect, staffOnly, async (req, res) => {
   try {
     const query = {
       assignedTo: req.user._id,
-      status: { $ne: "Paid" }
+      status: { $ne: "Paid" },
     };
 
     // Only add collectionDay filter if specific day is requested
@@ -459,9 +503,7 @@ router.get("/bills-assigned-today", protect, staffOnly, async (req, res) => {
       query.collectionDay = req.query.collectionDay;
     }
 
-    const bills = await Bill.find(query)
-      .populate("assignedTo", "name")
-      .lean();
+    const bills = await Bill.find(query).populate("assignedTo", "name").lean();
 
     res.json(bills);
   } catch (err) {

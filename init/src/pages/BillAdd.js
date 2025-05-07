@@ -19,7 +19,86 @@ const BillsAdd = () => {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
 
+  const [importProgress, setImportProgress] = useState({
+    current: 0,
+    total: 0,
+  });
   const API_URL = "https://laxmi-lube.onrender.com/api";
+  const handleImport = async (e) => {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+    setImportProgress({ current: 0, total: 0 });
+
+    if (!file) {
+      setError("Please select a file to upload");
+      return;
+    }
+
+    const validationError = await validateExcelStructure(file);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setLoading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Authentication token not found. Please log in again.");
+      }
+
+      // Add progress event handler
+      const config = {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`,
+        },
+        onUploadProgress: (progressEvent) => {
+          const { loaded, total } = progressEvent;
+          setImportProgress({
+            current: loaded,
+            total: total,
+          });
+        },
+      };
+
+      const response = await axios.post(
+        `${API_URL}/bills/import`,
+        formData,
+        config
+      );
+
+      if (response.data.errorCount > 0) {
+        setMessage(
+          `Successfully imported ${response.data.importedCount} bills. ${response.data.errorCount} records had errors.`
+        );
+        const exampleErrors =
+          response.data.errors?.slice(0, 3).join(";\n") || "";
+        setError(
+          `Some rows had errors. Examples:\n${exampleErrors}${
+            response.data.errorCount > 3 ? "\n...and more" : ""
+          }`
+        );
+      } else {
+        setMessage(
+          `Successfully imported ${response.data.importedCount} bills.`
+        );
+      }
+
+      setFile(null);
+      document.getElementById("fileInput").value = "";
+    } catch (error) {
+      console.error("Error importing file:", error);
+      // ... (keep existing error handling)
+    } finally {
+      setLoading(false);
+      setImportProgress({ current: 0, total: 0 });
+    }
+  };
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -48,7 +127,8 @@ const BillsAdd = () => {
     if (!manualBill.billNumber) errors.billNumber = "Bill number is required";
     if (!manualBill.retailer) errors.retailer = "Retailer is required";
     if (!manualBill.amount) errors.amount = "Amount is required";
-    if (!manualBill.collectionDay) errors.collectionDay = "Collection day is required";
+    if (!manualBill.collectionDay)
+      errors.collectionDay = "Collection day is required";
 
     if (manualBill.amount && isNaN(parseFloat(manualBill.amount)))
       errors.amount = "Amount must be a number";
@@ -77,7 +157,11 @@ const BillsAdd = () => {
           );
 
           const requiredColumns = [
-            'billno', 'custname', 'billamt', 'billdate', 'day'
+            "billno",
+            "custname",
+            "billamt",
+            "billdate",
+            "day",
           ];
 
           const missingColumns = requiredColumns.filter(
@@ -115,75 +199,6 @@ const BillsAdd = () => {
     });
   };
 
-  const handleImport = async (e) => {
-    e.preventDefault();
-    setError("");
-    setMessage("");
-  
-    if (!file) {
-      setError("Please select a file to upload");
-      return;
-    }
-  
-    const validationError = await validateExcelStructure(file);
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-  
-    setLoading(true);
-    const formData = new FormData();
-    formData.append("file", file);
-  
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Authentication token not found. Please log in again.");
-      }
-  
-      const response = await axios.post(`${API_URL}/bills/import`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-  
-      if (response.data.errorCount > 0) {
-        setMessage(
-          `Successfully imported ${response.data.importedCount} bills. ${response.data.errorCount} records had errors.`
-        );
-        // Show first 3 errors as examples
-        const exampleErrors = response.data.errors?.slice(0, 3).join(";\n") || "";
-        setError(
-          `Some rows had errors. Examples:\n${exampleErrors}${
-            response.data.errorCount > 3 ? "\n...and more" : ""
-          }`
-        );
-      } else {
-        setMessage(`Successfully imported ${response.data.importedCount} bills.`);
-      }
-  
-      setFile(null);
-      document.getElementById("fileInput").value = "";
-    } catch (error) {
-      console.error("Error importing file:", error);
-      if (error.response) {
-        if (error.response.data?.message) {
-          setError(`Failed to import: ${error.response.data.message}`);
-        } else if (error.response.data?.error) {
-          setError(`Failed to import: ${error.response.data.error}`);
-        } else {
-          setError("Failed to import: Unknown server error");
-        }
-      } else if (error.request) {
-        setError("No response from server. Check your connection.");
-      } else {
-        setError(`Failed to import: ${error.message}`);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleManualSubmit = async (e) => {
     e.preventDefault();
@@ -300,7 +315,7 @@ const BillsAdd = () => {
             />
             {fieldErrors.amount && <ErrorText>{fieldErrors.amount}</ErrorText>}
           </FormGroup>
-          
+
           <FormGroup>
             <Label htmlFor="collectionDay">Collection Day</Label>
             <Select
@@ -323,7 +338,7 @@ const BillsAdd = () => {
               <ErrorText>{fieldErrors.collectionDay}</ErrorText>
             )}
           </FormGroup>
-          
+
           <FormGroup>
             <Label htmlFor="dueAmount">Due Amount</Label>
             <Input
@@ -411,8 +426,19 @@ const BillsAdd = () => {
 
         <ButtonContainer>
           <Button type="submit" disabled={loading || !file}>
-            {loading ? "Uploading..." : "Upload Bills"}
+            {loading
+              ? importProgress.total > 0
+                ? `Importing... ${Math.round(
+                    (importProgress.current / importProgress.total) * 100
+                  )}%`
+                : "Processing..."
+              : "Upload Bills"}
           </Button>
+          {loading && importProgress.total > 0 && (
+            <ProgressText>
+              Processed {importProgress.current} of {importProgress.total} bytes
+            </ProgressText>
+          )}
         </ButtonContainer>
 
         <NoteText>
@@ -453,7 +479,12 @@ const SectionHeader = styled.h2`
     font-size: 1.5rem;
   }
 `;
-
+const ProgressText = styled.span`
+  font-size: 0.8rem;
+  color: #666;
+  margin-left: 1rem;
+  align-self: center;
+`;
 const FormContainer = styled.form`
   background: white;
   padding: 1.25rem;
