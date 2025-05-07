@@ -208,8 +208,11 @@ router.post(
   adminOnly,
   upload.single("file"),
   async (req, res) => {
+    const { PassThrough } = require("stream");
+    const progressStream = new PassThrough();
     try {
       if (!req.file) {
+        progressStream.end();
         return res.status(400).json({ message: "No file uploaded" });
       }
 
@@ -223,9 +226,6 @@ router.post(
         SAT: "Saturday",
         SUN: "Sunday",
       };
-      const totalRows =
-        jsonData.length - (jsonData[0].BillNo === "BillNo" ? 1 : 0);
-      let processedRows = 0;
       const updateProgress = () => {
         processedRows++;
         // Send progress update through the response stream
@@ -242,9 +242,19 @@ router.post(
 
       // Validate we have data
       if (!jsonData || jsonData.length === 0) {
-        fs.unlinkSync(req.file.path);
         return res.status(400).json({ message: "No data found in the file" });
       }
+      const totalRows =
+        jsonData.length - (jsonData[0].BillNo === "BillNo" ? 1 : 0);
+      let processedRows = 0;
+      progressStream.pipe(res);
+      progressStream.write(
+        JSON.stringify({
+          type: "progress",
+          current: 0,
+          total: totalRows,
+        }) + "\n"
+      );
 
       const errors = [];
       const importedBills = [];
@@ -426,10 +436,28 @@ router.post(
           } catch (saveError) {
             errors.push(`Row ${index + 2}: ${saveError.message}`);
           }
-          updateProgress();
+          processedRows++;
+          progressStream.write(
+            JSON.stringify({
+              type: "progress",
+              current: processedRows,
+              total: totalRows,
+            }) + "\n"
+          );
         } catch (error) {
           errors.push(`Row ${index + 2}: ${error.message}`);
         }
+        progressStream.write(
+          JSON.stringify({
+            type: "result",
+            importedCount: importedBills.length,
+            errorCount: errors.length,
+            errors: errors.slice(0, 10),
+          }) + "\n"
+        );
+
+        // Clean up
+
       }
 
       // Clean up file

@@ -23,7 +23,7 @@ const BillsAdd = () => {
     current: 0,
     total: 0,
   });
-  const API_URL = "https://laxmi-lube.onrender.com/api";
+  const API_URL = "http://localhost:2500/api";
   const handleImport = async (e) => {
     e.preventDefault();
     setError("");
@@ -51,52 +51,78 @@ const BillsAdd = () => {
         throw new Error("Authentication token not found. Please log in again.");
       }
 
-      // Add progress event handler
-      const config = {
+      // Use fetch instead of axios for better stream handling
+      const response = await fetch(`${API_URL}/bills/import`, {
+        method: "POST",
         headers: {
-          "Content-Type": "multipart/form-data",
           Authorization: `Bearer ${token}`,
         },
-        onUploadProgress: (progressEvent) => {
-          const { loaded, total } = progressEvent;
-          setImportProgress({
-            current: loaded,
-            total: total,
-          });
-        },
-      };
+        body: formData,
+      });
 
-      const response = await axios.post(
-        `${API_URL}/bills/import`,
-        formData,
-        config
-      );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-      if (response.data.errorCount > 0) {
-        setMessage(
-          `Successfully imported ${response.data.importedCount} bills. ${response.data.errorCount} records had errors.`
-        );
-        const exampleErrors =
-          response.data.errors?.slice(0, 3).join(";\n") || "";
-        setError(
-          `Some rows had errors. Examples:\n${exampleErrors}${
-            response.data.errorCount > 3 ? "\n...and more" : ""
-          }`
-        );
-      } else {
-        setMessage(
-          `Successfully imported ${response.data.importedCount} bills.`
-        );
+      // Handle the streaming response
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let result = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const textChunk = decoder.decode(value);
+        result += textChunk;
+
+        // Process each line
+        const lines = result.split("\n");
+        result = lines.pop(); // Keep incomplete line for next chunk
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+
+          try {
+            const data = JSON.parse(line);
+
+            if (data.type === "progress") {
+              setImportProgress({
+                current: data.current,
+                total: data.total,
+              });
+            } else if (data.type === "result") {
+              if (data.errorCount > 0) {
+                setMessage(
+                  `Successfully imported ${data.importedCount} bills. ${data.errorCount} records had errors.`
+                );
+                const exampleErrors = data.errors?.join(";\n") || "";
+                setError(
+                  `Some rows had errors. Examples:\n${exampleErrors}${
+                    data.errorCount > 10 ? "\n...and more" : ""
+                  }`
+                );
+              } else {
+                setMessage(
+                  `Successfully imported ${data.importedCount} bills.`
+                );
+              }
+            } else if (data.type === "error") {
+              setError(`Failed to import: ${data.message || data.error}`);
+            }
+          } catch (e) {
+            console.error("Error parsing progress update:", e);
+          }
+        }
       }
 
       setFile(null);
       document.getElementById("fileInput").value = "";
     } catch (error) {
       console.error("Error importing file:", error);
-      // ... (keep existing error handling)
+      setError(error.message || "Failed to import bills");
     } finally {
       setLoading(false);
-      setImportProgress({ current: 0, total: 0 });
     }
   };
 
@@ -198,7 +224,6 @@ const BillsAdd = () => {
       reader.readAsArrayBuffer(file);
     });
   };
-
 
   const handleManualSubmit = async (e) => {
     e.preventDefault();
@@ -402,9 +427,22 @@ const BillsAdd = () => {
         </FormGrid>
 
         <ButtonContainer>
-          <Button type="submit" disabled={loading}>
-            {loading ? "Adding Bill..." : "Add Bill"}
+          <Button type="submit" disabled={loading || !file}>
+            {loading
+              ? importProgress.total > 0
+                ? `Importing ${importProgress.current} of ${importProgress.total} rows`
+                : "Processing..."
+              : "Upload Bills"}
           </Button>
+          {loading && importProgress.total > 0 && (
+            <ProgressBar>
+              <ProgressFill
+                width={`${
+                  (importProgress.current / importProgress.total) * 100
+                }%`}
+              />
+            </ProgressBar>
+          )}
         </ButtonContainer>
       </FormContainer>
 
@@ -428,16 +466,18 @@ const BillsAdd = () => {
           <Button type="submit" disabled={loading || !file}>
             {loading
               ? importProgress.total > 0
-                ? `Importing... ${Math.round(
-                    (importProgress.current / importProgress.total) * 100
-                  )}%`
+                ? `Importing ${importProgress.current} of ${importProgress.total} rows`
                 : "Processing..."
               : "Upload Bills"}
           </Button>
           {loading && importProgress.total > 0 && (
-            <ProgressText>
-              Processed {importProgress.current} of {importProgress.total} bytes
-            </ProgressText>
+            <ProgressBar>
+              <ProgressFill
+                width={`${
+                  (importProgress.current / importProgress.total) * 100
+                }%`}
+              />
+            </ProgressBar>
           )}
         </ButtonContainer>
 
@@ -500,7 +540,21 @@ const FormContainer = styled.form`
     padding: 1.5rem;
   }
 `;
+const ProgressBar = styled.div`
+  width: 100%;
+  height: 4px;
+  background: #e0e0e0;
+  border-radius: 2px;
+  margin-top: 8px;
+  overflow: hidden;
+`;
 
+const ProgressFill = styled.div`
+  height: 100%;
+  background: #4299e1;
+  width: ${props => props.width};
+  transition: width 0.3s ease;
+`;
 const FormGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr;
