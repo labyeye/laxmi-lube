@@ -248,13 +248,23 @@ router.post(
         jsonData.length - (jsonData[0].BillNo === "BillNo" ? 1 : 0);
       let processedRows = 0;
       progressStream.pipe(res);
+      const finalResult = {
+        type: "result",
+        importedCount: importedBills.length,
+        errorCount: errors.length,
+        errors: errors.slice(0, 10),
+      };
+
+      // Send progress update for the last row
       progressStream.write(
         JSON.stringify({
           type: "progress",
-          current: 0,
+          current: totalRows,
           total: totalRows,
         }) + "\n"
       );
+      progressStream.write(JSON.stringify(finalResult) + "\n");
+      progressStream.end();
 
       const errors = [];
       const importedBills = [];
@@ -457,7 +467,6 @@ router.post(
         );
 
         // Clean up
-
       }
 
       // Clean up file

@@ -72,43 +72,39 @@ const BillsAdd = () => {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
+      
         const textChunk = decoder.decode(value);
         result += textChunk;
-
+      
         // Process each line
         const lines = result.split("\n");
         result = lines.pop(); // Keep incomplete line for next chunk
-
+      
         for (const line of lines) {
           if (!line.trim()) continue;
-
+      
           try {
             const data = JSON.parse(line);
-
+      
             if (data.type === "progress") {
               setImportProgress({
                 current: data.current,
                 total: data.total,
               });
             } else if (data.type === "result") {
+              setMessage(
+                `Successfully imported ${data.importedCount} bills. ${data.errorCount} records had errors.`
+              );
               if (data.errorCount > 0) {
-                setMessage(
-                  `Successfully imported ${data.importedCount} bills. ${data.errorCount} records had errors.`
-                );
                 const exampleErrors = data.errors?.join(";\n") || "";
                 setError(
                   `Some rows had errors. Examples:\n${exampleErrors}${
                     data.errorCount > 10 ? "\n...and more" : ""
                   }`
                 );
-              } else {
-                setMessage(
-                  `Successfully imported ${data.importedCount} bills.`
-                );
               }
-            } else if (data.type === "error") {
-              setError(`Failed to import: ${data.message || data.error}`);
+              // Reset progress after final result
+              setImportProgress({ current: 0, total: 0 });
             }
           } catch (e) {
             console.error("Error parsing progress update:", e);
