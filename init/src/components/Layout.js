@@ -25,7 +25,7 @@ const Layout = ({ children }) => {
     <Container>
       <Sidebar>
         <LogoContainer>
-          <h2>AdminPanel</h2>
+          <h2>Laxmi Lube Privated Limited (Admin Panel)</h2>
         </LogoContainer>
         <NavMenu>
           <NavItem active={location.pathname === '/admin'}>
