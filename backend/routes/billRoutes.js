@@ -210,6 +210,12 @@ router.post(
   async (req, res) => {
     const { PassThrough } = require("stream");
     const progressStream = new PassThrough();
+    const errors = [];
+    const importedBills = [];
+    const staffMap = new Map();
+    let processedRows = 0;
+    let totalRows = 0;
+
     try {
       if (!req.file) {
         progressStream.end();
@@ -226,11 +232,6 @@ router.post(
         SAT: "Saturday",
         SUN: "Sunday",
       };
-      const updateProgress = () => {
-        processedRows++;
-        // Send progress update through the response stream
-        res.write(`\nPROGRESS:${processedRows}:${totalRows}`);
-      };
 
       // Read file with cellDates option to properly handle Excel dates
       const workbook = xlsx.readFile(req.file.path, { cellDates: true });
@@ -244,31 +245,9 @@ router.post(
       if (!jsonData || jsonData.length === 0) {
         return res.status(400).json({ message: "No data found in the file" });
       }
-      const totalRows =
-        jsonData.length - (jsonData[0].BillNo === "BillNo" ? 1 : 0);
-      let processedRows = 0;
+
+      totalRows = jsonData.length;
       progressStream.pipe(res);
-      const finalResult = {
-        type: "result",
-        importedCount: importedBills.length,
-        errorCount: errors.length,
-        errors: errors.slice(0, 10),
-      };
-
-      // Send progress update for the last row
-      progressStream.write(
-        JSON.stringify({
-          type: "progress",
-          current: totalRows,
-          total: totalRows,
-        }) + "\n"
-      );
-      progressStream.write(JSON.stringify(finalResult) + "\n");
-      progressStream.end();
-
-      const errors = [];
-      const importedBills = [];
-      const staffMap = new Map();
 
       try {
         const User = require("../models/User");
@@ -446,6 +425,7 @@ router.post(
           } catch (saveError) {
             errors.push(`Row ${index + 2}: ${saveError.message}`);
           }
+
           processedRows++;
           progressStream.write(
             JSON.stringify({
@@ -457,17 +437,17 @@ router.post(
         } catch (error) {
           errors.push(`Row ${index + 2}: ${error.message}`);
         }
-        progressStream.write(
-          JSON.stringify({
-            type: "result",
-            importedCount: importedBills.length,
-            errorCount: errors.length,
-            errors: errors.slice(0, 10),
-          }) + "\n"
-        );
-
-        // Clean up
       }
+
+      // Send final result
+      const finalResult = {
+        type: "result",
+        importedCount: importedBills.length,
+        errorCount: errors.length,
+        errors: errors.slice(0, 10),
+      };
+      progressStream.write(JSON.stringify(finalResult) + "\n");
+      progressStream.end();
 
       // Clean up file
       fs.unlinkSync(req.file.path);
