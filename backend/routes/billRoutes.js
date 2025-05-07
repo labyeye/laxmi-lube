@@ -218,7 +218,6 @@ router.post(
 
     try {
       if (!req.file) {
-        progressStream.end();
         return res.status(400).json({ message: "No file uploaded" });
       }
 
@@ -247,7 +246,6 @@ router.post(
       }
 
       totalRows = jsonData.length;
-      progressStream.pipe(res);
 
       try {
         const User = require("../models/User");
@@ -261,6 +259,10 @@ router.post(
 
       // Track processed bills by bill number AND customer name
       const processedBills = {};
+
+      // Set headers for streaming response
+      res.setHeader("Content-Type", "application/x-ndjson");
+      res.setHeader("Transfer-Encoding", "chunked");
 
       for (const [index, row] of jsonData.entries()) {
         try {
@@ -303,7 +305,6 @@ router.post(
           }
 
           // Process collection day (accept both full names and abbreviations)
-          // Set default to Sunday if missing or empty
           let collectionDay = "Sunday"; // Default to Sunday if empty
 
           if (collectionDayInput) {
@@ -427,7 +428,7 @@ router.post(
           }
 
           processedRows++;
-          progressStream.write(
+          res.write(
             JSON.stringify({
               type: "progress",
               current: processedRows,
@@ -446,34 +447,26 @@ router.post(
         errorCount: errors.length,
         errors: errors.slice(0, 10),
       };
-      progressStream.write(JSON.stringify(finalResult) + "\n");
-      progressStream.end();
+      res.write(JSON.stringify(finalResult) + "\n");
 
-      // Clean up file
-      fs.unlinkSync(req.file.path);
-
-      // Prepare response
-      const response = {
-        message: `Imported ${importedBills.length} bills`,
-        importedCount: importedBills.length,
-      };
-
-      if (errors.length > 0) {
-        response.message = `Imported ${importedBills.length} bills with ${errors.length} errors`;
-        response.errorCount = errors.length;
-        response.errors = errors.slice(0, 10); // Return first 10 errors
-        return res.status(207).json(response);
-      }
-
-      res.json(response);
-    } catch (error) {
+      // Clean up uploaded file
       if (req.file && fs.existsSync(req.file.path)) {
         fs.unlinkSync(req.file.path);
       }
-      res.status(500).json({
-        message: "Failed to import bills",
-        error: error.message,
-      });
+    } catch (error) {
+      console.error("Import error:", error);
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      res.write(
+        JSON.stringify({
+          type: "error",
+          message: "Failed to import bills",
+          error: error.message,
+        }) + "\n"
+      );
+    } finally {
+      res.end();
     }
   }
 );

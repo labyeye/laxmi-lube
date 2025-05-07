@@ -29,29 +29,28 @@ const BillsAdd = () => {
     setError("");
     setMessage("");
     setImportProgress({ current: 0, total: 0 });
-
+  
     if (!file) {
       setError("Please select a file to upload");
       return;
     }
-
+  
     const validationError = await validateExcelStructure(file);
     if (validationError) {
       setError(validationError);
       return;
     }
-
+  
     setLoading(true);
     const formData = new FormData();
     formData.append("file", file);
-
+  
     try {
       const token = localStorage.getItem("token");
       if (!token) {
         throw new Error("Authentication token not found. Please log in again.");
       }
-
-      // Use fetch instead of axios for better stream handling
+  
       const response = await fetch(`${API_URL}/bills/import`, {
         method: "POST",
         headers: {
@@ -59,33 +58,35 @@ const BillsAdd = () => {
         },
         body: formData,
       });
-
+  
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      // Handle the streaming response
+  
+      if (!response.body) {
+        throw new Error("ReadableStream not supported in this browser");
+      }
+  
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let result = "";
-
+      let buffer = "";
+  
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-      
-        const textChunk = decoder.decode(value);
-        result += textChunk;
-      
-        // Process each line
-        const lines = result.split("\n");
-        result = lines.pop(); // Keep incomplete line for next chunk
-      
+  
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+  
+        // Keep the last incomplete line in the buffer
+        buffer = lines.pop() || "";
+  
         for (const line of lines) {
           if (!line.trim()) continue;
-      
+  
           try {
             const data = JSON.parse(line);
-      
+  
             if (data.type === "progress") {
               setImportProgress({
                 current: data.current,
@@ -103,15 +104,15 @@ const BillsAdd = () => {
                   }`
                 );
               }
-              // Reset progress after final result
-              setImportProgress({ current: 0, total: 0 });
+            } else if (data.type === "error") {
+              setError(data.message || "Failed to import bills");
             }
           } catch (e) {
-            console.error("Error parsing progress update:", e);
+            console.error("Error parsing JSON:", e);
           }
         }
       }
-
+  
       setFile(null);
       document.getElementById("fileInput").value = "";
     } catch (error) {
@@ -121,6 +122,7 @@ const BillsAdd = () => {
       setLoading(false);
     }
   };
+
 
 
   const handleFileChange = (e) => {
