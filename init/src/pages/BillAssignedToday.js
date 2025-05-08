@@ -178,6 +178,7 @@ const BillAssignedToday = () => {
     fetchBillsAssignedToday();
     fetchAllAssignedCustomers();
   }, [selectedDay]);
+  const imageWidth = window.innerWidth < 768 ? "80%" : "50%";
 
   // In BillAssignedToday.js, update the handleCollectionSubmit function:
   const handleCollectionSubmit = async () => {
@@ -707,15 +708,15 @@ const BillAssignedToday = () => {
                       <>
                         <img
                           style={{
-                            width: "50%",
-                            height: "400px",
+                            maxWidth: "100%",
+                            width: imageWidth,
+                            height: "auto",
                             borderRadius: 10,
-                            marginBottom: 10,
-                            marginTop: 10,
-                            marginLeft: "25%",
-                            marginRight: "25%",
+                            margin: "10px auto",
+                            display: "block",
                           }}
                           src={require("../../src/image/qr.jpeg")}
+                          alt="QR Code"
                         />
                         <FormGroup>
                           <Label>UPI ID</Label>
