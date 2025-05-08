@@ -90,9 +90,12 @@ const BillAssignedToday = () => {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("Authentication token not found");
 
-      const response = await axios.get(`https://laxmi-lube.onrender.com/api/users/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        `https://laxmi-lube.onrender.com/api/users/me`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       setStaffInfo({
         name: response.data.name || "Staff Member",
@@ -702,9 +705,21 @@ const BillAssignedToday = () => {
                     {/* Payment mode specific fields */}
                     {paymentMode === "upi" && (
                       <>
+                        <img
+                          style={{
+                            width: "50%",
+                            height: "400px",
+                            borderRadius: 10,
+                            marginBottom: 10,
+                            marginTop: 10,
+                            marginLeft: "25%",
+                            marginRight: "25%",
+                          }}
+                          src={require("../../src/image/qr.jpeg")}
+                        />
                         <FormGroup>
                           <Label>UPI ID</Label>
-                          <img src={require('../../src/image/qr.jpeg')}/>
+
                           <Input
                             type="text"
                             value={paymentDetails.upiId}
@@ -830,6 +845,7 @@ const BillAssignedToday = () => {
     </DashboardLayout>
   );
 };
+
 // Responsive Styled Components for BillAssignedToday
 const DashboardLayout = styled.div`
   display: flex;
@@ -1052,7 +1068,6 @@ const ButtonGroup = styled.div`
 
 const FormGroup = styled.div`
   margin-bottom: 15px;
-
   @media (min-width: 768px) {
     margin-bottom: 20px;
   }
