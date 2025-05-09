@@ -10,7 +10,6 @@ import {
   FaChevronLeft,
   FaChevronRight,
 } from "react-icons/fa";
-import { DateRangePicker } from "react-date-range";
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
 import Layout from "../components/Layout";
