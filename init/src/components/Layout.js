@@ -35,7 +35,7 @@ const Layout = ({ children }) => {
           </NavItem>
           <NavItem active={location.pathname === '/admin/bill-collection-history'}>
             <FaHistory />
-            <span>Collection History</span>
+            <span>DSR Summary</span>
             <Link to="/admin/bill-collection-history" />
           </NavItem>
           <NavItem active={location.pathname === '/admin/bills-add'}>

@@ -267,23 +267,12 @@ function startOfDay(date) {
   return newDate;
 }
 
-// Add this new route to reportRoutes.js
 router.get("/dsr-summary", protect, adminOnly, async (req, res) => {
   try {
     const { date } = req.query;
-
-    // Parse the date string (YYYY-MM-DD format)
     const selectedDate = date ? new Date(date) : new Date();
-
-    // Set to beginning of day in UTC
-    const startDate = new Date(selectedDate);
-    startDate.setUTCHours(0, 0, 0, 0);
-
-    // Set to end of day in UTC
-    const endDate = new Date(selectedDate);
-    endDate.setUTCHours(23, 59, 59, 999);
-
-    // Rest of your existing code...
+    const startDate = startOfDay(selectedDate);
+    const endDate = endOfDay(selectedDate);
     const collections = await Collection.find({
       collectedOn: {
         $gte: startDate,
