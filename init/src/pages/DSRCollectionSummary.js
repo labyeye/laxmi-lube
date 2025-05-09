@@ -17,37 +17,40 @@ const DSRCollectionSummary = () => {
   }, [selectedDate]);
 
   const fetchCollections = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Authentication token not found');
-      }
-
-      const response = await axios.get('https://laxmi-lube.onrender.com/api/reports/dsr-summary', {
-        params: {
-          date: selectedDate.toISOString()
-        },
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      
-      if (response.data.success) {
-        setSummaryData(response.data.data);
-      } else {
-        throw new Error(response.data.message || 'Failed to fetch data');
-      }
-    } catch (err) {
-      console.error('Error fetching DSR summary:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to fetch DSR summary');
-      setSummaryData([]);
-    } finally {
-      setLoading(false);
+  try {
+    setLoading(true);
+    setError(null);
+    
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication token not found');
     }
-  };
+
+    // Create date in YYYY-MM-DD format to avoid timezone issues
+    const formattedDate = selectedDate.toISOString().split('T')[0];
+    
+    const response = await axios.get('https://laxmi-lube.onrender.com/api/reports/dsr-summary', {
+      params: {
+        date: formattedDate // Send just the date part without time
+      },
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    
+    if (response.data.success) {
+      setSummaryData(response.data.data);
+    } else {
+      throw new Error(response.data.message || 'Failed to fetch data');
+    }
+  } catch (err) {
+    console.error('Error fetching DSR summary:', err);
+    setError(err.response?.data?.message || err.message || 'Failed to fetch DSR summary');
+    setSummaryData([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleDateChange = (date) => {
     setSelectedDate(date);
