@@ -107,22 +107,14 @@ const DSRCollectionSummary = () => {
               <tr>
                 <th>DSR Name</th>
                 <th>Total</th>
-                <CashHeader colSpan="2">Cash</CashHeader>
-                <UPIHeader colSpan="2">UPI</UPIHeader>
-                <ChequeHeader colSpan="2">Cheque</ChequeHeader>
-                <BankHeader colSpan="2">Bank Transfer</BankHeader>
-              </tr>
-              <tr>
-                <th></th>
-                <th></th>
-                <CashSubHeader>Amount</CashSubHeader>
-                <CashSubHeader>TRC</CashSubHeader>
-                <UPISubHeader>Amount</UPISubHeader>
-                <UPISubHeader>TRC</UPISubHeader>
-                <ChequeSubHeader>Amount</ChequeSubHeader>
-                <ChequeSubHeader>TRC</ChequeSubHeader>
-                <BankSubHeader>Amount</BankSubHeader>
-                <BankSubHeader>TRC</BankSubHeader>
+                <th>Cash</th>
+                <th>Cash TRC</th>
+                <th>UPI</th>
+                <th>UPI TRC</th>
+                <th>Cheque</th>
+                <th>Cheque TRC</th>
+                <th>Bank Transfer</th>
+                <th>Bank Transfer TRC</th>
               </tr>
             </thead>
             <tbody>
@@ -131,19 +123,19 @@ const DSRCollectionSummary = () => {
                   <tr key={index}>
                     <td>{row.staffName}</td>
                     <td>{row.total.toFixed(2)}</td>
-                    <CashCell>{row.cash.toFixed(2)}</CashCell>
-                    <CashCell>{row.cashTrc}</CashCell>
-                    <UPICell>{row.upi.toFixed(2)}</UPICell>
-                    <UPICell>{row.upiTrc}</UPICell>
-                    <ChequeCell>{row.cheque.toFixed(2)}</ChequeCell>
-                    <ChequeCell>{row.chequeTrc}</ChequeCell>
-                    <BankCell>{row.bankTransfer.toFixed(2)}</BankCell>
-                    <BankCell>{row.bankTransferTrc}</BankCell>
+                    <td>{row.cash.toFixed(2)}</td>
+                    <td>{row.cashTrc}</td>
+                    <td>{row.upi.toFixed(2)}</td>
+                    <td>{row.upiTrc}</td>
+                    <td>{row.cheque.toFixed(2)}</td>
+                    <td>{row.chequeTrc}</td>
+                    <td>{row.bankTransfer.toFixed(2)}</td>
+                    <td>{row.bankTransferTrc}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="11" style={{ textAlign: 'center' }}>
+                  <td colSpan="10" style={{ textAlign: 'center' }}>
                     No collections found for the selected date
                   </td>
                 </tr>
@@ -156,7 +148,7 @@ const DSRCollectionSummary = () => {
   );
 };
 
-// Styled components
+// Styled components (same as before)
 const HeaderContainer = styled.div`
   display: flex;
   justify-content: space-between;
@@ -226,6 +218,7 @@ const SummaryTable = styled.table`
   }
 
   th {
+    background-color: #f4f4f4;
     font-weight: 600;
     white-space: nowrap;
   }
@@ -237,59 +230,6 @@ const SummaryTable = styled.table`
   tr:hover {
     background-color: #f1f1f1;
   }
-`;
-
-// Color-coded headers and cells
-const CashHeader = styled.th`
-  background-color: #e3f2fd !important;
-  color: #1565c0;
-`;
-
-const CashSubHeader = styled.th`
-  background-color: #e3f2fd !important;
-`;
-
-const CashCell = styled.td`
-  background-color: #e3f2fd;
-`;
-
-const UPIHeader = styled.th`
-  background-color: #e8f5e9 !important;
-  color: #2e7d32;
-`;
-
-const UPISubHeader = styled.th`
-  background-color: #e8f5e9 !important;
-`;
-
-const UPICell = styled.td`
-  background-color: #e8f5e9;
-`;
-
-const ChequeHeader = styled.th`
-  background-color: #fff3e0 !important;
-  color: #e65100;
-`;
-
-const ChequeSubHeader = styled.th`
-  background-color: #fff3e0 !important;
-`;
-
-const ChequeCell = styled.td`
-  background-color: #fff3e0;
-`;
-
-const BankHeader = styled.th`
-  background-color: #f3e5f5 !important;
-  color: #6a1b9a;
-`;
-
-const BankSubHeader = styled.th`
-  background-color: #f3e5f5 !important;
-`;
-
-const BankCell = styled.td`
-  background-color: #f3e5f5;
 `;
 
 export default DSRCollectionSummary;
