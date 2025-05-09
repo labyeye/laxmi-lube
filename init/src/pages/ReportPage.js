@@ -66,7 +66,10 @@ const ReportPage = () => {
       setLoading(false);
     }
   };
-
+  const formatPaymentMode = (mode) => {
+  if (!mode) return "N/A";
+  return mode.charAt(0).toUpperCase() + mode.slice(1).toLowerCase();
+};
   const fetchReports = async () => {
     try {
       setLoading(true);
@@ -273,8 +276,8 @@ const ReportPage = () => {
               <thead>
                 <tr>
                   <th>Retailer</th>
-                  <th>Bill Number</th>
-                  <th>Bill Date</th>
+                  <th>Inv No</th>
+                  <th>Inv Date</th>
                   <th>Collection Amount</th>
                   <th>Due Amount</th>
                   <th>Payment Mode</th>
@@ -302,7 +305,7 @@ const ReportPage = () => {
                             <td>
                               ₹{report.dueAmount?.toLocaleString() || "0"}
                             </td>
-                            <td>{collection.paymentMode}</td>
+                            <td>{formatPaymentMode(collection.paymentMode)}</td>
                             <td>
                               {format(
                                 new Date(collection.paymentDate),
@@ -312,7 +315,7 @@ const ReportPage = () => {
                             <td>{collection.collectedByName || "System"}</td>
                             <td>
                               <PaymentDetails>
-                                {collection.paymentMode === "cash" ? (
+                                {collection.paymentMode === "Cash" ? (
                                   <div>
                                     <strong>Receipt:</strong>{" "}
                                     {collection.paymentDetails?.receiptNumber ||

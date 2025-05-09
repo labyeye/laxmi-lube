@@ -520,7 +520,7 @@ const PaymentMode = styled.span`
   font-size: 0.75rem;
   font-weight: 600;
   background-color: ${(props) =>
-    props.mode === "cash"
+    props.mode === "Cash"
       ? "#1cc88a20"
       : props.mode === "upi"
       ? "#4e73df20"
@@ -528,7 +528,7 @@ const PaymentMode = styled.span`
       ? "#36b9cc20"
       : "#f6c23e20"};
   color: ${(props) =>
-    props.mode === "cash"
+    props.mode === "Cash"
       ? "#1cc88a"
       : props.mode === "upi"
       ? "#4e73df"

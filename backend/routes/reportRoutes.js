@@ -9,7 +9,7 @@ const { format } = require("date-fns");
 // Update the getFilteredPaymentDetails function:
 const getFilteredPaymentDetails = (paymentMode, paymentDetails) => {
   if (!paymentDetails) {
-    return paymentMode === "cash" ? { receiptNumber: "Money Received" } : null;
+    return paymentMode === "Cash" ? { receiptNumber: "Money Received" } : null;
   }
 
   const modeSpecificDetails = {
@@ -97,7 +97,10 @@ router.get("/date-collections", protect, adminOnly, async (req, res) => {
         collections: billCollections.map((collection) => ({
           _id: collection._id,
           amountCollected: collection.amountCollected,
-          paymentMode: collection.paymentMode,
+          paymentMode: collection.paymentMode
+            ? collection.paymentMode.charAt(0).toUpperCase() +
+              collection.paymentMode.slice(1).toLowerCase()
+            : "N/A",
           paymentDate: collection.collectedOn,
           paymentDetails: collection.paymentDetails,
           collectedByName: collection.collectedBy?.name || "System",
@@ -155,19 +158,19 @@ router.get(
       const worksheet = workbook.addWorksheet("Collections");
 
       worksheet.columns = [
-        { header: "Retailer", key: "retailer", width: 25 },
-        { header: "Bill Number", key: "billNumber", width: 15 },
-        { header: "Bill Date", key: "billDate", width: 15 },
+        { header: "Retailer Name", key: "retailer", width: 25 },
+        { header: "Inv No", key: "billNumber", width: 15 },
+        { header: "Inv Date", key: "billDate", width: 15 },
         { header: "Collection Amount", key: "collectionAmount", width: 20 },
         { header: "Due Amount", key: "dueAmount", width: 15 },
         { header: "Payment Mode", key: "paymentMode", width: 15 },
         { header: "Payment Date", key: "paymentDate", width: 15 },
-        { header: "Collected By", key: "collectedBy", width: 20 },
-        { header: "Cheque No", key: "chequeNumber", width: 15 },
-        { header: "Bank Name", key: "bankName", width: 20 },
+        { header: "DSR Name", key: "collectedBy", width: 20 },
+        { header: "M.R.No", key: "receiptNumber", width: 15 },
         { header: "UPI ID", key: "upiId", width: 25 },
         { header: "Transaction ID", key: "transactionId", width: 25 },
-        { header: "Receipt No", key: "receiptNumber", width: 15 },
+        { header: "Cheque No", key: "chequeNumber", width: 15 },
+        { header: "Bank Name", key: "bankName", width: 20 },
       ];
 
       worksheet.getRow(1).eachCell((cell) => {
@@ -191,20 +194,23 @@ router.get(
             : "N/A",
           collectionAmount: collection.amountCollected,
           dueAmount: collection.bill?.dueAmount || 0,
-          paymentMode: collection.paymentMode,
+          paymentMode: collection.paymentMode
+            ? collection.paymentMode.charAt(0).toUpperCase() +
+              collection.paymentMode.slice(1).toLowerCase()
+            : "N/A",
           paymentDate: format(new Date(collection.collectedOn), "dd/MM/yyyy"),
           collectedBy: collection.collectedBy?.name || "System",
-          chequeNumber: paymentDetails.chequeNumber || "",
-          bankName: paymentDetails.bankName || "",
+          receiptNumber:
+            collection.paymentMode?.toLowerCase() === "cash"
+              ? paymentDetails.receiptNumber || "Money Received"
+              : "",
           upiId: paymentDetails.upiId || "",
           transactionId:
             paymentDetails.transactionId ||
             paymentDetails.upiTransactionId ||
             "",
-          receiptNumber:
-            collection.paymentMode === "cash"
-              ? paymentDetails.receiptNumber || "Money Received"
-              : "",
+          chequeNumber: paymentDetails.chequeNumber || "",
+          bankName: paymentDetails.bankName || "",
         });
       });
 
@@ -302,19 +308,19 @@ router.get(
       const worksheet = workbook.addWorksheet("Today's Collections");
 
       worksheet.columns = [
-        { header: "Retailer", key: "retailer", width: 25 },
-        { header: "Bill Number", key: "billNumber", width: 15 },
-        { header: "Bill Date", key: "billDate", width: 15 },
+        { header: "Retailer Name", key: "retailer", width: 25 },
+        { header: "Inv No", key: "billNumber", width: 15 },
+        { header: "Inv Date", key: "billDate", width: 15 },
         { header: "Collection Amount", key: "collectionAmount", width: 20 },
         { header: "Due Amount", key: "dueAmount", width: 15 },
         { header: "Payment Mode", key: "paymentMode", width: 15 },
         { header: "Payment Date", key: "paymentDate", width: 15 },
-        { header: "Collected By", key: "collectedBy", width: 20 },
-        { header: "Cheque No", key: "chequeNumber", width: 15 },
-        { header: "Bank Name", key: "bankName", width: 20 },
+        { header: "DSR Name", key: "collectedBy", width: 20 },
+        { header: "M.R.No", key: "receiptNumber", width: 15 },
         { header: "UPI ID", key: "upiId", width: 25 },
         { header: "Transaction ID", key: "transactionId", width: 25 },
-        { header: "Receipt No", key: "receiptNumber", width: 15 },
+        { header: "Cheque No", key: "chequeNumber", width: 15 },
+        { header: "Bank Name", key: "bankName", width: 20 },
       ];
 
       worksheet.getRow(1).eachCell((cell) => {
@@ -338,20 +344,23 @@ router.get(
             : "N/A",
           collectionAmount: collection.amountCollected,
           dueAmount: collection.bill?.dueAmount || 0,
-          paymentMode: collection.paymentMode,
+          paymentMode: collection.paymentMode
+            ? collection.paymentMode.charAt(0).toUpperCase() +
+              collection.paymentMode.slice(1).toLowerCase()
+            : "N/A",
           paymentDate: format(new Date(collection.collectedOn), "dd/MM/yyyy"),
           collectedBy: collection.collectedBy?.name || "System",
-          chequeNumber: paymentDetails.chequeNumber || "",
-          bankName: paymentDetails.bankName || "",
+          receiptNumber:
+            collection.paymentMode?.toLowerCase() === "cash"
+              ? paymentDetails.receiptNumber || "Money Received"
+              : "",
           upiId: paymentDetails.upiId || "",
           transactionId:
             paymentDetails.transactionId ||
             paymentDetails.upiTransactionId ||
             "",
-          receiptNumber:
-            collection.paymentMode === "cash"
-              ? paymentDetails.receiptNumber || "Money Received"
-              : "",
+          chequeNumber: paymentDetails.chequeNumber || "",
+          bankName: paymentDetails.bankName || "",
         });
       });
 
@@ -433,7 +442,10 @@ router.get("/today-collections", protect, adminOnly, async (req, res) => {
         collections: billCollections.map((collection) => ({
           _id: collection._id,
           amountCollected: collection.amountCollected,
-          paymentMode: collection.paymentMode,
+          paymentMode: collection.paymentMode
+            ? collection.paymentMode.charAt(0).toUpperCase() +
+              collection.paymentMode.slice(1).toLowerCase()
+            : "N/A",
           paymentDate: collection.collectedOn,
           paymentDetails: collection.paymentDetails,
           collectedByName: collection.collectedBy?.name || "System",
@@ -483,7 +495,10 @@ router.get("/", protect, adminOnly, async (req, res) => {
       collections: report.collections.map((collection) => ({
         _id: collection._id,
         amountCollected: collection.amountCollected,
-        paymentMode: collection.paymentMode,
+        paymentMode: collection.paymentMode
+          ? collection.paymentMode.charAt(0).toUpperCase() +
+            collection.paymentMode.slice(1).toLowerCase()
+          : "N/A",
         paymentDate: collection.collectedOn,
         paymentDetails: collection.paymentDetails,
         collectedByName: collection.collectedBy?.name || "System",
@@ -532,7 +547,7 @@ router.get("/export/excel", protect, adminOnly, async (req, res) => {
 
     // Add headers
     worksheet.columns = [
-      { header: "Retailer", key: "retailer", width: 25 },
+      { header: "Retailer Name", key: "retailer", width: 25 },
       { header: "Bill Number", key: "billNumber", width: 15 },
       { header: "Bill Date", key: "billDate", width: 15 },
       { header: "Collection Amount", key: "collectionAmount", width: 20 },
@@ -560,7 +575,10 @@ router.get("/export/excel", protect, adminOnly, async (req, res) => {
             billDate: format(new Date(report.billDate), "dd/MM/yyyy"),
             collectionAmount: collection.amountCollected,
             dueAmount: report.dueAmount,
-            paymentMode: collection.paymentMode,
+            paymentMode: collection.paymentMode
+              ? collection.paymentMode.charAt(0).toUpperCase() +
+                collection.paymentMode.slice(1).toLowerCase()
+              : "N/A",
             paymentDate: format(new Date(collection.collectedOn), "dd/MM/yyyy"),
             collectedBy: collection.collectedBy?.name || "System",
             paymentDetails: getFilteredPaymentDetails(
@@ -576,7 +594,10 @@ router.get("/export/excel", protect, adminOnly, async (req, res) => {
           billDate: format(new Date(report.billDate), "dd/MM/yyyy"),
           collectionAmount: collection.amountCollected,
           dueAmount: report.dueAmount,
-          paymentMode: collection.paymentMode,
+          paymentMode: collection.paymentMode
+            ? collection.paymentMode.charAt(0).toUpperCase() +
+              collection.paymentMode.slice(1).toLowerCase()
+            : "N/A",
           paymentDate: format(new Date(collection.collectedOn), "dd/MM/yyyy"),
           collectedBy: collection.collectedBy?.name || "System",
           paymentDetails: getFilteredPaymentDetails(
@@ -706,7 +727,10 @@ router.get("/export/excel", protect, adminOnly, async (req, res) => {
             billDate: format(new Date(report.billDate), "dd/MM/yyyy"),
             collectionAmount: collection.amountCollected,
             dueAmount: report.dueAmount,
-            paymentMode: collection.paymentMode,
+            paymentMode: collection.paymentMode
+              ? collection.paymentMode.charAt(0).toUpperCase() +
+                collection.paymentMode.slice(1).toLowerCase()
+              : "N/A",
             paymentDate: format(new Date(collection.collectedOn), "dd/MM/yyyy"),
             collectedBy: collection.collectedBy?.name || "System",
             paymentDetails,
