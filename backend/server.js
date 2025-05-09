@@ -27,3 +27,6 @@ app.use('/api/admin/reports', reportRoutes);
 app.use('/api/reports', reportRoutes);
 const PORT = 2500;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Set the timezone for the entire application
+process.env.TZ = 'Asia/Kolkata';
+console.log('Application timezone set to:', process.env.TZ);
