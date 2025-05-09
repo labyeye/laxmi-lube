@@ -24,5 +24,6 @@ app.use('/api/collections', collectionRoutes);
 app.use('/api/admin', adminDashboardRoutes); 
 app.use('/api/staff', staffRoutes); 
 app.use('/api/admin/reports', reportRoutes);
+app.use('/api/reports', reportRoutes);
 const PORT = 2500;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -267,6 +267,109 @@ function startOfDay(date) {
   return newDate;
 }
 
+// Add this new route to reportRoutes.js
+router.get("/dsr-summary", protect, adminOnly, async (req, res) => {
+  try {
+    const { date } = req.query;
+    const selectedDate = date ? new Date(date) : new Date();
+
+    const startDate = startOfDay(selectedDate);
+    const endDate = endOfDay(selectedDate);
+
+    // Get all collections for the selected date
+    const collections = await Collection.find({
+      collectedOn: {
+        $gte: startDate,
+        $lte: endDate,
+      },
+    })
+      .populate("collectedBy", "name")
+      .populate({
+        path: "bill",
+        select: "retailer billNumber",
+      });
+
+    // Process data for DSR summary
+    const summaryMap = new Map();
+
+    collections.forEach((collection) => {
+      if (!collection.collectedBy) return;
+
+      const staffId = collection.collectedBy._id;
+      const staffName = collection.collectedBy.name;
+      const paymentMode = collection.paymentMode?.toLowerCase() || "cash";
+      const amount = collection.amountCollected;
+      const retailer = collection.bill?.retailer || "Unknown";
+
+      if (!summaryMap.has(staffId)) {
+        summaryMap.set(staffId, {
+          staffName,
+          total: 0,
+          cash: 0,
+          cashTrc: new Set(),
+          upi: 0,
+          upiTrc: new Set(),
+          cheque: 0,
+          chequeTrc: new Set(),
+          bankTransfer: 0,
+          bankTransferTrc: new Set(),
+        });
+      }
+
+      const staffData = summaryMap.get(staffId);
+      staffData.total += amount;
+
+      switch (paymentMode) {
+        case "cash":
+          staffData.cash += amount;
+          staffData.cashTrc.add(retailer);
+          break;
+        case "upi":
+          staffData.upi += amount;
+          staffData.upiTrc.add(retailer);
+          break;
+        case "cheque":
+          staffData.cheque += amount;
+          staffData.chequeTrc.add(retailer);
+          break;
+        case "bank_transfer":
+          staffData.bankTransfer += amount;
+          staffData.bankTransferTrc.add(retailer);
+          break;
+        default:
+          break;
+      }
+    });
+
+    // Convert to array format
+    const summaryData = Array.from(summaryMap.values()).map((staff) => ({
+      staffName: staff.staffName,
+      total: staff.total,
+      cash: staff.cash,
+      cashTrc: staff.cashTrc.size,
+      upi: staff.upi,
+      upiTrc: staff.upiTrc.size,
+      cheque: staff.cheque,
+      chequeTrc: staff.chequeTrc.size,
+      bankTransfer: staff.bankTransfer,
+      bankTransferTrc: staff.bankTransferTrc.size,
+    }));
+
+    res.json({
+      success: true,
+      data: summaryData,
+      date: selectedDate.toISOString(),
+    });
+  } catch (err) {
+    console.error("DSR Summary error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Error generating DSR summary",
+      error: err.message,
+    });
+  }
+});
+
 router.get(
   "/export/today-collections/excel",
   protect,

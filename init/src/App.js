@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 import StaffDashboard from './pages/StaffDashboard';
-import BillCollectionHistory from './pages/BillCollectionHistory';
+import BillCollectionHistory from './pages/DSRCollectionSummary';
 import BillsAdd from './pages/BillAdd';
 import Users from './pages/Users';
 import Logout from './pages/Logout';
@@ -11,6 +11,7 @@ import BillAssignedToday from './pages/BillAssignedToday';
 import BillsPage from './pages/BillsPage';
 import CollectionsHistory from './pages/CollectionHistoryPage';
 import ReportPage from './pages/ReportPage';
+import DSRCollectionSummary from './pages/DSRCollectionSummary';
 
 const App = () => {
   const user = JSON.parse(localStorage.getItem('user'));
@@ -52,7 +53,7 @@ const App = () => {
 
         {/* Bill Collection History Route */}
         <Route path="/admin/bill-collection-history" element={
-          user?.role === 'admin' ? <BillCollectionHistory /> : <Navigate to="/login" />
+          user?.role === 'admin' ? <DSRCollectionSummary /> : <Navigate to="/login" />
         } />
 
         {/* Bills Add Route */}
