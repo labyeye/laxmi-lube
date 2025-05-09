@@ -91,7 +91,7 @@ const BillAssignedToday = () => {
       if (!token) throw new Error("Authentication token not found");
 
       const response = await axios.get(
-        `http://localhost:2500/api/users/me`,
+        `https://laxmi-lube.onrender.com/api/users/me`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -109,7 +109,7 @@ const BillAssignedToday = () => {
   const fetchAllAssignedCustomers = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:2500/api/bills/assigned-customers",
+        "https://laxmi-lube.onrender.com/api/bills/assigned-customers",
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
@@ -141,7 +141,7 @@ const BillAssignedToday = () => {
       setError("");
 
       const response = await axios.get(
-        "http://localhost:2500/api/bills/bills-assigned-today",
+        "https://laxmi-lube.onrender.com/api/bills/bills-assigned-today",
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
           params: {
@@ -218,7 +218,7 @@ const BillAssignedToday = () => {
 
       // First create the collection record
       await axios.post(
-        "http://localhost:2500/api/collections",
+        "https://laxmi-lube.onrender.com/api/collections",
         collectionPayload,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -228,7 +228,7 @@ const BillAssignedToday = () => {
       // Then update the bill status
       const newDueAmount = dueAmount - paidAmount;
       await axios.put(
-        `http://localhost:2500/api/bills/${selectedBill._id}`,
+        `https://laxmi-lube.onrender.com/api/bills/${selectedBill._id}`,
         {
           dueAmount: newDueAmount,
           status: newDueAmount <= 0 ? "Paid" : "Partially Paid",
