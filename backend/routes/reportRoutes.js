@@ -266,40 +266,38 @@ function startOfDay(date) {
   newDate.setHours(0, 0, 0, 0);
   return newDate;
 }
-
 router.get("/dsr-summary", protect, adminOnly, async (req, res) => {
   try {
     const { date } = req.query;
     const selectedDate = date ? new Date(date) : new Date();
-    const startDate = startOfDay(selectedDate);
-    const endDate = endOfDay(selectedDate);
+    const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
+
+    // 1. Get assigned retailers count
+    const assignedBills = await Bill.find({
+      $or: [
+        { collectionDay: dayOfWeek, assignedTo: { $exists: true } },
+        { assignedDate: { $gte: startOfDay(selectedDate), $lte: endOfDay(selectedDate) } }
+      ],
+      assignedTo: { $exists: true, $ne: null }
+    }).populate("assignedTo", "name");
+
+    // 2. Get collections and calculate TRC counts
     const collections = await Collection.find({
-      collectedOn: {
-        $gte: startDate,
-        $lte: endDate,
-      },
-    })
-      .populate("collectedBy", "name")
-      .populate({
-        path: "bill",
-        select: "retailer billNumber",
-      });
+      collectedOn: { $gte: startOfDay(selectedDate), $lte: endOfDay(selectedDate) }
+    }).populate("collectedBy", "name").populate("bill", "retailer assignedTo");
 
-    // Process data for DSR summary
-    const summaryMap = new Map();
-
-    collections.forEach((collection) => {
-      if (!collection.collectedBy) return;
+    // 3. Process data
+    const result = collections.reduce((acc, collection) => {
+      if (!collection.collectedBy) return acc;
 
       const staffId = collection.collectedBy._id;
-      const staffName = collection.collectedBy.name;
       const paymentMode = collection.paymentMode?.toLowerCase() || "cash";
-      const amount = collection.amountCollected;
       const retailer = collection.bill?.retailer || "Unknown";
 
-      if (!summaryMap.has(staffId)) {
-        summaryMap.set(staffId, {
-          staffName,
+      if (!acc[staffId]) {
+        acc[staffId] = {
+          staffId,
+          staffName: collection.collectedBy.name,
           total: 0,
           cash: 0,
           cashTrc: new Set(),
@@ -309,59 +307,119 @@ router.get("/dsr-summary", protect, adminOnly, async (req, res) => {
           chequeTrc: new Set(),
           bankTransfer: 0,
           bankTransferTrc: new Set(),
-        });
+        };
       }
 
-      const staffData = summaryMap.get(staffId);
-      staffData.total += amount;
+      // Amounts
+      acc[staffId].total += collection.amountCollected;
+      acc[staffId][paymentMode] += collection.amountCollected;
 
-      switch (paymentMode) {
-        case "cash":
-          staffData.cash += amount;
-          staffData.cashTrc.add(retailer);
-          break;
-        case "upi":
-          staffData.upi += amount;
-          staffData.upiTrc.add(retailer);
-          break;
-        case "cheque":
-          staffData.cheque += amount;
-          staffData.chequeTrc.add(retailer);
-          break;
-        case "bank_transfer":
-          staffData.bankTransfer += amount;
-          staffData.bankTransferTrc.add(retailer);
-          break;
-        default:
-          break;
-      }
+      // TRC counts
+      acc[staffId][`${paymentMode}Trc`].add(retailer);
+
+      return acc;
+    }, {});
+
+    // 4. Add assigned retailers count and format
+    const finalData = Object.values(result).map(dsr => {
+      const assignedCount = assignedBills
+        .filter(bill => bill.assignedTo?._id.equals(dsr.staffId))
+        .reduce((set, bill) => set.add(bill.retailer), new Set()).size;
+
+      return {
+        ...dsr,
+        assignedRetailers: assignedCount,
+        collectedRetailers: dsr.cashTrc.size + dsr.upiTrc.size + dsr.chequeTrc.size + dsr.bankTransferTrc.size,
+        cashTrc: dsr.cashTrc.size,
+        upiTrc: dsr.upiTrc.size,
+        chequeTrc: dsr.chequeTrc.size,
+        bankTransferTrc: dsr.bankTransferTrc.size
+      };
     });
 
-    // Convert to array format
-    const summaryData = Array.from(summaryMap.values()).map((staff) => ({
-      staffName: staff.staffName,
-      total: staff.total,
-      cash: staff.cash,
-      cashTrc: staff.cashTrc.size,
-      upi: staff.upi,
-      upiTrc: staff.upiTrc.size,
-      cheque: staff.cheque,
-      chequeTrc: staff.chequeTrc.size,
-      bankTransfer: staff.bankTransfer,
-      bankTransferTrc: staff.bankTransferTrc.size,
+    res.json({ success: true, data: finalData });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+router.get("/dsr-daily-retailers", protect, adminOnly, async (req, res) => {
+  try {
+    const { date } = req.query;
+    const selectedDate = date ? new Date(date) : new Date();
+    const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
+
+    // 1. Get all bills assigned for today (by collection day OR assigned today)
+    const assignedBills = await Bill.find({
+      $or: [
+        { collectionDay: dayOfWeek, assignedTo: { $exists: true } },
+        { 
+          assignedDate: { 
+            $gte: startOfDay(selectedDate), 
+            $lte: endOfDay(selectedDate) 
+          } 
+        }
+      ],
+      assignedTo: { $exists: true, $ne: null }
+    }).populate("assignedTo", "name");
+
+    // 2. Get today's collections
+    const todayCollections = await Collection.find({
+      collectedOn: { 
+        $gte: startOfDay(selectedDate), 
+        $lte: endOfDay(selectedDate) 
+      }
+    }).populate("bill", "retailer assignedTo");
+
+    // 3. Count unique assigned retailers per DSR
+    const assignedRetailersMap = new Map(); // { staffId: { name, retailers: Set() } }
+
+    assignedBills.forEach(bill => {
+      if (!bill.assignedTo) return;
+      
+      const staffId = bill.assignedTo._id;
+      if (!assignedRetailersMap.has(staffId)) {
+        assignedRetailersMap.set(staffId, {
+          name: bill.assignedTo.name,
+          retailers: new Set()
+        });
+      }
+      assignedRetailersMap.get(staffId).retailers.add(bill.retailer);
+    });
+
+    // 4. Count unique collected retailers per DSR
+    const collectedRetailersMap = new Map(); // { staffId: Set(retailers) }
+
+    todayCollections.forEach(collection => {
+      if (!collection.bill?.assignedTo) return;
+      
+      const staffId = collection.bill.assignedTo;
+      if (!collectedRetailersMap.has(staffId)) {
+        collectedRetailersMap.set(staffId, new Set());
+      }
+      collectedRetailersMap.get(staffId).add(collection.bill.retailer);
+    });
+
+    // 5. Prepare final result
+    const result = Array.from(assignedRetailersMap.entries()).map(([staffId, data]) => ({
+      staffId,
+      staffName: data.name,
+      assignedRetailers: data.retailers.size,
+      collectedRetailers: collectedRetailersMap.get(staffId)?.size || 0
     }));
 
     res.json({
       success: true,
-      data: summaryData,
-      date: selectedDate.toISOString(),
+      data: result,
+      date: selectedDate.toISOString().split('T')[0],
+      day: dayOfWeek
     });
+
   } catch (err) {
-    console.error("DSR Summary error:", err);
+    console.error("DSR Daily Retailers error:", err);
     res.status(500).json({
       success: false,
-      message: "Error generating DSR summary",
-      error: err.message,
+      message: "Error fetching DSR retailer counts",
+      error: err.message
     });
   }
 });
