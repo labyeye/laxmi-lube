@@ -176,6 +176,12 @@ const StaffDashboard = () => {
               </>
             )}
           </NavItem>
+          <NavItem onClick={() => navigate("/staff/order-create")}>
+              <NavIcon>
+                <FaMoneyBillWave />
+              </NavIcon>
+              <NavText>Order Create</NavText>
+          </NavItem>
 
           <NavItemWithSubmenu>
             <NavItemMain onClick={() => toggleSubmenu("collections")}>

@@ -12,7 +12,12 @@ import BillsPage from './pages/BillsPage';
 import CollectionsHistory from './pages/CollectionHistoryPage';
 import ReportPage from './pages/ReportPage';
 import DSRCollectionSummary from './pages/DSRCollectionSummary';
-
+import RetailerAdd from './pages/RetailerAdd';
+import ProductAdd from './pages/ProductAdd';
+import RetailerList from './pages/RetailerList';
+import ProductList from './pages/ProductList';
+import OrderCreate from './pages/OrderCreate';
+import OrderList from './pages/OrderList';
 const App = () => {
   const user = JSON.parse(localStorage.getItem('user'));
   const token = localStorage.getItem('token');
@@ -55,6 +60,22 @@ const App = () => {
         <Route path="/admin/bill-collection-history" element={
           user?.role === 'admin' ? <DSRCollectionSummary /> : <Navigate to="/login" />
         } />
+        {/* Add Retailer */}
+        <Route path="/admin/add-retailer" element={
+          user?.role === 'admin' ? <RetailerAdd /> : <Navigate to="/login" />
+        } />
+        {/* Add Product */}
+        <Route path="/admin/add-product" element={
+          user?.role === 'admin' ? <ProductAdd /> : <Navigate to="/login" />
+        } />
+        {/* View Retailer */}
+        <Route path="/admin/view-retailer" element={
+          user?.role === 'admin' ? <RetailerList /> : <Navigate to="/login" />
+        } />
+        {/* View Product */}
+        <Route path="/admin/view-product" element={
+          user?.role === 'admin' ? <ProductList /> : <Navigate to="/login" />
+        } />
 
         {/* Bills Add Route */}
         <Route path="/admin/bills-add" element={
@@ -69,6 +90,12 @@ const App = () => {
         {/* Bill Assigned Today (For Staff) */}
         <Route path="/staff/bill-assigned-today" element={
           user?.role === 'staff' ? <BillAssignedToday /> : <Navigate to="/login" />
+        } />
+        <Route path="/staff/order-create" element={
+          user?.role === 'staff' ? <OrderCreate /> : <Navigate to="/login" />
+        } />
+        <Route path="/admin/order-list" element={
+          user?.role === 'admin' ? <OrderList /> : <Navigate to="/login" />
         } />
          <Route path="/admin/reports" element={
           user?.role === 'admin' ? <ReportPage /> : <Navigate to="/login" />
