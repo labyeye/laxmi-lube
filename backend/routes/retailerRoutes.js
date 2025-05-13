@@ -165,7 +165,7 @@ router.post(
             name,
             address1,
             address2,
-            dayAssigned,
+            dayAssigned: processedDayAssigned, // Use the processed day here instead of dayAssigned
             assignedTo,
             createdBy: req.user._id,
           });
