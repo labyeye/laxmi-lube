@@ -9,7 +9,7 @@ const ProductAdd = () => {
   const [manualProduct, setManualProduct] = useState({
     code: "",
     name: "",
-    mrp:"",
+    mrp: "",
     price: "",
     weight: "",
     scheme: "",
@@ -126,7 +126,9 @@ const ProductAdd = () => {
           const hasWeight = lowerHeaders.some((h) => h.includes("weight"));
           const hasScheme = lowerHeaders.some((h) => h.includes("scheme"));
           const hasStock = lowerHeaders.some((h) => h.includes("stock"));
-          const hasCompany = lowerHeaders.some(h => h.includes('company') || h.includes('company name'));
+          const hasCompany = lowerHeaders.some(
+            (h) => h.includes("company") || h.includes("company name")
+          );
 
           if (!hasCode) resolve("Missing required column: Code");
           else if (!hasName) resolve("Missing required column: Product Name");
@@ -162,39 +164,83 @@ const ProductAdd = () => {
     }
 
     setLoading(true);
+    setError("");
+    setMessage("");
+    setImportProgress({ current: 0, total: 0 });
+
     const formData = new FormData();
     formData.append("file", file);
 
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.post(
+      const response = await fetch(
         "https://laxmi-lube.onrender.com/api/products/import",
-        formData,
         {
+          method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
           },
+          body: formData,
         }
       );
 
-      setMessage(
-        `Successfully imported ${response.data.importedCount} products. ` +
-          `${response.data.errorCount} records had errors.`
-      );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-      if (response.data.errorCount > 0) {
-        setError(
-          `Some rows had errors. Examples:\n${response.data.errors.join(
-            ";\n"
-          )}${response.data.errorCount > 10 ? "\n...and more" : ""}`
-        );
+      if (!response.body) {
+        throw new Error("ReadableStream not supported in this browser");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+
+          try {
+            const data = JSON.parse(line);
+            if (data.type === "progress") {
+              setImportProgress({
+                current: data.current,
+                total: data.total,
+              });
+            } else if (data.type === "result") {
+              setMessage(
+                `Successfully imported ${data.importedCount} products. ${data.errorCount} records had errors.`
+              );
+              if (data.errorCount > 0) {
+                const exampleErrors = data.errors?.join(";\n") || "";
+                setError(
+                  `Some rows had errors. Examples:\n${exampleErrors}${
+                    data.errorCount > 10 ? "\n...and more" : ""
+                  }`
+                );
+              }
+            } else if (data.type === "error") {
+              setError(data.message || "Failed to import products");
+            }
+          } catch (e) {
+            console.error("Error parsing JSON:", e);
+          }
+        }
       }
 
       setFile(null);
       document.getElementById("fileInput").value = "";
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to import products");
+    } catch (error) {
+      console.error("Error importing file:", error);
+      setError(error.message || "Failed to import products");
     } finally {
       setLoading(false);
     }
@@ -299,9 +345,22 @@ const ProductAdd = () => {
         </FormGrid>
 
         <ButtonContainer>
-          <Button type="submit" disabled={loading}>
-            {loading ? "Processing..." : "Add Product"}
+          <Button type="submit" disabled={loading || !file}>
+            {loading
+              ? importProgress.total > 0
+                ? `Importing ${importProgress.current} of ${importProgress.total} rows`
+                : "Processing..."
+              : "Upload Products"}
           </Button>
+          {loading && importProgress.total > 0 && (
+            <ProgressBar>
+              <ProgressFill
+                width={`${
+                  (importProgress.current / importProgress.total) * 100
+                }%`}
+              />
+            </ProgressBar>
+          )}
         </ButtonContainer>
       </FormContainer>
 
@@ -385,7 +444,21 @@ const Input = styled.input`
   border-radius: 0.375rem;
   font-size: 0.875rem;
 `;
+const ProgressBar = styled.div`
+  width: 100%;
+  height: 4px;
+  background: #e0e0e0;
+  border-radius: 2px;
+  margin-top: 8px;
+  overflow: hidden;
+`;
 
+const ProgressFill = styled.div`
+  height: 100%;
+  background: #4299e1;
+  width: ${(props) => props.width};
+  transition: width 0.3s ease;
+`;
 const ButtonContainer = styled.div`
   margin-top: 1.25rem;
   display: flex;

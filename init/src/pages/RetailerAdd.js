@@ -5,7 +5,6 @@ import * as xlsx from "xlsx";
 import styled from "styled-components";
 import Layout from "../components/Layout";
 import { useNavigate } from "react-router-dom";
-
 const RetailerAdd = () => {
   const navigate = useNavigate();
   const [manualRetailer, setManualRetailer] = useState({
@@ -199,60 +198,90 @@ const RetailerAdd = () => {
       return;
     }
 
-    setLoading(true);
-    setError("");
-    setMessage("");
-
-    // Validate file structure
     const validationError = await validateExcelStructure(file);
     if (validationError) {
       setError(validationError);
-      setLoading(false);
       return;
     }
+
+    setLoading(true);
+    setError("");
+    setMessage("");
+    setImportProgress({ current: 0, total: 0 });
 
     const formData = new FormData();
     formData.append("file", file);
 
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.post(
+      const response = await fetch(
         "https://laxmi-lube.onrender.com/api/retailers/import",
-        formData,
         {
+          method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
           },
-          onUploadProgress: (progressEvent) => {
-            setImportProgress({
-              current: progressEvent.loaded,
-              total: progressEvent.total,
-            });
-          },
+          body: formData,
         }
       );
 
-      let successMessage = `Successfully imported ${response.data.importedCount} retailers!`;
-      if (response.data.errorCount > 0) {
-        successMessage += ` (${response.data.errorCount} errors)`;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      setMessage(successMessage);
-      if (response.data.errors && response.data.errors.length > 0) {
-        setError(
-          `Some rows had errors:\n${response.data.errors.join("\n")}${
-            response.data.errorCount > 10 ? "\n...and more" : ""
-          }`
-        );
+
+      if (!response.body) {
+        throw new Error("ReadableStream not supported in this browser");
       }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+
+          try {
+            const data = JSON.parse(line);
+            if (data.type === "progress") {
+              setImportProgress({
+                current: data.current,
+                total: data.total,
+              });
+            } else if (data.type === "result") {
+              setMessage(
+                `Successfully imported ${data.importedCount} retailers. ${data.errorCount} records had errors.`
+              );
+              if (data.errorCount > 0) {
+                const exampleErrors = data.errors?.join(";\n") || "";
+                setError(
+                  `Some rows had errors. Examples:\n${exampleErrors}${
+                    data.errorCount > 10 ? "\n...and more" : ""
+                  }`
+                );
+              }
+            } else if (data.type === "error") {
+              setError(data.message || "Failed to import retailers");
+            }
+          } catch (e) {
+            console.error("Error parsing JSON:", e);
+          }
+        }
+      }
+
       setFile(null);
       document.getElementById("fileInput").value = "";
-    } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          "Failed to import retailers. Please check the file format."
-      );
-      console.error("Import error:", err);
+    } catch (error) {
+      console.error("Error importing file:", error);
+      setError(error.message || "Failed to import retailers");
     } finally {
       setLoading(false);
     }
@@ -352,9 +381,22 @@ const RetailerAdd = () => {
         </FormGrid>
 
         <ButtonContainer>
-          <SubmitButton type="submit" disabled={loading}>
-            {loading ? "Processing..." : "Add Retailer"}
+          <SubmitButton type="submit" disabled={loading || !file}>
+            {loading
+              ? importProgress.total > 0
+                ? `Importing ${importProgress.current} of ${importProgress.total} rows`
+                : "Processing..."
+              : "Upload Retailers"}
           </SubmitButton>
+          {loading && importProgress.total > 0 && (
+            <ProgressBar>
+              <ProgressFill
+                width={`${
+                  (importProgress.current / importProgress.total) * 100
+                }%`}
+              />
+            </ProgressBar>
+          )}
         </ButtonContainer>
       </FormContainer>
 
@@ -391,7 +433,21 @@ const RetailerAdd = () => {
     </Layout>
   );
 };
+const ProgressBar = styled.div`
+  width: 100%;
+  height: 4px;
+  background: #e0e0e0;
+  border-radius: 2px;
+  margin-top: 8px;
+  overflow: hidden;
+`;
 
+const ProgressFill = styled.div`
+  height: 100%;
+  background: #4299e1;
+  width: ${(props) => props.width};
+  transition: width 0.3s ease;
+`;
 // Styled components (similar to your BillAdd.js styles)
 const PageHeader = styled.h1`
   font-size: 1.5rem;
