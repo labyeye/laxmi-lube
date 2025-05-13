@@ -7,6 +7,7 @@ const Retailer = require("../models/Retailer");
 const { protect, adminOnly } = require("../middleware/authMiddleware");
 const mongoose = require("mongoose");
 const User = require("../models/User");
+const fs = require("fs");
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -62,17 +63,33 @@ router.post("/", protect, adminOnly, async (req, res) => {
     console.error("Error saving retailer:", err); // Debug log
     res.status(400).json({ message: err.message });
   }
-});
+}); // In the /import route, replace the current implementation with:
+
 router.post(
   "/import",
   protect,
   adminOnly,
   upload.single("file"),
   async (req, res) => {
+    const { PassThrough } = require("stream");
+    const progressStream = new PassThrough();
+    const errors = [];
+    const importedRetailers = [];
+    let processedRows = 0;
+    let totalRows = 0;
+    const cleanup = () => {
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+    };
+
     try {
       if (!req.file) {
+        cleanup();
         return res.status(400).json({ message: "No file uploaded" });
       }
+
+      // Day abbreviations mapping
       const dayAbbreviations = {
         MON: "Monday",
         TUE: "Tuesday",
@@ -83,9 +100,13 @@ router.post(
         SUN: "Sunday",
       };
 
+      // Read the workbook
       const workbook = xlsx.readFile(req.file.path);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const headers = xlsx.utils.sheet_to_json(worksheet, { header: 1 })[0];
+      const jsonData = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
+
+      // Get headers
+      const headers = jsonData[0] || [];
       const lowerHeaders = headers.map((h) => String(h).toLowerCase().trim());
 
       // Find column indexes
@@ -107,21 +128,28 @@ router.post(
         return res.status(400).json({ message: "Required columns not found" });
       }
 
-      const jsonData = xlsx.utils.sheet_to_json(worksheet, { header: 0 });
-      const retailers = [];
-      const errors = [];
+      // Set up streaming response
+      res.setHeader("Content-Type", "application/x-ndjson");
+      res.setHeader("Transfer-Encoding", "chunked");
+
+      // Process rows
+      totalRows = jsonData.length - 1; // Subtract header row
 
       for (const [index, row] of jsonData.entries()) {
-        try {
-          if (!row[headers[nameCol]] && !row[headers[addr1Col]]) continue;
+        if (index === 0) continue; // Skip header row
 
-          const name = row[headers[nameCol]]?.trim();
-          const address1 = row[headers[addr1Col]]?.trim();
-          const address2 =
-            addr2Col !== -1 ? row[headers[addr2Col]]?.trim() : "";
+        try {
+          // Skip empty rows
+          if (!row[nameCol] && !row[addr1Col]) continue;
+
+          const name = row[nameCol]?.trim();
+          const address1 = row[addr1Col]?.trim();
+          const address2 = addr2Col !== -1 ? row[addr2Col]?.trim() : "";
           const dayAssigned =
-            dayAssignedCol !== -1 ? row[headers[dayAssignedCol]]?.trim() : "";
+            dayAssignedCol !== -1 ? row[dayAssignedCol]?.trim() : "";
           let processedDayAssigned = dayAssigned;
+
+          // Process day assigned
           if (dayAbbreviations[dayAssigned?.toUpperCase()]) {
             processedDayAssigned = dayAbbreviations[dayAssigned.toUpperCase()];
           } else if (
@@ -137,54 +165,90 @@ router.post(
           ) {
             processedDayAssigned = "";
           }
+
+          // Process assigned staff
           let assignedTo = null;
-          if (assignedToCol !== -1 && row[headers[assignedToCol]]) {
-            const assignedToName = row[headers[assignedToCol]]?.trim();
-            try {
-              const staff = await User.findOne({
-                name: { $regex: new RegExp(assignedToName, "i") },
-                role: "staff",
-              });
-              assignedTo = staff?._id || null;
-              if (!staff) {
-                errors.push(
-                  `Row ${index + 2}: Staff member "${assignedToName}" not found`
-                );
-              }
-            } catch (err) {
-              errors.push(`Row ${index + 2}: Error looking up staff member`);
+          if (assignedToCol !== -1 && row[assignedToCol]) {
+            const assignedToName = row[assignedToCol]?.trim();
+            const staff = await User.findOne({
+              name: { $regex: new RegExp(assignedToName, "i") },
+              role: "staff",
+            });
+            assignedTo = staff?._id || null;
+            if (!staff) {
+              errors.push(
+                `Row ${index + 1}: Staff member "${assignedToName}" not found`
+              );
             }
           }
 
           if (!name || !address1) {
-            errors.push(`Row ${index + 2}: Missing required fields`);
+            errors.push(`Row ${index + 1}: Missing required fields`);
             continue;
           }
 
+          // Check if retailer already exists
+          const existingRetailer = await Retailer.findOne({
+            name: { $regex: new RegExp(name, "i") },
+          });
+          if (existingRetailer) {
+            errors.push(
+              `Row ${index + 1}: Retailer with name "${name}" already exists`
+            );
+            continue;
+          }
+
+          // Create and save new retailer
           const retailer = new Retailer({
             name,
             address1,
             address2,
-            dayAssigned: processedDayAssigned, // Use the processed day here instead of dayAssigned
+            dayAssigned: processedDayAssigned,
             assignedTo,
             createdBy: req.user._id,
           });
 
           await retailer.save();
-          retailers.push(retailer);
+          importedRetailers.push(retailer);
+
+          processedRows++;
+          res.write(
+            JSON.stringify({
+              type: "progress",
+              current: processedRows,
+              total: totalRows,
+            }) + "\n"
+          );
         } catch (err) {
-          errors.push(`Row ${index + 2}: ${err.message}`);
+          errors.push(`Row ${index + 1}: ${err.message}`);
         }
       }
 
-      res.json({
-        importedCount: retailers.length,
+      // Send final result
+      const finalResult = {
+        type: "result",
+        importedCount: importedRetailers.length,
         errorCount: errors.length,
         errors: errors.slice(0, 10),
-      });
-    } catch (err) {
-      console.error("Import error:", err);
-      res.status(500).json({ message: err.message });
+      };
+      res.write(JSON.stringify(finalResult) + "\n");
+    } catch (error) {
+      console.error("Import error:", error);
+      res.write(
+        JSON.stringify({
+          type: "error",
+          message: "Failed to import retailers",
+          error: error.message,
+        }) + "\n"
+      );
+    } finally {
+      cleanup();
+      try {
+        res.end();
+      }
+      catch (err) {
+        console.error("Error ending response:", err);
+      }
     }
   }
 );

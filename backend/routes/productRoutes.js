@@ -37,20 +37,28 @@ router.post("/", protect, adminOnly, async (req, res) => {
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
-});
+});// In the /import route, replace the current implementation with:
+
 router.post("/import", protect, adminOnly, upload.single("file"), async (req, res) => {
+  const { PassThrough } = require("stream");
+  const progressStream = new PassThrough();
+  const errors = [];
+  const importedProducts = [];
+  let processedRows = 0;
+  let totalRows = 0;
+
   try {
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
+    // Read the workbook
     const workbook = xlsx.readFile(req.file.path);
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    
-    // Get the exact header names from the first row
-    const headers = xlsx.utils.sheet_to_json(worksheet, { header: 1 })[0];
-    
-    // Convert to lowercase for case-insensitive matching
+    const jsonData = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
+
+    // Get headers
+    const headers = jsonData[0] || [];
     const lowerHeaders = headers.map(h => String(h).toLowerCase().trim());
     
     // Find column indexes
@@ -67,31 +75,42 @@ router.post("/import", protect, adminOnly, upload.single("file"), async (req, re
       return res.status(400).json({ message: "Required columns not found" });
     }
 
-    // Get all data rows (skip header)
-    const jsonData = xlsx.utils.sheet_to_json(worksheet, { header: 0 });
+    // Set up streaming response
+    res.setHeader("Content-Type", "application/x-ndjson");
+    res.setHeader("Transfer-Encoding", "chunked");
 
-    const products = [];
-    const errors = [];
+    // Process rows
+    totalRows = jsonData.length - 1; // Subtract header row
 
     for (const [index, row] of jsonData.entries()) {
+      if (index === 0) continue; // Skip header row
+
       try {
         // Skip empty rows
-        if (!row[headers[codeCol]] && !row[headers[nameCol]]) continue;
+        if (!row[codeCol] && !row[nameCol]) continue;
 
-        const code = row[headers[codeCol]]?.toString().trim();
-        const name = row[headers[nameCol]]?.toString().trim();
-        const mrp = parseFloat(row[headers[mrpCol]]) || 0;
-        const price = parseFloat(row[headers[priceCol]]) || 0;
-        const weight = parseFloat(row[headers[weightCol]]) || 0;
-        const scheme = schemeCol !== -1 ? parseFloat(row[headers[schemeCol]]) || 0 : 0;
-        const stock = parseInt(row[headers[stockCol]]) || 0;
-        const company = companyCol !== -1 ? row[headers[companyCol]]?.toString().trim() : "";
+        const code = row[codeCol]?.toString().trim();
+        const name = row[nameCol]?.toString().trim();
+        const mrp = parseFloat(row[mrpCol]) || 0;
+        const price = parseFloat(row[priceCol]) || 0;
+        const weight = parseFloat(row[weightCol]) || 0;
+        const scheme = schemeCol !== -1 ? parseFloat(row[schemeCol]) || 0 : 0;
+        const stock = parseInt(row[stockCol]) || 0;
+        const company = companyCol !== -1 ? row[companyCol]?.toString().trim() : "";
 
-        if (!code || !name || !mrp || isNaN(price) || isNaN(weight) || isNaN(stock)) {
-          errors.push(`Row ${index + 2}: Missing or invalid required fields`);
+        if (!code || !name || isNaN(price) || isNaN(weight) || isNaN(stock)) {
+          errors.push(`Row ${index + 1}: Missing or invalid required fields`);
           continue;
         }
 
+        // Check if product already exists
+        const existingProduct = await Product.findOne({ code: code.toUpperCase() });
+        if (existingProduct) {
+          errors.push(`Row ${index + 1}: Product with code ${code} already exists`);
+          continue;
+        }
+
+        // Create and save new product
         const product = new Product({
           code: code.toUpperCase(),
           name,
@@ -104,19 +123,41 @@ router.post("/import", protect, adminOnly, upload.single("file"), async (req, re
         });
 
         await product.save();
-        products.push(product);
+        importedProducts.push(product);
+
+        processedRows++;
+        res.write(JSON.stringify({
+          type: "progress",
+          current: processedRows,
+          total: totalRows,
+        }) + "\n");
       } catch (err) {
-        errors.push(`Row ${index + 2}: ${err.message}`);
+        errors.push(`Row ${index + 1}: ${err.message}`);
       }
     }
 
-    res.json({
-      importedCount: products.length,
+    // Send final result
+    const finalResult = {
+      type: "result",
+      importedCount: importedProducts.length,
       errorCount: errors.length,
-      errors: errors.slice(0, 10)
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+      errors: errors.slice(0, 10),
+    };
+    res.write(JSON.stringify(finalResult) + "\n");
+
+  } catch (error) {
+    console.error("Import error:", error);
+    res.write(JSON.stringify({
+      type: "error",
+      message: "Failed to import products",
+      error: error.message,
+    }) + "\n");
+  } finally {
+    // Clean up uploaded file
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    res.end();
   }
 });
 
