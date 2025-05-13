@@ -329,17 +329,20 @@ const OrderCreate = () => {
           <FiltersContainer>
             <FilterGroup>
               <FilterLabel>Filter by Day</FilterLabel>
+              // Replace the day filter select options with this:
               <FilterSelect
                 value={dayFilter}
                 onChange={(e) => setDayFilter(e.target.value)}
               >
                 <option value="">All Days</option>
                 {[
-                  ...new Set(
-                    userAssignedRetailers
-                      .map((r) => r.dayAssigned)
-                      .filter(Boolean)
-                  ),
+                  "Monday",
+                  "Tuesday",
+                  "Wednesday",
+                  "Thursday",
+                  "Friday",
+                  "Saturday",
+                  "Sunday",
                 ].map((day) => (
                   <option key={day} value={day}>
                     {day}
