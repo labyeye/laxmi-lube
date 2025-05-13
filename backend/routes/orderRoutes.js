@@ -1,4 +1,3 @@
-// routes/orderRoutes.js
 const express = require("express");
 const router = express.Router();
 const Order = require("../models/Order");
@@ -130,8 +129,7 @@ router.get("/export/excel", protect, adminOnly, async (req, res) => {
     console.error("Export error:", err);
     res.status(500).json({ message: "Failed to generate Excel export" });
   }
-});
-router.post("/", protect, async (req, res) => {
+});router.post("/", protect, async (req, res) => {
   try {
     const { retailerId, items } = req.body;
 
@@ -159,9 +157,10 @@ router.post("/", protect, async (req, res) => {
           message: `Insufficient stock for product ${product.name}. Available: ${product.stock}`,
         });
       }
-      const totalScheme = item.scheme + (item.otherScheme || 0);
-      const netPrice =
-        (item.quantity * item.price) - (item.quantity * totalScheme);
+
+      // Calculate values using product.price and product.scheme
+      const totalScheme = product.scheme + (item.otherScheme || 0);
+      const netPrice = (item.quantity * product.price) - (item.quantity * totalScheme);
       const totalSale = netPrice;
       const totalItemLitres = item.quantity * product.weight;
 
