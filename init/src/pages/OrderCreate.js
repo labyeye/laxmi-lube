@@ -30,6 +30,15 @@ const OrderCreate = () => {
   const [companyFilter, setCompanyFilter] = useState("");
   const navigate = useNavigate();
   const [userAssignedRetailers, setUserAssignedRetailers] = useState([]);
+  const daysOfWeek = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ];
   const [staffInfo, setStaffInfo] = useState({
     name: "Loading...",
     role: "Collections",
@@ -47,7 +56,17 @@ const OrderCreate = () => {
       setActiveSubmenu(menu);
     }
   };
-
+  const availableDays = [
+    ...new Set(
+      userAssignedRetailers
+        .map((r) => r.dayAssigned)
+        .filter(Boolean)
+        .map((day) => {
+          const lowerDay = day.trim().toLowerCase();
+          return daysOfWeek.find((d) => d.toLowerCase() === lowerDay) || day;
+        })
+    ),
+  ];
   // In OrderCreate.js, modify the useEffect hook:
   useEffect(() => {
     const fetchData = async () => {
@@ -164,9 +183,11 @@ const OrderCreate = () => {
     };
   };
   const filteredRetailers = userAssignedRetailers.filter((retailer) => {
-    if (!dayFilter) return true; // Show all if no day filter
+    if (!dayFilter) return true;
 
-    const retailerDay = retailer.dayAssigned?.trim()?.toLowerCase();
+    if (!retailer.dayAssigned) return false;
+
+    const retailerDay = retailer.dayAssigned.trim().toLowerCase();
     const selectedDay = dayFilter.trim().toLowerCase();
 
     return retailerDay === selectedDay;
@@ -333,33 +354,16 @@ const OrderCreate = () => {
           <FiltersContainer>
             <FilterGroup>
               <FilterLabel>Filter by Day</FilterLabel>
-              // Replace the day filter select options with this:
               <FilterSelect
                 value={dayFilter}
                 onChange={(e) => setDayFilter(e.target.value)}
               >
                 <option value="">All Days</option>
-                {[
-                  "Monday",
-                  "Tuesday",
-                  "Wednesday",
-                  "Thursday",
-                  "Friday",
-                  "Saturday",
-                  "Sunday",
-                ]
-                  .filter((day) =>
-                    userAssignedRetailers.some(
-                      (retailer) =>
-                        retailer.dayAssigned?.trim()?.toLowerCase() ===
-                        day.toLowerCase()
-                    )
-                  )
-                  .map((day) => (
-                    <option key={day} value={day}>
-                      {day}
-                    </option>
-                  ))}
+                {availableDays.map((day) => (
+                  <option key={day} value={day}>
+                    {day}
+                  </option>
+                ))}
               </FilterSelect>
             </FilterGroup>
 
