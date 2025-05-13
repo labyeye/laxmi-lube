@@ -60,6 +60,7 @@ router.post("/import", protect, adminOnly, upload.single("file"), async (req, re
     const weightCol = lowerHeaders.findIndex(h => h.includes('weight'));
     const schemeCol = lowerHeaders.findIndex(h => h.includes('scheme'));
     const stockCol = lowerHeaders.findIndex(h => h.includes('stock'));
+    const companyCol = lowerHeaders.findIndex(h => h.includes('company') || h.includes('company name'));
 
     if (codeCol === -1 || nameCol === -1 || priceCol === -1 || weightCol === -1 || stockCol === -1) {
       return res.status(400).json({ message: "Required columns not found" });
@@ -82,6 +83,7 @@ router.post("/import", protect, adminOnly, upload.single("file"), async (req, re
         const weight = parseFloat(row[headers[weightCol]]) || 0;
         const scheme = schemeCol !== -1 ? parseFloat(row[headers[schemeCol]]) || 0 : 0;
         const stock = parseInt(row[headers[stockCol]]) || 0;
+        const company = companyCol !== -1 ? row[headers[companyCol]]?.toString().trim() : "";
 
         if (!code || !name || isNaN(price) || isNaN(weight) || isNaN(stock)) {
           errors.push(`Row ${index + 2}: Missing or invalid required fields`);
@@ -94,7 +96,8 @@ router.post("/import", protect, adminOnly, upload.single("file"), async (req, re
           price,
           weight,
           scheme,
-          stock
+          stock,
+          company
         });
 
         await product.save();

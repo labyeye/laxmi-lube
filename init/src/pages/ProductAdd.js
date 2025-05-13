@@ -123,6 +123,7 @@ const ProductAdd = () => {
           const hasPrice = lowerHeaders.some((h) => h.includes("price"));
           const hasWeight = lowerHeaders.some((h) => h.includes("weight"));
           const hasStock = lowerHeaders.some((h) => h.includes("stock"));
+          const hasCompany = lowerHeaders.some(h => h.includes('company') || h.includes('company name'));
 
           if (!hasCode) resolve("Missing required column: Code");
           else if (!hasName) resolve("Missing required column: Product Name");

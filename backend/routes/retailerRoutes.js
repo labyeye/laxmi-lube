@@ -73,6 +73,15 @@ router.post(
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
+      const dayAbbreviations = {
+        MON: "Monday",
+        TUE: "Tuesday",
+        WED: "Wednesday",
+        THU: "Thursday",
+        FRI: "Friday",
+        SAT: "Saturday",
+        SUN: "Sunday",
+      };
 
       const workbook = xlsx.readFile(req.file.path);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -108,10 +117,26 @@ router.post(
 
           const name = row[headers[nameCol]]?.trim();
           const address1 = row[headers[addr1Col]]?.trim();
-          const address2 = addr2Col !== -1 ? row[headers[addr2Col]]?.trim() : "";
+          const address2 =
+            addr2Col !== -1 ? row[headers[addr2Col]]?.trim() : "";
           const dayAssigned =
             dayAssignedCol !== -1 ? row[headers[dayAssignedCol]]?.trim() : "";
-
+          let processedDayAssigned = dayAssigned;
+          if (dayAbbreviations[dayAssigned?.toUpperCase()]) {
+            processedDayAssigned = dayAbbreviations[dayAssigned.toUpperCase()];
+          } else if (
+            ![
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday",
+              "Saturday",
+              "Sunday",
+            ].includes(dayAssigned)
+          ) {
+            processedDayAssigned = "";
+          }
           let assignedTo = null;
           if (assignedToCol !== -1 && row[headers[assignedToCol]]) {
             const assignedToName = row[headers[assignedToCol]]?.trim();
@@ -163,7 +188,6 @@ router.post(
     }
   }
 );
-
 
 router.put("/:id", protect, adminOnly, async (req, res) => {
   try {
