@@ -16,7 +16,7 @@ import {
   FaChevronUp,
   FaPlus,
   FaMinus,
-  FaTrash
+  FaTrash,
 } from "react-icons/fa";
 
 const OrderCreate = () => {
@@ -33,6 +33,7 @@ const OrderCreate = () => {
   const [dayFilter, setDayFilter] = useState("");
   const [companyFilter, setCompanyFilter] = useState("");
   const navigate = useNavigate();
+  const [userAssignedRetailers, setUserAssignedRetailers] = useState([]);
   const [staffInfo, setStaffInfo] = useState({
     name: "Loading...",
     role: "Collections",
@@ -55,11 +56,14 @@ const OrderCreate = () => {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem("token");
-        const [retailersRes, productsRes] = await Promise.all([
+        const [retailersRes, productsRes, userRes] = await Promise.all([
           axios.get("https://laxmi-lube.onrender.com/api/retailers", {
             headers: { Authorization: `Bearer ${token}` },
           }),
           axios.get("https://laxmi-lube.onrender.com/api/products", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          axios.get("https://laxmi-lube.onrender.com/api/users/me", {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -68,6 +72,22 @@ const OrderCreate = () => {
         setCompanies(companies);
         setRetailers(retailersRes.data);
         setProducts(productsRes.data);
+
+        setStaffInfo({
+          name: userRes.data.name,
+          role: userRes.data.role,
+        });
+        if (
+          userRes.data.assignedRetailers &&
+          userRes.data.assignedRetailers.length > 0
+        ) {
+          const assignedRetailers = retailersRes.data.filter((retailer) =>
+            userRes.data.assignedRetailers.includes(retailer._id)
+          );
+          setUserAssignedRetailers(assignedRetailers);
+        } else {
+          setUserAssignedRetailers(retailersRes.data);
+        }
       } catch (err) {
         setError("Failed to fetch data. Please try again.");
       }
@@ -144,9 +164,9 @@ const OrderCreate = () => {
     };
   };
 
-  const filteredRetailers = retailers.filter(
-    (retailer) => !dayFilter || retailer.dayAssigned === dayFilter
-  );
+  const filteredRetailers = userAssignedRetailers.filter(
+  (retailer) => !dayFilter || retailer.dayAssigned === dayFilter
+);
   const filteredProducts = products.filter(
     (product) => !companyFilter || product.company === companyFilter
   );
@@ -386,14 +406,18 @@ const OrderCreate = () => {
                           <Select
                             value={item.productId}
                             onChange={(e) =>
-                              handleItemChange(index, "productId", e.target.value)
+                              handleItemChange(
+                                index,
+                                "productId",
+                                e.target.value
+                              )
                             }
                           >
                             <option value="">Select Product</option>
                             {filteredProducts.map((product) => (
                               <option key={product._id} value={product._id}>
-                                {product.code} - {product.name} (₹{product.price},{" "}
-                                {product.weight}kg/ltr)
+                                {product.code} - {product.name} (₹
+                                {product.price}, {product.weight}kg/ltr)
                               </option>
                             ))}
                           </Select>
@@ -445,7 +469,9 @@ const OrderCreate = () => {
                                   type="button"
                                   onClick={() => {
                                     const currentValue = item.quantity || 1;
-                                    if (currentValue < item.productDetails.stock) {
+                                    if (
+                                      currentValue < item.productDetails.stock
+                                    ) {
                                       handleItemChange(
                                         index,
                                         "quantity",
@@ -564,7 +590,11 @@ const OrderCreate = () => {
                                 type="text"
                                 value={item.remarks}
                                 onChange={(e) =>
-                                  handleItemChange(index, "remarks", e.target.value)
+                                  handleItemChange(
+                                    index,
+                                    "remarks",
+                                    e.target.value
+                                  )
                                 }
                               />
                             </FormGroup>
@@ -1046,7 +1076,6 @@ const ErrorMessage = styled.div`
   font-size: 0.875rem;
   border: 1px solid #f5c6cb;
 `;
-
 
 const SubmenuItem = styled.div`
   display: flex;
