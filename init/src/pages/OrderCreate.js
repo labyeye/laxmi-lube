@@ -163,10 +163,14 @@ const OrderCreate = () => {
       totalPrice: totalPrice || 0,
     };
   };
+  const filteredRetailers = userAssignedRetailers.filter((retailer) => {
+    if (!dayFilter) return true; // Show all if no day filter
 
-  const filteredRetailers = userAssignedRetailers.filter(
-    (retailer) => !dayFilter || retailer.dayAssigned === dayFilter
-  );
+    const retailerDay = retailer.dayAssigned?.trim()?.toLowerCase();
+    const selectedDay = dayFilter.trim().toLowerCase();
+
+    return retailerDay === selectedDay;
+  });
   const filteredProducts = products.filter(
     (product) => !companyFilter || product.company === companyFilter
   );
@@ -343,11 +347,19 @@ const OrderCreate = () => {
                   "Friday",
                   "Saturday",
                   "Sunday",
-                ].map((day) => (
-                  <option key={day} value={day}>
-                    {day}
-                  </option>
-                ))}
+                ]
+                  .filter((day) =>
+                    userAssignedRetailers.some(
+                      (retailer) =>
+                        retailer.dayAssigned?.trim()?.toLowerCase() ===
+                        day.toLowerCase()
+                    )
+                  )
+                  .map((day) => (
+                    <option key={day} value={day}>
+                      {day}
+                    </option>
+                  ))}
               </FilterSelect>
             </FilterGroup>
 
