@@ -5,6 +5,7 @@ const multer = require("multer");
 const xlsx = require("xlsx");
 const Product = require("../models/Product");
 const { protect, adminOnly } = require("../middleware/authMiddleware");
+const fs = require("fs");
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
