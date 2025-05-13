@@ -124,6 +124,7 @@ const ProductAdd = () => {
           const hasMrp = lowerHeaders.some((h) => h.includes("mrp"));
           const hasPrice = lowerHeaders.some((h) => h.includes("price"));
           const hasWeight = lowerHeaders.some((h) => h.includes("weight"));
+          const hasScheme = lowerHeaders.some((h) => h.includes("scheme"));
           const hasStock = lowerHeaders.some((h) => h.includes("stock"));
           const hasCompany = lowerHeaders.some(h => h.includes('company') || h.includes('company name'));
 
@@ -132,8 +133,9 @@ const ProductAdd = () => {
           else if (!hasMrp) resolve("Missing required column: MRP");
           else if (!hasPrice) resolve("Missing required column: Price");
           else if (!hasWeight) resolve("Missing required column: Weight");
+          else if (!hasScheme) resolve("Missing required column: Scheme");
           else if (!hasStock) resolve("Missing required column: Stock");
-          else if (!hasCompany) resolve("Missing required column: Stock");
+          else if (!hasCompany) resolve("Missing required column: Company");
           else resolve(null);
         } catch (error) {
           resolve("Error reading Excel file: " + error.message);
