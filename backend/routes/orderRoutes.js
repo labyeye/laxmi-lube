@@ -159,11 +159,9 @@ router.post("/", protect, async (req, res) => {
           message: `Insufficient stock for product ${product.name}. Available: ${product.stock}`,
         });
       }
-
-      // Calculate values
-      const totalScheme = item.productDetails.scheme + (item.otherScheme || 0);
+      const totalScheme = item.scheme + (item.otherScheme || 0);
       const netPrice =
-        (item.quantity * item.productDetails.price) - (item.quantity * totalScheme);
+        (item.quantity * item.price) - (item.quantity * totalScheme);
       const totalSale = netPrice;
       const totalItemLitres = item.quantity * product.weight;
 

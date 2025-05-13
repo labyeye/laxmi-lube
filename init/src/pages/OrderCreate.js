@@ -10,10 +10,6 @@ import {
   FaSignOutAlt,
   FaChevronDown,
   FaChevronRight,
-  FaExclamationTriangle,
-  FaCheckCircle,
-  FaChevronLeft,
-  FaChevronUp,
   FaPlus,
   FaMinus,
   FaTrash,
@@ -52,6 +48,7 @@ const OrderCreate = () => {
     }
   };
 
+  // In OrderCreate.js, modify the useEffect hook:
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -77,6 +74,8 @@ const OrderCreate = () => {
           name: userRes.data.name,
           role: userRes.data.role,
         });
+
+        // Only show retailers assigned to this staff member
         if (
           userRes.data.assignedRetailers &&
           userRes.data.assignedRetailers.length > 0
@@ -86,7 +85,8 @@ const OrderCreate = () => {
           );
           setUserAssignedRetailers(assignedRetailers);
         } else {
-          setUserAssignedRetailers(retailersRes.data);
+          // If no retailers are assigned, show none (or all if that's your business logic)
+          setUserAssignedRetailers([]);
         }
       } catch (err) {
         setError("Failed to fetch data. Please try again.");
@@ -165,8 +165,8 @@ const OrderCreate = () => {
   };
 
   const filteredRetailers = userAssignedRetailers.filter(
-  (retailer) => !dayFilter || retailer.dayAssigned === dayFilter
-);
+    (retailer) => !dayFilter || retailer.dayAssigned === dayFilter
+  );
   const filteredProducts = products.filter(
     (product) => !companyFilter || product.company === companyFilter
   );
@@ -334,13 +334,17 @@ const OrderCreate = () => {
                 onChange={(e) => setDayFilter(e.target.value)}
               >
                 <option value="">All Days</option>
-                <option value="Monday">Monday</option>
-                <option value="Tuesday">Tuesday</option>
-                <option value="Wednesday">Wednesday</option>
-                <option value="Thursday">Thursday</option>
-                <option value="Friday">Friday</option>
-                <option value="Saturday">Saturday</option>
-                <option value="Sunday">Sunday</option>
+                {[
+                  ...new Set(
+                    userAssignedRetailers
+                      .map((r) => r.dayAssigned)
+                      .filter(Boolean)
+                  ),
+                ].map((day) => (
+                  <option key={day} value={day}>
+                    {day}
+                  </option>
+                ))}
               </FilterSelect>
             </FilterGroup>
 
