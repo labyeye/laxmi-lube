@@ -56,6 +56,7 @@ router.post("/import", protect, adminOnly, upload.single("file"), async (req, re
     // Find column indexes
     const codeCol = lowerHeaders.findIndex(h => h.includes('code'));
     const nameCol = lowerHeaders.findIndex(h => h.includes('product name') || h.includes('name'));
+    const mrpCol = lowerHeaders.findIndex(h => h.includes('mrp'));
     const priceCol = lowerHeaders.findIndex(h => h.includes('price'));
     const weightCol = lowerHeaders.findIndex(h => h.includes('weight'));
     const schemeCol = lowerHeaders.findIndex(h => h.includes('scheme'));
@@ -79,13 +80,14 @@ router.post("/import", protect, adminOnly, upload.single("file"), async (req, re
 
         const code = row[headers[codeCol]]?.toString().trim();
         const name = row[headers[nameCol]]?.toString().trim();
+        const mrp = parseFloat(row[headers[mrpCol]]) || 0;
         const price = parseFloat(row[headers[priceCol]]) || 0;
         const weight = parseFloat(row[headers[weightCol]]) || 0;
         const scheme = schemeCol !== -1 ? parseFloat(row[headers[schemeCol]]) || 0 : 0;
         const stock = parseInt(row[headers[stockCol]]) || 0;
         const company = companyCol !== -1 ? row[headers[companyCol]]?.toString().trim() : "";
 
-        if (!code || !name || isNaN(price) || isNaN(weight) || isNaN(stock)) {
+        if (!code || !name || !mrp || isNaN(price) || isNaN(weight) || isNaN(stock)) {
           errors.push(`Row ${index + 2}: Missing or invalid required fields`);
           continue;
         }
@@ -93,6 +95,7 @@ router.post("/import", protect, adminOnly, upload.single("file"), async (req, re
         const product = new Product({
           code: code.toUpperCase(),
           name,
+          mrp,
           price,
           weight,
           scheme,
