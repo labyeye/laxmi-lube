@@ -30,7 +30,7 @@ const OrderCreate = () => {
   const [companyFilter, setCompanyFilter] = useState("");
   const navigate = useNavigate();
   const [userAssignedRetailers, setUserAssignedRetailers] = useState([]);
-const [productSearch, setProductSearch] = useState("");
+  const [productSearch, setProductSearch] = useState("");
   const [staffInfo, setStaffInfo] = useState({
     name: "Loading...",
     role: "Collections",
@@ -169,12 +169,12 @@ const [productSearch, setProductSearch] = useState("");
     (retailer) => !dayFilter || retailer.dayAssigned === dayFilter
   );
   const filteredProducts = products.filter(
-  (product) => 
-    (!companyFilter || product.company === companyFilter) &&
-    (!productSearch || 
-     product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-     product.code.toLowerCase().includes(productSearch.toLowerCase()))
-);
+    (product) =>
+      (!companyFilter || product.company === companyFilter) &&
+      (!productSearch ||
+        product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+        product.code.toLowerCase().includes(productSearch.toLowerCase()))
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -406,107 +406,114 @@ const [productSearch, setProductSearch] = useState("");
 
                       <ItemGrid>
                         <FormGroup>
-  <Label>Product</Label>
-  <Input
-    type="text"
-    placeholder="Search products..."
-    value={item.productId ? 
-      `${item.productDetails?.code} - ${item.productDetails?.name}` : 
-      productSearch}
-    onChange={(e) => {
-      if (!item.productId) {
-        setProductSearch(e.target.value);
-      }
-    }}
-    onFocus={() => {
-      if (item.productId) {
-        // Clear selection when focusing on the input
-        handleItemChange(index, "productId", "");
-        setProductSearch("");
-      }
-    }}
-  />
-  {!item.productId && productSearch && (
-    <ProductResultsList>
-      {filteredProducts.map((product) => (
-        <ProductResultItem
-          key={product._id}
-          onClick={() => {
-            handleItemChange(index, "productId", product._id);
-            setProductSearch("");
-          }}
-        >
-          {product.code} - {product.name} (₹{product.price}, {product.weight}kg/ltr)
-        </ProductResultItem>
-      ))}
-      {filteredProducts.length === 0 && (
-        <NoResults>No products found</NoResults>
-      )}
-    </ProductResultsList>
-  )}
-</FormGroup>
+                          <Label>Product</Label>
+                          <SearchInput
+                            type="text"
+                            placeholder="Search products..."
+                            value={
+                              item.productId
+                                ? `${item.productDetails?.code} - ${item.productDetails?.name}`
+                                : productSearch
+                            }
+                            onChange={(e) => {
+                              if (!item.productId) {
+                                setProductSearch(e.target.value);
+                              }
+                            }}
+                            onFocus={() => {
+                              if (item.productId) {
+                                handleItemChange(index, "productId", "");
+                                setProductSearch("");
+                              }
+                            }}
+                          />
+                          {!item.productId && productSearch && (
+                            <ProductResultsList>
+                              {filteredProducts.map((product) => (
+                                <ProductResultItem
+                                  key={product._id}
+                                  onClick={() => {
+                                    handleItemChange(
+                                      index,
+                                      "productId",
+                                      product._id
+                                    );
+                                    setProductSearch("");
+                                  }}
+                                >
+                                  {product.code} - {product.name} (₹
+                                  {product.price}, {product.weight}kg/ltr)
+                                </ProductResultItem>
+                              ))}
+                              {filteredProducts.length === 0 && (
+                                <NoResults>No products found</NoResults>
+                              )}
+                            </ProductResultsList>
+                          )}
+                        </FormGroup>
 
                         {item.productDetails && (
                           <>
-                            <FormGroup>
-                              <Label>Stock</Label>
-                              <Input
-                                type="text"
-                                value={item.productDetails.stock}
-                                readOnly
-                              />
-                            </FormGroup>
-
-                            <FormGroup>
-                              <Label>Quantity</Label>
-                              <NumberInputContainer>
-                                <NumberInputButton
-                                  type="button"
-                                  onClick={() => {
-                                    const currentValue = item.quantity || 1;
-                                    if (currentValue > 1) {
-                                      handleItemChange(
-                                        index,
-                                        "quantity",
-                                        currentValue - 1
-                                      );
-                                    }
-                                  }}
-                                >
-                                  <FaMinus />
-                                </NumberInputButton>
-                                <QuantityInput
-                                  type="number"
-                                  min="1"
-                                  max={item.productDetails.stock}
-                                  value={item.quantity}
-                                  onChange={(e) =>
-                                    handleItemChange(
-                                      index,
-                                      "quantity",
-                                      e.target.value
-                                    )
-                                  }
+                            <StockGroup>
+                              <SFormGroup>
+                                <Label>Stock</Label>
+                                <StockInput
+                                  type="text"
+                                  value={item.productDetails.stock}
+                                  readOnly
                                 />
-                                <NumberInputButton
-                                  type="button"
-                                  onClick={() => {
-                                    const currentValue = item.quantity || 1;
-                                    if (
-                                      currentValue < item.productDetails.stock
-                                    ) {
+                              </SFormGroup>
+                              <QFormGroup>
+                                <Label>Quantity</Label>
+                                <NumberInputContainer>
+                                  <NumberInputButton
+                                    type="button"
+                                    onClick={() => {
+                                      const currentValue = item.quantity || 1;
+                                      if (currentValue > 1) {
+                                        handleItemChange(
+                                          index,
+                                          "quantity",
+                                          currentValue - 1
+                                        );
+                                      }
+                                    }}
+                                  >
+                                    <FaMinus />
+                                  </NumberInputButton>
+                                  <QuantityInput
+                                    type="number"
+                                    min="1"
+                                    max={item.productDetails.stock}
+                                    value={item.quantity}
+                                    onChange={(e) =>
                                       handleItemChange(
                                         index,
                                         "quantity",
-                                        currentValue + 1
-                                      );
+                                        e.target.value
+                                      )
                                     }
-                                  }}
-                                >
-                                  <FaPlus />
-                                </NumberInputButton>
-                              </NumberInputContainer>
-                            </FormGroup>
+                                  />
+                                  <NumberInputButton
+                                    type="button"
+                                    onClick={() => {
+                                      const currentValue = item.quantity || 1;
+                                      if (
+                                        currentValue < item.productDetails.stock
+                                      ) {
+                                        handleItemChange(
+                                          index,
+                                          "quantity",
+                                          currentValue + 1
+                                        );
+                                      }
+                                    }}
+                                  >
+                                    <FaPlus />
+                                  </NumberInputButton>
+                                </NumberInputContainer>
+                              </QFormGroup>
+                            </StockGroup>
 
                             <FormGroup>
                               <Label>Product Scheme (₹)</Label>
@@ -658,14 +665,15 @@ const DashboardLayout = styled.div`
 const ProductResultsList = styled.div`
   position: absolute;
   z-index: 10;
-  width: 100%;
+  width: 64%;
   max-height: 200px;
   overflow-y: auto;
   background: white;
   border: 1px solid #ddd;
   border-radius: 0.375rem;
   margin-top: 0.25rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  font-size: 0.75rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 `;
 
 const ProductResultItem = styled.div`
@@ -764,6 +772,14 @@ const ItemsHeader = styled.div`
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
+  }
+`;
+const StockGroup = styled.div`
+  display: flex;
+  flex-direction: row;
+  margin-bottom: 1.5rem;
+  @media (min-width: 768px) {
+    flex-direction: row;
   }
 `;
 
@@ -1035,6 +1051,16 @@ const FormGroup = styled.div`
   ${(props) => props.fullWidth && "grid-column: 1 / -1;"}
 `;
 
+const SFormGroup = styled.div`
+  margin-bottom: 1rem;
+  width: 35%;
+`;
+
+const QFormGroup = styled.div`
+  margin-bottom: 1rem;
+  width: 60%;
+`;
+
 const Label = styled.label`
   display: block;
   margin-bottom: 0.5rem;
@@ -1063,7 +1089,17 @@ const Input = styled.input`
   }
 `;
 
+const StockInput = styled(Input)`
+  text-align: center;
+  width: 40%;
+  background-color: #fff8e1;
+`;
 const QuantityInput = styled(Input)`
+  width: 40%;
+  text-align: center;
+  background-color: #fff8e1;
+`;
+const SearchInput = styled(Input)`
   text-align: center;
   background-color: #fff8e1;
 `;
@@ -1089,8 +1125,7 @@ const RInput = styled.input`
 `;
 const SchemeInput = styled(Input)`
   text-align: center;
-    background-color: #fff8e1;
-
+  background-color: #fff8e1;
 `;
 
 const Select = styled.select`
