@@ -515,104 +515,115 @@ const OrderCreate = () => {
                               </QFormGroup>
                             </StockGroup>
 
-                            <FormGroup>
-                              <Label>Product Scheme (₹)</Label>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={item.productDetails.scheme}
-                                readOnly
-                              />
-                            </FormGroup>
-
-                            <FormGroup>
-                              <Label>Other Scheme (₹)</Label>
-                              <NumberInputContainer>
-                                <NumberInputButton
-                                  type="button"
-                                  onClick={() => {
-                                    const currentValue = item.otherScheme || 0;
-                                    handleItemChange(
-                                      index,
-                                      "otherScheme",
-                                      currentValue - 1
-                                    );
-                                  }}
-                                >
-                                  <FaMinus />
-                                </NumberInputButton>
-                                <SchemeInput
+                            <StockGroup>
+                              <SFormGroup>
+                                <Label>Scheme(₹)</Label>
+                                <StockInput
                                   type="number"
                                   step="0.01"
-                                  value={item.otherScheme}
-                                  onChange={(e) =>
-                                    handleItemChange(
-                                      index,
-                                      "otherScheme",
-                                      e.target.value
-                                    )
-                                  }
+                                  value={item.productDetails.scheme}
+                                  readOnly
                                 />
-                                <NumberInputButton
-                                  type="button"
-                                  onClick={() => {
-                                    const currentValue = item.otherScheme || 0;
-                                    handleItemChange(
-                                      index,
-                                      "otherScheme",
-                                      currentValue + 1
-                                    );
-                                  }}
-                                >
-                                  <FaPlus />
-                                </NumberInputButton>
-                              </NumberInputContainer>
-                            </FormGroup>
+                              </SFormGroup>
 
-                            <FormGroup>
-                              <Label>Total Scheme (₹)</Label>
-                              <Input
-                                type="text"
-                                value={calculatedValues.totalScheme.toFixed(2)}
-                                readOnly
-                              />
-                            </FormGroup>
+                              <QFormGroup>
+                                <Label>Other Scheme (₹)</Label>
+                                <NumberInputContainer>
+                                  <NumberInputButton
+                                    type="button"
+                                    onClick={() => {
+                                      const currentValue =
+                                        item.otherScheme || 0;
+                                      handleItemChange(
+                                        index,
+                                        "otherScheme",
+                                        currentValue - 1
+                                      );
+                                    }}
+                                  >
+                                    <FaMinus />
+                                  </NumberInputButton>
+                                  <SchemeInput
+                                    type="number"
+                                    step="0.01"
+                                    value={item.otherScheme}
+                                    onChange={(e) =>
+                                      handleItemChange(
+                                        index,
+                                        "otherScheme",
+                                        e.target.value
+                                      )
+                                    }
+                                  />
+                                  <NumberInputButton
+                                    type="button"
+                                    onClick={() => {
+                                      const currentValue =
+                                        item.otherScheme || 0;
+                                      handleItemChange(
+                                        index,
+                                        "otherScheme",
+                                        currentValue + 1
+                                      );
+                                    }}
+                                  >
+                                    <FaPlus />
+                                  </NumberInputButton>
+                                </NumberInputContainer>
+                              </QFormGroup>
+                            </StockGroup>
 
-                            <FormGroup>
-                              <Label>Net Price (₹)</Label>
-                              <Input
-                                type="text"
-                                value={calculatedValues.netPrice.toFixed(2)}
-                                readOnly
-                              />
-                            </FormGroup>
+                            <SaleGroup>
+                              <FormGroup>
+                                <Label>Tl Scheme</Label>
+                                <NInput
+                                  type="text"
+                                  value={calculatedValues.totalScheme.toFixed(
+                                    2
+                                  )}
+                                  readOnly
+                                />
+                              </FormGroup>
 
-                            <FormGroup>
-                              <Label>Total Litres</Label>
-                              <Input
-                                type="text"
-                                value={calculatedValues.totalLitres.toFixed(2)}
-                                readOnly
-                              />
-                            </FormGroup>
+                              <FormGroup>
+                                <Label>Tl Litres</Label>
+                                <NInput
+                                  type="text"
+                                  value={calculatedValues.totalLitres.toFixed(
+                                    2
+                                  )}
+                                  readOnly
+                                />
+                              </FormGroup>
 
-                            <FormGroup>
-                              <Label>Total Sale (₹)</Label>
-                              <Input
-                                type="text"
-                                value={calculatedValues.totalSale.toFixed(2)}
-                                readOnly
-                              />
-                            </FormGroup>
+                              <FormGroup>
+                                <Label>Tl Sale</Label>
+                                <NInput
+                                  type="text"
+                                  value={calculatedValues.totalSale.toFixed(2)}
+                                  readOnly
+                                />
+                              </FormGroup>
+                            </SaleGroup>
+                            <PriceGroup>
+                              <FormGroup>
+                                <Label>Net Price (₹)</Label>
+                                <NInput
+                                  type="text"
+                                  value={calculatedValues.netPrice.toFixed(2)}
+                                  readOnly
+                                />
+                              </FormGroup>
 
-                            <FormGroup>
-                              <Label>Net Price Per Pc (₹)</Label>
-                              <Input
-                                type="text"
-                                value={calculatedValues.totalPrice.toFixed(2)}
-                                readOnly
-                              />
-                            </FormGroup>
+                              <FormGroup>
+                                <Label>NP Per Pc(₹)</Label>
+                                <NInput
+                                  type="text"
+                                  value={calculatedValues.totalPrice.toFixed(2)}
+                                  readOnly
+                                />
+                              </FormGroup>
+                            </PriceGroup>
 
                             <FormGroup fullWidth>
                               <Label>Remarks</Label>
@@ -777,7 +788,21 @@ const ItemsHeader = styled.div`
 const StockGroup = styled.div`
   display: flex;
   flex-direction: row;
-  margin-bottom: 1.5rem;
+  @media (min-width: 768px) {
+    flex-direction: row;
+  }
+`;
+const PriceGroup = styled.div`
+  display: flex;
+  flex-direction: row;
+  @media (min-width: 768px) {
+    flex-direction: row;
+  }
+`;
+const SaleGroup = styled.div`
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
   @media (min-width: 768px) {
     flex-direction: row;
   }
@@ -1092,6 +1117,11 @@ const Input = styled.input`
 const StockInput = styled(Input)`
   text-align: center;
   width: 40%;
+  background-color: #fff8e1;
+`;
+const NInput = styled(Input)`
+  text-align: center;
+  width: 45%;
   background-color: #fff8e1;
 `;
 const QuantityInput = styled(Input)`
