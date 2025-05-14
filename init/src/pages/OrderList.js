@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import styled from "styled-components";
 import Layout from "../components/Layout";
-import { FaSearch, FaFilter, FaFileExcel } from "react-icons/fa";
+import { FaSearch, FaFileExcel } from "react-icons/fa";
 import { format } from "date-fns";
 
 const OrderList = () => {

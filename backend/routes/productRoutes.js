@@ -1,4 +1,3 @@
-// routes/productRoutes.js
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
@@ -6,8 +5,6 @@ const xlsx = require("xlsx");
 const Product = require("../models/Product");
 const { protect, adminOnly } = require("../middleware/authMiddleware");
 const fs = require("fs");
-
-// Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "uploads/");
@@ -17,8 +14,6 @@ const storage = multer.diskStorage({
   }
 });
 const upload = multer({ storage });
-
-// Update the route handler:
 router.post("/", protect, adminOnly, async (req, res) => {
   try {
     const { code, name, price, weight, scheme, stock, company } = req.body;

@@ -423,7 +423,6 @@ const ReportPage = () => {
   );
 };
 
-// Add these new styled components
 const DateNavigation = styled.div`
   display: flex;
   justify-content: space-between;
@@ -499,7 +498,6 @@ const PageInfo = styled.span`
   padding: 0 10px;
 `;
 
-// Styled components (responsive version)
 const MainContent = styled.div`
   flex: 1;
   padding: 15px;
@@ -642,75 +640,6 @@ const SearchInput = styled.input`
 
   &::placeholder {
     color: #b7b9cc;
-  }
-`;
-
-const DateFilterContainer = styled.div`
-  position: relative;
-  width: 100%;
-
-  @media (min-width: 576px) {
-    width: auto;
-  }
-`;
-
-const DateFilterButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 8px 15px;
-  background-color: #f8f9fc;
-  color: #6e707e;
-  border: 1px solid #d1d3e2;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all 0.2s;
-  width: 100%;
-  font-size: 0.9rem;
-
-  &:hover {
-    background-color: #eaecf4;
-  }
-
-  @media (min-width: 576px) {
-    width: auto;
-    justify-content: flex-start;
-  }
-`;
-
-const DatePickerContainer = styled.div`
-  position: absolute;
-  top: 100%;
-  right: 0;
-  z-index: 100;
-  background: white;
-  border: 1px solid #d1d3e2;
-  border-radius: 4px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  margin-top: 5px;
-  width: 100%;
-
-  @media (min-width: 576px) {
-    width: auto;
-  }
-`;
-
-const ApplyDateFilter = styled.button`
-  width: 100%;
-  padding: 10px;
-  background-color: #4e73df;
-  color: white;
-  border: none;
-  border-radius: 0 0 4px 4px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
-  font-size: 0.9rem;
-
-  &:hover {
-    background-color: #3a5bc7;
   }
 `;
 

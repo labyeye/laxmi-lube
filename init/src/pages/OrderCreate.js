@@ -10,10 +10,6 @@ import {
   FaSignOutAlt,
   FaChevronDown,
   FaChevronRight,
-  FaExclamationTriangle,
-  FaCheckCircle,
-  FaChevronLeft,
-  FaChevronUp,
   FaPlus,
   FaMinus,
   FaTrash,
@@ -34,6 +30,7 @@ const OrderCreate = () => {
   const [companyFilter, setCompanyFilter] = useState("");
   const navigate = useNavigate();
   const [userAssignedRetailers, setUserAssignedRetailers] = useState([]);
+const [productSearch, setProductSearch] = useState("");
   const [staffInfo, setStaffInfo] = useState({
     name: "Loading...",
     role: "Collections",
@@ -172,82 +169,83 @@ const OrderCreate = () => {
     (retailer) => !dayFilter || retailer.dayAssigned === dayFilter
   );
   const filteredProducts = products.filter(
-    (product) => !companyFilter || product.company === companyFilter
-  );
+  (product) => 
+    (!companyFilter || product.company === companyFilter) &&
+    (!productSearch || 
+     product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+     product.code.toLowerCase().includes(productSearch.toLowerCase()))
+);
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setError("");
-  setMessage("");
+    e.preventDefault();
+    setError("");
+    setMessage("");
 
-  if (!selectedRetailer) {
-    setError("Please select a retailer");
-    return;
-  }
-
-  if (orderItems.length === 0) {
-    setError("Please add at least one product to the order");
-    return;
-  }
-
-  for (const item of orderItems) {
-    if (!item.productId) {
-      setError("Please select a product for all items");
+    if (!selectedRetailer) {
+      setError("Please select a retailer");
       return;
     }
 
-    if (!item.quantity || item.quantity <= 0) {
-      setError("Please enter a valid quantity for all items");
+    if (orderItems.length === 0) {
+      setError("Please add at least one product to the order");
       return;
     }
 
-    if (item.productDetails && item.quantity > item.productDetails.stock) {
-      setError(
-        `Insufficient stock for ${item.productDetails.name}. Available: ${item.productDetails.stock}`
-      );
-      return;
-    }
-  }
-
-  setLoading(true);
-  try {
-    const token = localStorage.getItem("token");
-    const response = await axios.post(
-      "https://laxmi-lube.onrender.com/api/orders",
-      {
-        retailerId: selectedRetailer,
-        items: orderItems.map((item) => ({
-          productId: item.productId,
-          quantity: Number(item.quantity),
-          otherScheme: Number(item.otherScheme || 0),
-          remarks: item.remarks || "",
-          price: item.productDetails.price, 
-          scheme: item.productDetails.scheme 
-        })),
-      },
-      {
-        headers: { Authorization: `Bearer ${token}` },
+    for (const item of orderItems) {
+      if (!item.productId) {
+        setError("Please select a product for all items");
+        return;
       }
-    );
 
-    setMessage("Order created successfully!");
-    setSelectedRetailer("");
-    setOrderItems([]);
-  } catch (err) {
-    setError(err.response?.data?.message || "Failed to create order");
-  } finally {
-    setLoading(false);
-  }
-};
+      if (!item.quantity || item.quantity <= 0) {
+        setError("Please enter a valid quantity for all items");
+        return;
+      }
+
+      if (item.productDetails && item.quantity > item.productDetails.stock) {
+        setError(
+          `Insufficient stock for ${item.productDetails.name}. Available: ${item.productDetails.stock}`
+        );
+        return;
+      }
+    }
+
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        "https://laxmi-lube.onrender.com/api/orders",
+        {
+          retailerId: selectedRetailer,
+          items: orderItems.map((item) => ({
+            productId: item.productId,
+            quantity: Number(item.quantity),
+            otherScheme: Number(item.otherScheme || 0),
+            remarks: item.remarks || "",
+            price: item.productDetails.price,
+            scheme: item.productDetails.scheme,
+          })),
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      setMessage("Order created successfully!");
+      setSelectedRetailer("");
+      setOrderItems([]);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to create order");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <DashboardLayout>
       <Sidebar collapsed={sidebarCollapsed}>
         <SidebarHeader>
           <Logo>BillTrack</Logo>
-          <ToggleButton onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>
-            {sidebarCollapsed ? <FaChevronRight /> : <FaChevronDown />}
-          </ToggleButton>
         </SidebarHeader>
         <UserProfile>
           <UserAvatar>
@@ -268,7 +266,6 @@ const OrderCreate = () => {
             {!sidebarCollapsed && (
               <>
                 <NavText>Dashboard</NavText>
-                <NavCheckmark>☑</NavCheckmark>
               </>
             )}
           </NavItem>
@@ -277,6 +274,7 @@ const OrderCreate = () => {
               <FaMoneyBillWave />
             </NavIcon>
             {!sidebarCollapsed && <NavText>Order Create</NavText>}
+            <NavCheckmark>☑</NavCheckmark>
           </NavItem>
 
           <NavItemWithSubmenu>
@@ -408,26 +406,45 @@ const OrderCreate = () => {
 
                       <ItemGrid>
                         <FormGroup>
-                          <Label>Product</Label>
-                          <Select
-                            value={item.productId}
-                            onChange={(e) =>
-                              handleItemChange(
-                                index,
-                                "productId",
-                                e.target.value
-                              )
-                            }
-                          >
-                            <option value="">Select Product</option>
-                            {filteredProducts.map((product) => (
-                              <option key={product._id} value={product._id}>
-                                {product.code} - {product.name} (₹
-                                {product.price}, {product.weight}kg/ltr)
-                              </option>
-                            ))}
-                          </Select>
-                        </FormGroup>
+  <Label>Product</Label>
+  <Input
+    type="text"
+    placeholder="Search products..."
+    value={item.productId ? 
+      `${item.productDetails?.code} - ${item.productDetails?.name}` : 
+      productSearch}
+    onChange={(e) => {
+      if (!item.productId) {
+        setProductSearch(e.target.value);
+      }
+    }}
+    onFocus={() => {
+      if (item.productId) {
+        // Clear selection when focusing on the input
+        handleItemChange(index, "productId", "");
+        setProductSearch("");
+      }
+    }}
+  />
+  {!item.productId && productSearch && (
+    <ProductResultsList>
+      {filteredProducts.map((product) => (
+        <ProductResultItem
+          key={product._id}
+          onClick={() => {
+            handleItemChange(index, "productId", product._id);
+            setProductSearch("");
+          }}
+        >
+          {product.code} - {product.name} (₹{product.price}, {product.weight}kg/ltr)
+        </ProductResultItem>
+      ))}
+      {filteredProducts.length === 0 && (
+        <NoResults>No products found</NoResults>
+      )}
+    </ProductResultsList>
+  )}
+</FormGroup>
 
                         {item.productDetails && (
                           <>
@@ -592,7 +609,7 @@ const OrderCreate = () => {
 
                             <FormGroup fullWidth>
                               <Label>Remarks</Label>
-                              <Input
+                              <RInput
                                 type="text"
                                 value={item.remarks}
                                 onChange={(e) =>
@@ -627,21 +644,47 @@ const OrderCreate = () => {
     </DashboardLayout>
   );
 };
-
-// Styled Components
-const spin = keyframes`
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-`;
-
+// Updated Styled Components for responsiveness
 const DashboardLayout = styled.div`
   display: flex;
   min-height: 100vh;
   background-color: #f8f9fc;
+  flex-direction: column;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+  }
+`;
+const ProductResultsList = styled.div`
+  position: absolute;
+  z-index: 10;
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 0.375rem;
+  margin-top: 0.25rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 `;
 
+const ProductResultItem = styled.div`
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: #f0f4f8;
+  }
+`;
+
+const NoResults = styled.div`
+  padding: 0.5rem 0.75rem;
+  color: #718096;
+  font-style: italic;
+`;
 const Sidebar = styled.div`
-  width: ${(props) => (props.collapsed ? "80px" : "250px")};
+  width: 100%;
   background-color: #fff;
   box-shadow: 0 0 28px 0 rgba(82, 63, 105, 0.08);
   transition: all 0.3s ease;
@@ -649,10 +692,104 @@ const Sidebar = styled.div`
   flex-direction: column;
   position: sticky;
   top: 0;
-  height: 100vh;
   z-index: 10;
+  height: auto;
+  overflow: hidden;
+  max-height: ${(props) => (props.collapsed ? "70px" : "100vh")};
+
+  @media (min-width: 768px) {
+    width: ${(props) => (props.collapsed ? "80px" : "250px")};
+    max-height: 100vh;
+    height: 100vh;
+  }
 `;
 
+const MainContent = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  height: calc(100vh - 70px);
+
+  @media (min-width: 768px) {
+    height: 100vh;
+  }
+`;
+
+const ContentContainer = styled.div`
+  padding: 1rem;
+  width: 90%;
+  margin: 0 auto;
+
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
+`;
+
+const FiltersContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+`;
+
+const FilterGroup = styled.div`
+  width: 90%;
+
+  @media (min-width: 768px) {
+    flex: 1;
+    min-width: 200px;
+  }
+`;
+
+const ItemsHeader = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+
+  h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #2e3a59;
+  }
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+`;
+
+const ItemGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+
+  @media (min-width: 480px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+`;
+
+const ButtonContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+
+  @media (min-width: 768px) {
+    justify-content: flex-end;
+  }
+`;
 const SidebarHeader = styled.div`
   display: flex;
   justify-content: space-between;
@@ -667,15 +804,6 @@ const Logo = styled.div`
   font-weight: 600;
   color: #4e73df;
   white-space: nowrap;
-`;
-
-const ToggleButton = styled.button`
-  background: none;
-  border: none;
-  color: #6c757d;
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 5px;
 `;
 
 const UserProfile = styled.div`
@@ -794,38 +922,11 @@ const LogoutButton = styled.div`
   }
 `;
 
-const MainContent = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  height: 100vh;
-`;
-
-const ContentContainer = styled.div`
-  padding: 2rem;
-  max-width: 1200px;
-  width: 100%;
-  margin: 0 auto;
-`;
-
 const PageHeader = styled.h1`
   font-size: 1.75rem;
   margin-bottom: 1.5rem;
   color: #2e3a59;
   font-weight: 600;
-`;
-
-const FiltersContainer = styled.div`
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-`;
-
-const FilterGroup = styled.div`
-  flex: 1;
-  min-width: 200px;
 `;
 
 const FilterLabel = styled.label`
@@ -837,7 +938,7 @@ const FilterLabel = styled.label`
 `;
 
 const FilterSelect = styled.select`
-  width: 100%;
+  width: 90%;
   padding: 0.625rem 0.75rem;
   border: 1px solid #ddd;
   border-radius: 0.375rem;
@@ -857,21 +958,6 @@ const FormContainer = styled.form`
   border-radius: 0.5rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   margin-bottom: 1.5rem;
-`;
-
-const ItemsHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-
-  h3 {
-    margin: 0;
-    font-size: 1.25rem;
-    color: #2e3a59;
-  }
 `;
 
 const AddButton = styled.button`
@@ -944,12 +1030,6 @@ const RemoveButton = styled.button`
   }
 `;
 
-const ItemGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1.5rem;
-`;
-
 const FormGroup = styled.div`
   margin-bottom: 1rem;
   ${(props) => props.fullWidth && "grid-column: 1 / -1;"}
@@ -964,7 +1044,7 @@ const Label = styled.label`
 `;
 
 const Input = styled.input`
-  width: 100%;
+  width: 90%;
   padding: 0.625rem 0.75rem;
   border: 1px solid #ddd;
   border-radius: 0.375rem;
@@ -988,8 +1068,29 @@ const QuantityInput = styled(Input)`
   background-color: #fff8e1;
 `;
 
+const RInput = styled.input`
+  width: 90%;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  background-color: #fff8e1;
+  transition: border-color 0.3s;
+
+  &:focus {
+    outline: none;
+    border-color: #4e73df;
+  }
+
+  &[readonly] {
+    background-color: #f8f9fc;
+    color: #6c757d;
+  }
+`;
 const SchemeInput = styled(Input)`
   text-align: center;
+    background-color: #fff8e1;
+
 `;
 
 const Select = styled.select`
@@ -1033,12 +1134,6 @@ const NumberInputButton = styled.button`
     opacity: 0.5;
     cursor: not-allowed;
   }
-`;
-
-const ButtonContainer = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 2rem;
 `;
 
 const SubmitButton = styled.button`

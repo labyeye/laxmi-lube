@@ -67,8 +67,6 @@ const RetailerAdd = () => {
       setLoading(false);
     }
   };
-
-  // Clear the redirect timer when component unmounts
   useEffect(() => {
     return () => {
       if (redirectTimer) {
@@ -148,17 +146,7 @@ const RetailerAdd = () => {
           if (missingColumns.length > 0) {
             resolve(`Missing required columns: ${missingColumns.join(", ")}`);
             return;
-          }
-
-          // Check for optional columns
-          const hasAssignedTo =
-            lowerHeaders.includes("assigned to") ||
-            lowerHeaders.includes("assignedto");
-          const hasDayAssigned =
-            lowerHeaders.includes("day assigned") ||
-            lowerHeaders.includes("dayassigned");
-
-          // Warn about unrecognized columns
+          }          
           const allowedColumns = [
             "retailer name",
             "address 1",
@@ -287,7 +275,6 @@ const RetailerAdd = () => {
     }
   };
 
-  // Add a button to go back to retailer list
   const handleBackToList = () => {
     navigate("/retailers");
   };
@@ -448,7 +435,6 @@ const ProgressFill = styled.div`
   width: ${(props) => props.width};
   transition: width 0.3s ease;
 `;
-// Styled components (similar to your BillAdd.js styles)
 const PageHeader = styled.h1`
   font-size: 1.5rem;
   margin-bottom: 1.5rem;
