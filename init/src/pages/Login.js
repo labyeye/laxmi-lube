@@ -109,7 +109,7 @@ const InputField = styled.input`
 const SubmitButton = styled.button`
   width: 100%;
   padding: 0.8rem;
-  background: linear-gradient(to right, #667eea, #764ba2);
+  background: linear-gradient(to right, #FFD60E 0%, #FD241D 100%);
   color: white;
   border: none;
   border-radius: 8px;
