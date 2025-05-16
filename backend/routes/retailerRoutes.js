@@ -64,7 +64,6 @@ router.post("/", protect, adminOnly, async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 }); // In the /import route, replace the current implementation with:
-
 router.post(
   "/import",
   protect,
@@ -187,13 +186,13 @@ router.post(
             continue;
           }
 
-          // Check if retailer already exists
+          // Check if retailer already exists (EXACT MATCH ONLY)
           const existingRetailer = await Retailer.findOne({
             name: { $regex: new RegExp(`^${name}$`, "i") },
           });
           if (existingRetailer) {
             errors.push(
-              `Row ${index + 1}: Retailer with name "${name}" already exists`
+              `Row ${index + 1}: Retailer with exact name "${name}" already exists`
             );
             continue;
           }
@@ -245,7 +244,8 @@ router.post(
       cleanup();
       try {
         res.end();
-      } catch (err) {
+      }
+      catch (err) {
         console.error("Error ending response:", err);
       }
     }
