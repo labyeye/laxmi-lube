@@ -178,18 +178,13 @@ const Login = () => {
         password,
       });
 
-      // Store token and user data
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
-      
-      // Directly navigate to the appropriate dashboard based on user role
-      // instead of relying on the root route redirection
+
       if (res.data.user.role === "admin") {
-        navigate("/admin", { replace: true });
-      } else if (res.data.user.role === "staff") {
-        navigate("/staff", { replace: true });
+        navigate("/admin");
       } else {
-        navigate("/", { replace: true });
+        navigate("/staff");
       }
     } catch (err) {
       setError(
