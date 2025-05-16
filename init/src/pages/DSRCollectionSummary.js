@@ -7,80 +7,57 @@ import "react-datepicker/dist/react-datepicker.css";
 import * as XLSX from "xlsx";
 
 const DSRCollectionSummary = () => {
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date());
   const [loading, setLoading] = useState(false);
   const [summaryData, setSummaryData] = useState([]);
   const [error, setError] = useState(null);
-  useEffect(() => {
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const token = localStorage.getItem("token");
 
-      // Single API call that includes everything
-      const response = await axios.get(
-        "https://laxmi-lube.onrender.com/api/reports/dsr-summary",
-        {
-          params: { date: selectedDate.toISOString() },
-          headers: { Authorization: `Bearer ${token}` },
+  useEffect(() => {
+    const fetchCollections = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const token = localStorage.getItem("token");
+        if (!token) throw new Error("Authentication token not found");
+
+        const response = await axios.get(
+          "https://laxmi-lube.onrender.com/api/reports/dsr-summary",
+          {
+            params: {
+              startDate: startDate.toISOString(),
+              endDate: endDate.toISOString(),
+            },
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (response.data.success) {
+          setSummaryData(response.data.data);
+        } else {
+          throw new Error("Failed to fetch data");
         }
-      );
-
-      if (response.data.success) {
-        setSummaryData(response.data.data);
-      } else {
-        throw new Error('Failed to fetch data');
+      } catch (err) {
+        console.error("Error:", err);
+        setError(
+          err.response?.data?.message || err.message || "Failed to fetch data"
+        );
+        setSummaryData([]);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      setError(err.message);
-      setSummaryData([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  fetchData();
-}, [selectedDate]);
-  useEffect(() => {
     fetchCollections();
-  }, [selectedDate]);
+  }, [startDate, endDate]);
 
-  const fetchCollections = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("Authentication token not found");
-
-      // Only fetch from dsr-summary (now includes collectedRetailers as TRC sum)
-      const response = await axios.get(
-        "https://laxmi-lube.onrender.com/api/reports/dsr-summary",
-        {
-          params: { date: selectedDate.toISOString() },
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (response.data.success) {
-        setSummaryData(response.data.data);
-      } else {
-        throw new Error("Failed to fetch data");
-      }
-    } catch (err) {
-      console.error("Error:", err);
-      setError(
-        err.response?.data?.message || err.message || "Failed to fetch data"
-      );
-      setSummaryData([]);
-    } finally {
-      setLoading(false);
-    }
+  const handleStartDateChange = (date) => {
+    setStartDate(date);
   };
 
-  const handleDateChange = (date) => {
-    setSelectedDate(date);
+  const handleEndDateChange = (date) => {
+    setEndDate(date);
   };
 
   const exportToExcel = () => {
@@ -110,8 +87,8 @@ const DSRCollectionSummary = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, "DSR Collection Summary");
 
     const fileName = `DSR_Collection_Summary_${
-      selectedDate.toISOString().split("T")[0]
-    }.xlsx`;
+      startDate.toISOString().split("T")[0]
+    }_to_${endDate.toISOString().split("T")[0]}.xlsx`;
     XLSX.writeFile(workbook, fileName);
   };
 
@@ -121,14 +98,33 @@ const DSRCollectionSummary = () => {
         <HeaderContainer>
           <h1>DSR Collection Summary</h1>
           <ControlsContainer>
-            <DatePickerContainer>
-              <DatePicker
-                selected={selectedDate}
-                onChange={handleDateChange}
-                dateFormat="dd/MM/yyyy"
-                className="date-picker"
-              />
-            </DatePickerContainer>
+            <DateRangeContainer>
+              <DatePickerContainer>
+                <label>Start Date</label>
+                <DatePicker
+                  selected={startDate}
+                  onChange={handleStartDateChange}
+                  dateFormat="dd/MM/yyyy"
+                  className="date-picker"
+                  selectsStart
+                  startDate={startDate}
+                  endDate={endDate}
+                />
+              </DatePickerContainer>
+              <DatePickerContainer>
+                <label>End Date</label>
+                <DatePicker
+                  selected={endDate}
+                  onChange={handleEndDateChange}
+                  dateFormat="dd/MM/yyyy"
+                  className="date-picker"
+                  selectsEnd
+                  startDate={startDate}
+                  endDate={endDate}
+                  minDate={startDate}
+                />
+              </DatePickerContainer>
+            </DateRangeContainer>
             <ExportButton
               onClick={exportToExcel}
               disabled={summaryData.length === 0}
@@ -145,48 +141,52 @@ const DSRCollectionSummary = () => {
         ) : (
           <TableWrapper>
             <SummaryTable>
-  <thead>
-    <tr>
-      <th rowSpan="2">DSR Name</th>
-      <th rowSpan="2">Total Amount</th>
-      <th colSpan="2">Retailers</th>
-      <th colSpan="2">Cash</th>
-      <th colSpan="2">UPI</th>
-      <th colSpan="2">Cheque</th>
-      <th colSpan="2">Bank Transfer</th>
-    </tr>
-    <tr>
-      <th>Assigned</th>
-      <th>Collected</th>
-      <CashHeader>Amount</CashHeader>
-      <CashHeader>TRC</CashHeader>
-      <UPIHeader>Amount</UPIHeader>
-      <UPIHeader>TRC</UPIHeader>
-      <ChequeHeader>Amount</ChequeHeader>
-      <ChequeHeader>TRC</ChequeHeader>
-      <BankHeader>Amount</BankHeader>
-      <BankHeader>TRC</BankHeader>
-    </tr>
-  </thead>
-  <tbody>
-    {summaryData.map((row, index) => (
-      <tr key={index}>
-        <td><strong>{row.staffName}</strong></td>
-        <td><strong>{row.total.toFixed(2)}</strong></td>
-        <td>{row.assignedRetailers}</td>
-        <td>{row.collectedRetailers}</td>
-        <CashCell>{row.cash.toFixed(2)}</CashCell>
-        <CashCell>{row.cashTrc}</CashCell>
-        <UPICell>{row.upi.toFixed(2)}</UPICell>
-        <UPICell>{row.upiTrc}</UPICell>
-        <ChequeCell>{row.cheque.toFixed(2)}</ChequeCell>
-        <ChequeCell>{row.chequeTrc}</ChequeCell>
-        <BankCell>{row.bankTransfer.toFixed(2)}</BankCell>
-        <BankCell>{row.bankTransferTrc}</BankCell>
-      </tr>
-    ))}
-  </tbody>
-</SummaryTable>
+              <thead>
+                <tr>
+                  <th rowSpan="2">DSR Name</th>
+                  <th rowSpan="2">Total Amount</th>
+                  <th colSpan="2">Retailers</th>
+                  <th colSpan="2">Cash</th>
+                  <th colSpan="2">UPI</th>
+                  <th colSpan="2">Cheque</th>
+                  <th colSpan="2">Bank Transfer</th>
+                </tr>
+                <tr>
+                  <th>Assigned</th>
+                  <th>Collected</th>
+                  <CashHeader>Amount</CashHeader>
+                  <CashHeader>TRC</CashHeader>
+                  <UPIHeader>Amount</UPIHeader>
+                  <UPIHeader>TRC</UPIHeader>
+                  <ChequeHeader>Amount</ChequeHeader>
+                  <ChequeHeader>TRC</ChequeHeader>
+                  <BankHeader>Amount</BankHeader>
+                  <BankHeader>TRC</BankHeader>
+                </tr>
+              </thead>
+              <tbody>
+                {summaryData.map((row, index) => (
+                  <tr key={index}>
+                    <td>
+                      <strong>{row.staffName}</strong>
+                    </td>
+                    <td>
+                      <strong>{row.total.toFixed(2)}</strong>
+                    </td>
+                    <td>{row.assignedRetailers}</td>
+                    <td>{row.collectedRetailers}</td>
+                    <CashCell>{row.cash.toFixed(2)}</CashCell>
+                    <CashCell>{row.cashTrc}</CashCell>
+                    <UPICell>{row.upi.toFixed(2)}</UPICell>
+                    <UPICell>{row.upiTrc}</UPICell>
+                    <ChequeCell>{row.cheque.toFixed(2)}</ChequeCell>
+                    <ChequeCell>{row.chequeTrc}</ChequeCell>
+                    <BankCell>{row.bankTransfer.toFixed(2)}</BankCell>
+                    <BankCell>{row.bankTransferTrc}</BankCell>
+                  </tr>
+                ))}
+              </tbody>
+            </SummaryTable>
           </TableWrapper>
         )}
       </Container>
@@ -259,7 +259,16 @@ const ExportButton = styled.button`
     background-color: ${(props) => (props.disabled ? "#cccccc" : "#45a049")};
   }
 `;
-
+const DateRangeContainer = styled.div`
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+`;
 const LoadingMessage = styled.div`
   padding: 20px;
   text-align: center;
