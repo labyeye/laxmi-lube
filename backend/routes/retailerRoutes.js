@@ -189,7 +189,7 @@ router.post(
 
           // Check if retailer already exists
           const existingRetailer = await Retailer.findOne({
-            name: { $regex: new RegExp(name, "i") },
+            name: { $regex: new RegExp(`^${name}$`, "i") },
           });
           if (existingRetailer) {
             errors.push(
@@ -245,8 +245,7 @@ router.post(
       cleanup();
       try {
         res.end();
-      }
-      catch (err) {
+      } catch (err) {
         console.error("Error ending response:", err);
       }
     }
