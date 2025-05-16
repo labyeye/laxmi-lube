@@ -16,6 +16,7 @@ import {
 } from "react-icons/fa";
 
 const OrderCreate = () => {
+  const [retailerSearch, setRetailerSearch] = useState("");
   const [retailers, setRetailers] = useState([]);
   const [products, setProducts] = useState([]);
   const [selectedRetailer, setSelectedRetailer] = useState("");
@@ -350,17 +351,60 @@ const OrderCreate = () => {
 
             <FilterGroup>
               <FilterLabel>Select Retailer</FilterLabel>
-              <FilterSelect
-                value={selectedRetailer}
-                onChange={(e) => setSelectedRetailer(e.target.value)}
-              >
-                <option value="">Select Retailer</option>
-                {filteredRetailers.map((retailer) => (
-                  <option key={retailer._id} value={retailer._id}>
-                    {retailer.name} - {retailer.address1}
-                  </option>
-                ))}
-              </FilterSelect>
+              <SearchInput
+                type="text"
+                placeholder="Search retailers..."
+                value={
+                  selectedRetailer
+                    ? `${
+                        retailers.find((r) => r._id === selectedRetailer)
+                          ?.name || ""
+                      } - ${
+                        retailers.find((r) => r._id === selectedRetailer)
+                          ?.address1 || ""
+                      }`
+                    : retailerSearch
+                }
+                onChange={(e) => {
+                  if (!selectedRetailer) {
+                    setRetailerSearch(e.target.value);
+                  }
+                }}
+                onFocus={() => {
+                  if (selectedRetailer) {
+                    setSelectedRetailer("");
+                    setRetailerSearch("");
+                  }
+                }}
+              />
+              {!selectedRetailer && retailerSearch && (
+                <ProductResultsList>
+                  {filteredRetailers
+                    .filter(
+                      (retailer) =>
+                        retailer.name
+                          .toLowerCase()
+                          .includes(retailerSearch.toLowerCase()) ||
+                        retailer.address1
+                          .toLowerCase()
+                          .includes(retailerSearch.toLowerCase())
+                    )
+                    .map((retailer) => (
+                      <ProductResultItem
+                        key={retailer._id}
+                        onClick={() => {
+                          setSelectedRetailer(retailer._id);
+                          setRetailerSearch("");
+                        }}
+                      >
+                        {retailer.name} - {retailer.address1}
+                      </ProductResultItem>
+                    ))}
+                  {filteredRetailers.length === 0 && (
+                    <NoResults>No retailers found</NoResults>
+                  )}
+                </ProductResultsList>
+              )}
             </FilterGroup>
           </FiltersContainer>
 
@@ -662,7 +706,6 @@ const OrderCreate = () => {
     </DashboardLayout>
   );
 };
-// Updated Styled Components for responsiveness
 const DashboardLayout = styled.div`
   display: flex;
   min-height: 100vh;
