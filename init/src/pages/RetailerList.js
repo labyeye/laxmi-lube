@@ -49,9 +49,12 @@ const RetailerList = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const response = await axios.get("https://laxmi-lube.onrender.com/api/retailers", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        "https://laxmi-lube.onrender.com/api/retailers",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       console.log("Retailers data received:", response.data);
       setRetailers(response.data);
     } catch (err) {
@@ -77,9 +80,12 @@ const RetailerList = () => {
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`https://laxmi-lube.onrender.com/api/retailers/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.delete(
+        `https://laxmi-lube.onrender.com/api/retailers/${id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       setError("");
       fetchRetailers();
     } catch (err) {
@@ -90,7 +96,29 @@ const RetailerList = () => {
       );
     }
   };
+  const handleExport = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        "https://laxmi-lube.onrender.com/api/retailers/export",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: "blob", // Important for file downloads
+        }
+      );
 
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "retailers_export.csv");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      setError("Failed to export retailers. Please try again.");
+    }
+  };
   // Edit retailer
   const handleEdit = (retailer) => {
     setEditingRetailer(retailer);
@@ -138,10 +166,12 @@ const RetailerList = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </SearchContainer>
-
-        <AddButton onClick={handleAddNew}>
-          <FaPlus /> Add New
-        </AddButton>
+        <ButtonGroup>
+          <AddButton onClick={handleAddNew}>
+            <FaPlus /> Add New
+          </AddButton>
+          <ExportButton onClick={handleExport}>Export to CSV</ExportButton>
+        </ButtonGroup>
       </ActionsContainer>
 
       {error && <ErrorMessage>{error}</ErrorMessage>}
@@ -299,6 +329,23 @@ const EmptyMessage = styled.div`
   color: #718096;
   border: 1px dashed #cbd5e0;
   border-radius: 0.375rem;
+`;
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 0.5rem;
+`;
+
+const ExportButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: #38a169;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-weight: 500;
 `;
 
 const RetailersTable = styled.table`

@@ -184,5 +184,38 @@ router.patch("/:id/stock", protect, adminOnly, async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 });
+// Add this route after the existing routes
+router.get("/export", protect, adminOnly, async (req, res) => {
+  try {
+    const products = await Product.find({}).sort({ name: 1 });
+    
+    // Prepare CSV data
+    const csvData = [
+      ["Code", "Product Name", "MRP", "Price", "Weight", "Scheme", "Stock", "Company"],
+      ...products.map(product => [
+        product.code,
+        product.name,
+        product.mrp || 0,
+        product.price,
+        product.weight,
+        product.scheme || 0,
+        product.stock,
+        product.company || ""
+      ])
+    ];
+    
+    // Convert to CSV string
+    const csvString = csvData.map(row => row.join(",")).join("\n");
+    
+    // Set response headers
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", "attachment; filename=products_export.csv");
+    
+    // Send the CSV
+    res.send(csvString);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 module.exports = router;

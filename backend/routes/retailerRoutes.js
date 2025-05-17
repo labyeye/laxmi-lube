@@ -324,5 +324,36 @@ router.post("/:id/assign", protect, adminOnly, async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 });
-
+// Add this route after the existing routes
+router.get("/export", protect, adminOnly, async (req, res) => {
+  try {
+    const retailers = await Retailer.find({})
+      .populate("assignedTo", "name")
+      .sort({ name: 1 });
+    
+    // Prepare CSV data
+    const csvData = [
+      ["Name", "Address 1", "Address 2", "Day Assigned", "Assigned To"],
+      ...retailers.map(retailer => [
+        retailer.name,
+        retailer.address1,
+        retailer.address2 || "",
+        retailer.dayAssigned || "",
+        retailer.assignedTo?.name || ""
+      ])
+    ];
+    
+    // Convert to CSV string
+    const csvString = csvData.map(row => row.join(",")).join("\n");
+    
+    // Set response headers
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", "attachment; filename=retailers_export.csv");
+    
+    // Send the CSV
+    res.send(csvString);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 module.exports = router;

@@ -18,9 +18,12 @@ const ProductList = () => {
       try {
         setLoading(true);
         const token = localStorage.getItem("token");
-        const response = await axios.get("https://laxmi-lube.onrender.com/api/products", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await axios.get(
+          "https://laxmi-lube.onrender.com/api/products",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         setProducts(response.data);
       } catch (err) {
         setError("Failed to fetch products. Please try again.");
@@ -31,6 +34,30 @@ const ProductList = () => {
 
     fetchProducts();
   }, []);
+  // Add this function to the component
+  const handleExport = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        "https://laxmi-lube.onrender.com/api/products/export",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: "blob", // Important for file downloads
+        }
+      );
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "products_export.csv");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      setError("Failed to export products. Please try again.");
+    }
+  };
 
   const filteredProducts = products.filter(
     (product) =>
@@ -42,17 +69,18 @@ const ProductList = () => {
   return (
     <Layout>
       <PageHeader>Product List</PageHeader>
-
-      <SearchContainer>
-        <FaSearch />
-        <SearchInput
-          type="text"
-          placeholder="Search products..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </SearchContainer>
-
+      <ActionsContainer>
+        <SearchContainer>
+          <FaSearch />
+          <SearchInput
+            type="text"
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </SearchContainer>
+        <ExportButton onClick={handleExport}>Export to CSV</ExportButton>
+      </ActionsContainer>
       {error && <ErrorMessage>{error}</ErrorMessage>}
 
       {loading ? (
@@ -181,5 +209,26 @@ const ActionButton = styled.button`
     color: #0d47a1;
   }
 `;
+const ActionsContainer = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  width: 100%;
+`;
 
+const ExportButton = styled.button`
+  padding: 0.5rem 1rem;
+  background-color: #38a169;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  margin-left: 1rem;
+
+  &:hover {
+    background-color: #2f855a;
+  }
+`;
 export default ProductList;
