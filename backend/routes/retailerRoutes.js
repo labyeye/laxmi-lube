@@ -57,13 +57,13 @@ router.post("/", protect, adminOnly, async (req, res) => {
     });
 
     await retailer.save();
-    console.log("Retailer saved:", retailer); // Debug log
+    console.log("Retailer saved:", retailer);
     res.status(201).json(retailer);
   } catch (err) {
-    console.error("Error saving retailer:", err); // Debug log
+    console.error("Error saving retailer:", err);
     res.status(400).json({ message: err.message });
   }
-}); // In the /import route, replace the current implementation with:
+});
 router.post(
   "/import",
   protect,
@@ -87,8 +87,6 @@ router.post(
         cleanup();
         return res.status(400).json({ message: "No file uploaded" });
       }
-
-      // Day abbreviations mapping
       const dayAbbreviations = {
         MON: "Monday",
         TUE: "Tuesday",
@@ -99,16 +97,13 @@ router.post(
         SUN: "Sunday",
       };
 
-      // Read the workbook
       const workbook = xlsx.readFile(req.file.path);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
 
-      // Get headers
       const headers = jsonData[0] || [];
       const lowerHeaders = headers.map((h) => String(h).toLowerCase().trim());
 
-      // Find column indexes
       const nameCol = lowerHeaders.findIndex((h) => h.includes("name"));
       const addr1Col = lowerHeaders.findIndex(
         (h) => h.includes("address 1") || h.includes("address1")
@@ -127,28 +122,22 @@ router.post(
         return res.status(400).json({ message: "Required columns not found" });
       }
 
-      // Set up streaming response
       res.setHeader("Content-Type", "application/x-ndjson");
       res.setHeader("Transfer-Encoding", "chunked");
 
-      // Process rows
-      totalRows = jsonData.length - 1; // Subtract header row
+      totalRows = jsonData.length - 1;
 
       for (const [index, row] of jsonData.entries()) {
-        if (index === 0) continue; // Skip header row
+        if (index === 0) continue;
 
         try {
-          // Skip empty rows
           if (!row[nameCol] && !row[addr1Col]) continue;
-
           const name = row[nameCol]?.trim();
           const address1 = row[addr1Col]?.trim();
           const address2 = addr2Col !== -1 ? row[addr2Col]?.trim() : "";
           const dayAssigned =
             dayAssignedCol !== -1 ? row[dayAssignedCol]?.trim() : "";
           let processedDayAssigned = dayAssigned;
-
-          // Process day assigned
           if (dayAbbreviations[dayAssigned?.toUpperCase()]) {
             processedDayAssigned = dayAbbreviations[dayAssigned.toUpperCase()];
           } else if (
@@ -164,8 +153,6 @@ router.post(
           ) {
             processedDayAssigned = "";
           }
-
-          // Process assigned staff
           let assignedTo = null;
           if (assignedToCol !== -1 && row[assignedToCol]) {
             const assignedToName = row[assignedToCol]?.trim();
@@ -185,14 +172,14 @@ router.post(
             errors.push(`Row ${index + 1}: Missing required fields`);
             continue;
           }
-
-          // Check if retailer already exists (EXACT MATCH ONLY)
           const existingRetailer = await Retailer.findOne({
-            name: { $regex: new RegExp(`^${name}$`, "i") },
+            name: { $regex: new RegExp(`^${name.split("(")[0].trim()}`, "i") },
           });
           if (existingRetailer) {
             errors.push(
-              `Row ${index + 1}: Retailer with exact name "${name}" already exists`
+              `Row ${
+                index + 1
+              }: Retailer with exact name "${name}" already exists`
             );
             continue;
           }
@@ -244,8 +231,7 @@ router.post(
       cleanup();
       try {
         res.end();
-      }
-      catch (err) {
+      } catch (err) {
         console.error("Error ending response:", err);
       }
     }
@@ -303,8 +289,8 @@ router.delete("/:id", protect, adminOnly, async (req, res) => {
 router.get("/", protect, async (req, res) => {
   try {
     const retailers = await Retailer.find({})
-      .populate("assignedTo", "name") // Ensure this matches your User model
-      .populate("createdBy", "name") // Optional if you want creator info
+      .populate("assignedTo", "name")
+      .populate("createdBy", "name")
       .sort({ name: 1 });
     res.json(retailers);
   } catch (err) {
@@ -324,32 +310,30 @@ router.post("/:id/assign", protect, adminOnly, async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 });
-// Add this route after the existing routes
 router.get("/export", protect, adminOnly, async (req, res) => {
   try {
     const retailers = await Retailer.find({})
       .populate("assignedTo", "name")
       .sort({ name: 1 });
-    
+
     // Prepare CSV data
     const csvData = [
       ["Name", "Address 1", "Address 2", "Day Assigned", "Assigned To"],
-      ...retailers.map(retailer => [
+      ...retailers.map((retailer) => [
         retailer.name,
         retailer.address1,
         retailer.address2 || "",
         retailer.dayAssigned || "",
-        retailer.assignedTo?.name || ""
-      ])
+        retailer.assignedTo?.name || "",
+      ]),
     ];
-    
-    // Convert to CSV string
-    const csvString = csvData.map(row => row.join(",")).join("\n");
-    
-    // Set response headers
+    const csvString = csvData.map((row) => row.join(",")).join("\n");
     res.setHeader("Content-Type", "text/csv");
-    res.setHeader("Content-Disposition", "attachment; filename=retailers_export.csv");
-    
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=retailers_export.csv"
+    );
+
     // Send the CSV
     res.send(csvString);
   } catch (err) {
