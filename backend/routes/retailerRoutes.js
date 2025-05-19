@@ -173,7 +173,7 @@ router.post(
             continue;
           }
           const existingRetailer = await Retailer.findOne({
-            name: { $regex: new RegExp(`^${name.split("(")[0].trim()}`, "i") },
+            name: { $regex: new RegExp(`^${name.trim()}$`, "i") },
           });
           if (existingRetailer) {
             errors.push(
