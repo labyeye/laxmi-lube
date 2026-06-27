@@ -8,7 +8,9 @@ const isVisibleForRole = (field, role) => {
 
 const isVisibleForView = (field, view) => {
   if (field.showInForm !== undefined || field.showInList !== undefined) {
-    return view === "form" ? field.showInForm !== false : field.showInList !== false;
+    return view === "form"
+      ? field.showInForm !== false
+      : field.showInList !== false;
   }
   if (!field.visible || field.visible.length === 0) return true;
   return field.visible.includes(view);
@@ -68,16 +70,14 @@ const formatValue = (value, field) => {
   if (field.type === "boolean") {
     return <Badge $active={value}>{value ? "Yes" : "No"}</Badge>;
   }
-  if (field.type === "status" || field.key.toLowerCase().includes('status')) {
-     return <Badge $status={value}>{value}</Badge>;
+  if (field.type === "status" || field.key.toLowerCase().includes("status")) {
+    return <Badge $status={value}>{value}</Badge>;
   }
   if (field.type === "relation" && Array.isArray(field.options || [])) {
     if (Array.isArray(value)) {
       return value
         .map((val) => {
-          const match = field.options.find(
-            (opt) => (opt.value ?? opt) === val
-          );
+          const match = field.options.find((opt) => (opt.value ?? opt) === val);
           return match?.label || match || val;
         })
         .join(", ");
@@ -101,18 +101,24 @@ const Badge = styled.span`
     if (props.$active === true) return "rgba(16, 185, 129, 0.1)";
     if (props.$active === false) return "rgba(239, 68, 68, 0.1)";
     const status = String(props.$status || "").toLowerCase();
-    if (["paid", "completed", "approved", "delivered"].includes(status)) return "rgba(16, 185, 129, 0.1)";
-    if (["pending", "processing", "partially paid"].includes(status)) return "rgba(245, 158, 11, 0.1)";
-    if (["unpaid", "failed", "rejected", "cancelled"].includes(status)) return "rgba(239, 68, 68, 0.1)";
+    if (["paid", "completed", "approved", "delivered"].includes(status))
+      return "rgba(16, 185, 129, 0.1)";
+    if (["pending", "processing", "partially paid"].includes(status))
+      return "rgba(245, 158, 11, 0.1)";
+    if (["unpaid", "failed", "rejected", "cancelled"].includes(status))
+      return "rgba(239, 68, 68, 0.1)";
     return "var(--nb-muted)";
   }};
   color: ${(props) => {
     if (props.$active === true) return "rgb(16, 185, 129)";
     if (props.$active === false) return "rgb(239, 68, 68)";
     const status = String(props.$status || "").toLowerCase();
-    if (["paid", "completed", "approved", "delivered"].includes(status)) return "rgb(16, 185, 129)";
-    if (["pending", "processing", "partially paid"].includes(status)) return "rgb(245, 158, 11)";
-    if (["unpaid", "failed", "rejected", "cancelled"].includes(status)) return "rgb(239, 68, 68)";
+    if (["paid", "completed", "approved", "delivered"].includes(status))
+      return "rgb(16, 185, 129)";
+    if (["pending", "processing", "partially paid"].includes(status))
+      return "rgb(245, 158, 11)";
+    if (["unpaid", "failed", "rejected", "cancelled"].includes(status))
+      return "rgb(239, 68, 68)";
     return "var(--nb-ink)";
   }};
 `;

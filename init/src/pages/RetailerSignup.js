@@ -369,7 +369,8 @@ const DaysGrid = styled.div`
 
 const DayCheckbox = styled.div`
   padding: 0.6rem;
-  border: 1px solid ${(props) => (props.selected ? "var(--nb-blue)" : "var(--nb-border)")};
+  border: 1px solid
+    ${(props) => (props.selected ? "var(--nb-blue)" : "var(--nb-border)")};
   background-color: ${(props) => (props.selected ? "var(--nb-blue)" : "var(--nb-white)")};
   color: ${(props) => (props.selected ? "var(--nb-white)" : "var(--nb-ink)")};
   border-radius: 8px;

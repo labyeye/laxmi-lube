@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import Layout from "../components/Layout";
 import axios from "axios";
-import { FaFileCsv, FaFilter, FaSearch, FaEye } from "react-icons/fa";
+import { FaFileCsv, FaSearch, FaEye } from "react-icons/fa";
 import * as XLSX from "xlsx";
 
 const DeliveryHistory = () => {
@@ -20,6 +20,7 @@ const DeliveryHistory = () => {
 
   useEffect(() => {
     fetchDeliveries();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, page]);
 
   useEffect(() => {

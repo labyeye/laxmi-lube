@@ -24,8 +24,7 @@ const normalizeValue = (field, value) => {
       return Number.isNaN(num) ? null : num;
     }
     case "date": {
-      const date =
-        value instanceof Date ? value : new Date(String(value));
+      const date = value instanceof Date ? value : new Date(String(value));
       return Number.isNaN(date.getTime()) ? null : date.toISOString();
     }
     case "dropdown":
@@ -50,12 +49,7 @@ const isFieldVisibleToRole = (field, role) => {
   return field.roles.includes(role);
 };
 
-const validateRecordPayload = ({
-  moduleDef,
-  data,
-  role,
-  isUpdate = false,
-}) => {
+const validateRecordPayload = ({ moduleDef, data, role, isUpdate = false }) => {
   const errors = {};
   const normalizedData = {};
 
@@ -85,7 +79,12 @@ const validateRecordPayload = ({
     const incomingValue = data?.[fieldKey];
     const hasValue = !isEmpty(incomingValue);
 
-    if (!isUpdate && field.required && fieldStatus !== "disabled" && !hasValue) {
+    if (
+      !isUpdate &&
+      field.required &&
+      fieldStatus !== "disabled" &&
+      !hasValue
+    ) {
       errors[fieldKey] = `${field.label || field.key} is required`;
       continue;
     }
@@ -99,14 +98,15 @@ const validateRecordPayload = ({
 
       if (field.type === "dropdown" && Array.isArray(field.options)) {
         if (!field.options.includes(normalized)) {
-          errors[fieldKey] = `${field.label || field.key} must be a valid option`;
+          errors[fieldKey] =
+            `${field.label || field.key} must be a valid option`;
           continue;
         }
       }
 
       if (field.type === "multi_select" && Array.isArray(field.options)) {
         const invalid = normalized.filter(
-          (item) => !field.options.includes(item)
+          (item) => !field.options.includes(item),
         );
         if (invalid.length > 0) {
           errors[fieldKey] = `${field.label || field.key} has invalid options`;
@@ -117,7 +117,7 @@ const validateRecordPayload = ({
       if (field.type === "relation") {
         const values = field.multi ? normalized : [normalized];
         const invalidIds = values.filter(
-          (val) => !mongoose.Types.ObjectId.isValid(val)
+          (val) => !mongoose.Types.ObjectId.isValid(val),
         );
         if (invalidIds.length > 0) {
           errors[fieldKey] = `${field.label || field.key} has invalid relation`;
@@ -126,7 +126,11 @@ const validateRecordPayload = ({
       }
 
       normalizedData[fieldKey] = normalized;
-    } else if (!isUpdate && field.default !== undefined && field.default !== null) {
+    } else if (
+      !isUpdate &&
+      field.default !== undefined &&
+      field.default !== null
+    ) {
       normalizedData[fieldKey] = field.default;
     }
   }
@@ -154,7 +158,7 @@ const filterRecordDataForRole = (moduleDef, record, role) => {
         if (isAdmin) return true;
         return field.status !== "disabled" && isFieldVisibleToRole(field, role);
       })
-      .map((field) => field.key)
+      .map((field) => field.key),
   );
   const filteredData = {};
   for (const key of Object.keys(record.data || {})) {

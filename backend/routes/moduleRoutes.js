@@ -2,17 +2,19 @@ const express = require("express");
 const router = express.Router();
 const ModuleDefinition = require("../models/ModuleDefinition");
 const { protect, adminOnly } = require("../middleware/authMiddleware");
-const {
-  filterModuleDefinitionForRole,
-} = require("../utils/recordValidation");
+const { filterModuleDefinitionForRole } = require("../utils/recordValidation");
 
 const normalizeFields = (fields = []) =>
   fields.map((field, index) => {
     const visible = Array.isArray(field.visible) ? field.visible : [];
     const showInForm =
-      field.showInForm !== undefined ? field.showInForm : visible.includes("form");
+      field.showInForm !== undefined
+        ? field.showInForm
+        : visible.includes("form");
     const showInList =
-      field.showInList !== undefined ? field.showInList : visible.includes("list");
+      field.showInList !== undefined
+        ? field.showInList
+        : visible.includes("list");
     const computedVisible = [];
     if (showInForm) computedVisible.push("form");
     if (showInList) computedVisible.push("list");
@@ -521,7 +523,9 @@ router.get("/", protect, adminOnly, async (req, res) => {
     const modules = await ModuleDefinition.find().sort({ name: 1 });
     res.json(modules);
   } catch (err) {
-    res.status(500).json({ message: "Failed to load modules", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to load modules", error: err.message });
   }
 });
 
@@ -530,11 +534,13 @@ router.get("/definitions", protect, async (req, res) => {
     await ensureDefaults();
     const modules = await ModuleDefinition.find().sort({ name: 1 });
     const filtered = modules.map((moduleDef) =>
-      filterModuleDefinitionForRole(moduleDef, req.user.role)
+      filterModuleDefinitionForRole(moduleDef, req.user.role),
     );
     res.json(filtered);
   } catch (err) {
-    res.status(500).json({ message: "Failed to load modules", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to load modules", error: err.message });
   }
 });
 
@@ -548,7 +554,9 @@ router.get("/definition/:key", protect, async (req, res) => {
     const filtered = filterModuleDefinitionForRole(moduleDef, req.user.role);
     res.json(filtered);
   } catch (err) {
-    res.status(500).json({ message: "Failed to load module", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to load module", error: err.message });
   }
 });
 
@@ -560,7 +568,9 @@ router.get("/:id", protect, adminOnly, async (req, res) => {
     }
     res.json(moduleDef);
   } catch (err) {
-    res.status(500).json({ message: "Failed to load module", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to load module", error: err.message });
   }
 });
 
@@ -580,7 +590,9 @@ router.put("/:id", protect, adminOnly, async (req, res) => {
     const updated = await moduleDef.save();
     res.json(updated);
   } catch (err) {
-    res.status(400).json({ message: "Failed to update module", error: err.message });
+    res
+      .status(400)
+      .json({ message: "Failed to update module", error: err.message });
   }
 });
 

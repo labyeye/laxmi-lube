@@ -30,9 +30,12 @@ const SalaryPage = () => {
   const fetchSalaries = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("https://backend.laxmilube.in/api/salaries", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        "https://backend.laxmilube.in/api/salaries",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       setSalaries(response.data);
     } catch (error) {
       console.error("Error fetching salaries:", error);
@@ -43,9 +46,12 @@ const SalaryPage = () => {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("https://backend.laxmilube.in/api/users", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        "https://backend.laxmilube.in/api/users",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       // Filter to show only staff members, not admin
       const staffMembers = response.data.filter(
         (user) => user.role === "staff",

@@ -37,7 +37,7 @@ const BillAssignedToday = () => {
     role: "Collections",
   });
   const [collectionDate, setCollectionDate] = useState(
-    new Date().toISOString().split("T")[0]
+    new Date().toISOString().split("T")[0],
   );
 
   const [bills, setBills] = useState([]);
@@ -46,7 +46,7 @@ const BillAssignedToday = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [retrying, setRetrying] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState(null);
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [selectedBill, setSelectedBill] = useState(null);
@@ -105,9 +105,12 @@ const BillAssignedToday = () => {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("Authentication token not found");
 
-      const response = await axios.get(`https://backend.laxmilube.in/api/users/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        `https://backend.laxmilube.in/api/users/me`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       setStaffInfo({
         name: response.data.name || "Staff Member",
@@ -122,9 +125,14 @@ const BillAssignedToday = () => {
     try {
       const res = await axios.get(
         "https://backend.laxmilube.in/api/collections/next-receipt-number",
-        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        },
       );
-      setPaymentDetails((prev) => ({ ...prev, receiptNumber: res.data.receiptNumber }));
+      setPaymentDetails((prev) => ({
+        ...prev,
+        receiptNumber: res.data.receiptNumber,
+      }));
     } catch (err) {
       console.error("Failed to fetch receipt number:", err);
     }
@@ -136,7 +144,7 @@ const BillAssignedToday = () => {
         "https://backend.laxmilube.in/api/bills/assigned-customers",
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
+        },
       );
       setAllAssignedCustomers(response.data);
     } catch (error) {
@@ -171,7 +179,7 @@ const BillAssignedToday = () => {
           params: {
             collectionDay: selectedDay || null,
           },
-        }
+        },
       );
 
       const billsWithDates = response.data.map((bill) => ({
@@ -201,17 +209,23 @@ const BillAssignedToday = () => {
   useEffect(() => {
     fetchBillsAssignedToday();
     fetchAllAssignedCustomers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDay]);
   const imageWidth = window.innerWidth < 768 ? "80%" : "50%";
 
   const handleCollectionSubmit = async () => {
     const paidAmount = parseFloat(paymentAmount);
-    if (isNaN(paidAmount)) { setSubmitError("Please enter a valid amount"); return; }
+    if (isNaN(paidAmount)) {
+      setSubmitError("Please enter a valid amount");
+      return;
+    }
 
     const roundedAmount = Math.round(paidAmount * 100) / 100;
     const dueAmount = parseFloat(selectedBill.dueAmount);
     if (roundedAmount <= 0 || roundedAmount > dueAmount) {
-      setSubmitError(`Amount must be between ₹0.01 and ₹${dueAmount.toFixed(2)}`);
+      setSubmitError(
+        `Amount must be between ₹0.01 and ₹${dueAmount.toFixed(2)}`,
+      );
       return;
     }
 
@@ -219,7 +233,12 @@ const BillAssignedToday = () => {
     setSubmitError("");
 
     // Open progress modal — step 1 in progress
-    setWaProgress({ step1: "loading", step2: "waiting", result: null, collectionId: null });
+    setWaProgress({
+      step1: "loading",
+      step2: "waiting",
+      result: null,
+      collectionId: null,
+    });
 
     try {
       const collectionPayload = {
@@ -228,20 +247,30 @@ const BillAssignedToday = () => {
         paymentMode,
         remarks: paymentRemarks,
         collectedOn: collectionDate,
-        paymentDetails: paymentMode === "Cash"
-          ? { receiptNumber: paymentDetails.receiptNumber || "Money Received" }
-          : paymentDetails,
+        paymentDetails:
+          paymentMode === "Cash"
+            ? {
+                receiptNumber: paymentDetails.receiptNumber || "Money Received",
+              }
+            : paymentDetails,
       };
 
       const saveRes = await axios.post(
         "https://backend.laxmilube.in/api/collections",
         collectionPayload,
-        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        },
       );
       const savedId = saveRes.data._id;
 
       // Step 1 done — step 2 starts
-      setWaProgress({ step1: "done", step2: "loading", result: null, collectionId: savedId });
+      setWaProgress({
+        step1: "done",
+        step2: "loading",
+        result: null,
+        collectionId: savedId,
+      });
 
       // Build local collection data for receipt preview
       const d = new Date(collectionDate);
@@ -258,9 +287,12 @@ const BillAssignedToday = () => {
         remarks: paymentRemarks,
         receiptNumber: paymentDetails.receiptNumber,
         upiId: paymentDetails.upiId,
-        transactionId: paymentDetails.upiTransactionId || paymentDetails.bankTransactionId,
+        transactionId:
+          paymentDetails.upiTransactionId || paymentDetails.bankTransactionId,
         chequeNumber: paymentDetails.chequeNumber,
-        chequeDate: paymentDetails.chequeNumber ? `${dd}/${mm}/${yyyy}` : undefined,
+        chequeDate: paymentDetails.chequeNumber
+          ? `${dd}/${mm}/${yyyy}`
+          : undefined,
         bankName: paymentDetails.bankName,
       });
 
@@ -269,7 +301,11 @@ const BillAssignedToday = () => {
         const waRes = await axios.post(
           `https://backend.laxmilube.in/api/collections/${savedId}/send-whatsapp`,
           {},
-          { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          },
         );
         setWaProgress({
           step1: "done",
@@ -283,7 +319,8 @@ const BillAssignedToday = () => {
           step1: "done",
           step2: "error",
           result: "error",
-          message: "WhatsApp send failed. You can retry from Collection History.",
+          message:
+            "WhatsApp send failed. You can retry from Collection History.",
           collectionId: savedId,
         });
       }
@@ -293,7 +330,9 @@ const BillAssignedToday = () => {
     } catch (err) {
       console.error("Collection save error:", err);
       setWaProgress(null);
-      setSubmitError(err.response?.data?.message || "Failed to record collection");
+      setSubmitError(
+        err.response?.data?.message || "Failed to record collection",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -368,7 +407,7 @@ const BillAssignedToday = () => {
   const totalAmount = bills.reduce((sum, bill) => sum + (bill.amount || 0), 0);
   const totalDueAmount = bills.reduce(
     (sum, bill) => sum + (bill.dueAmount > 0 ? bill.dueAmount : 0),
-    0
+    0,
   );
   const averageAmount = totalBills > 0 ? totalAmount / totalBills : 0;
 
@@ -675,10 +714,15 @@ const BillAssignedToday = () => {
                     </SuccessIcon>
                     <SuccessTitle>Collection Recorded!</SuccessTitle>
                     <SuccessDetail>
-                      <strong>{lastCollection?.retailerName}</strong> — Bill #{lastCollection?.billNumber}
+                      <strong>{lastCollection?.retailerName}</strong> — Bill #
+                      {lastCollection?.billNumber}
                     </SuccessDetail>
                     <SuccessDetail>
-                      Amount: <strong>Rs. {parseFloat(lastCollection?.amount).toFixed(2)}</strong> via {lastCollection?.paymentMode}
+                      Amount:{" "}
+                      <strong>
+                        Rs. {parseFloat(lastCollection?.amount).toFixed(2)}
+                      </strong>{" "}
+                      via {lastCollection?.paymentMode}
                     </SuccessDetail>
                     <ReceiptButtonGroup>
                       {pdfError && (
@@ -714,7 +758,9 @@ const BillAssignedToday = () => {
                     <CustomerBillsContainer>
                       {allAssignedCustomers
                         .filter((c) =>
-                          c.toLowerCase().includes(customerSearch.toLowerCase())
+                          c
+                            .toLowerCase()
+                            .includes(customerSearch.toLowerCase()),
                         )
                         .map((customer) => (
                           <BillOption
@@ -742,7 +788,7 @@ const BillAssignedToday = () => {
                         .filter(
                           (bill) =>
                             bill.retailer === selectedCustomer &&
-                            bill.dueAmount > 0
+                            bill.dueAmount > 0,
                         )
                         .map((bill) => (
                           <BillOption
@@ -846,7 +892,10 @@ const BillAssignedToday = () => {
                           type="text"
                           value={paymentDetails.receiptNumber}
                           readOnly
-                          style={{ background: "#f5f5f5", cursor: "not-allowed" }}
+                          style={{
+                            background: "#f5f5f5",
+                            cursor: "not-allowed",
+                          }}
                         />
                       </FormGroup>
                     )}
@@ -985,7 +1034,7 @@ const BillAssignedToday = () => {
                     </ButtonGroup>
                   </>
                 )}
-                </ModalBody>
+              </ModalBody>
             </Modal>
           </ModalOverlay>
         )}
@@ -999,10 +1048,15 @@ const BillAssignedToday = () => {
               </ModalHeader>
               <ModalBody>
                 <PreviewHint>
-                  Adjust X/Y positions in <code>src/utils/generateReceipt.js</code> → <code>POS</code> object, then click Preview Receipt again.
+                  Adjust X/Y positions in{" "}
+                  <code>src/utils/generateReceipt.js</code> → <code>POS</code>{" "}
+                  object, then click Preview Receipt again.
                 </PreviewHint>
                 {standalonePreviewUrl ? (
-                  <PreviewFrame src={standalonePreviewUrl} title="Receipt Position Preview" />
+                  <PreviewFrame
+                    src={standalonePreviewUrl}
+                    title="Receipt Position Preview"
+                  />
                 ) : (
                   <PreviewPlaceholder>Generating…</PreviewPlaceholder>
                 )}
@@ -1019,39 +1073,67 @@ const BillAssignedToday = () => {
 
               <WaStep status={waProgress.step1}>
                 <WaStepIcon status={waProgress.step1}>
-                  {waProgress.step1 === "done" ? "✓" : waProgress.step1 === "loading" ? <WaSpinner /> : "○"}
+                  {waProgress.step1 === "done" ? (
+                    "✓"
+                  ) : waProgress.step1 === "loading" ? (
+                    <WaSpinner />
+                  ) : (
+                    "○"
+                  )}
                 </WaStepIcon>
                 <WaStepText>
                   <strong>Saving collection data</strong>
-                  <span>{waProgress.step1 === "loading" ? "Please wait…" : waProgress.step1 === "done" ? "Saved successfully" : ""}</span>
+                  <span>
+                    {waProgress.step1 === "loading"
+                      ? "Please wait…"
+                      : waProgress.step1 === "done"
+                        ? "Saved successfully"
+                        : ""}
+                  </span>
                 </WaStepText>
               </WaStep>
 
               <WaStep status={waProgress.step2}>
                 <WaStepIcon status={waProgress.step2}>
-                  {waProgress.step2 === "done" ? "✓" : waProgress.step2 === "error" ? "✗" : waProgress.step2 === "loading" ? <WaSpinner /> : "○"}
+                  {waProgress.step2 === "done" ? (
+                    "✓"
+                  ) : waProgress.step2 === "error" ? (
+                    "✗"
+                  ) : waProgress.step2 === "loading" ? (
+                    <WaSpinner />
+                  ) : (
+                    "○"
+                  )}
                 </WaStepIcon>
                 <WaStepText>
                   <strong>Sending WhatsApp receipt</strong>
                   <span>
-                    {waProgress.step2 === "loading" ? "Sending to retailer…"
-                      : waProgress.step2 === "done" ? "Message dispatched"
-                      : waProgress.step2 === "error" ? "Send failed"
-                      : "Waiting…"}
+                    {waProgress.step2 === "loading"
+                      ? "Sending to retailer…"
+                      : waProgress.step2 === "done"
+                        ? "Message dispatched"
+                        : waProgress.step2 === "error"
+                          ? "Send failed"
+                          : "Waiting…"}
                   </span>
                 </WaStepText>
               </WaStep>
 
               {waProgress.result && (
                 <WaResultBanner result={waProgress.result}>
-                  {waProgress.result === "success" && "✅ WhatsApp receipt sent successfully!"}
-                  {waProgress.result === "no_phone" && "⚠️ Saved! No phone number for this retailer — please add one."}
-                  {waProgress.result === "error" && "⚠️ Saved! WhatsApp failed — retry from Collection History."}
+                  {waProgress.result === "success" &&
+                    "✅ WhatsApp receipt sent successfully!"}
+                  {waProgress.result === "no_phone" &&
+                    "⚠️ Saved! No phone number for this retailer — please add one."}
+                  {waProgress.result === "error" &&
+                    "⚠️ Saved! WhatsApp failed — retry from Collection History."}
                 </WaResultBanner>
               )}
 
               {waProgress.result && (
-                <WaCloseBtn onClick={() => setWaProgress(null)}>Close</WaCloseBtn>
+                <WaCloseBtn onClick={() => setWaProgress(null)}>
+                  Close
+                </WaCloseBtn>
               )}
             </WaProgressCard>
           </WaProgressOverlay>
@@ -1392,7 +1474,8 @@ const RefreshButton = styled.button`
 
 const DayButton = styled.button`
   padding: 6px 10px;
-  border: 1px solid ${(props) => (props.active ? "var(--nb-blue)" : "var(--nb-border)")};
+  border: 1px solid
+    ${(props) => (props.active ? "var(--nb-blue)" : "var(--nb-border)")};
   border-radius: 20px;
   background-color: ${(props) => (props.active ? "var(--nb-blue)" : "var(--nb-white)")};
   color: ${(props) => (props.active ? "var(--nb-white)" : "var(--nb-ink)")};
@@ -1562,15 +1645,6 @@ const Logo = styled.div`
   font-weight: 600;
   color: var(--nb-blue);
   white-space: nowrap;
-`;
-
-const ToggleButton = styled.button`
-  background: none;
-  border: none;
-  color: var(--nb-ink);
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 5px;
 `;
 
 const UserProfile = styled.div`
@@ -1896,14 +1970,14 @@ const BillStatus = styled.div`
     props.status === "Paid"
       ? "var(--nb-blue)20"
       : props.status === "Pending"
-      ? "var(--nb-orange)20"
-      : "var(--nb-orange)20"};
+        ? "var(--nb-orange)20"
+        : "var(--nb-orange)20"};
   color: ${(props) =>
     props.status === "Paid"
       ? "var(--nb-blue)"
       : props.status === "Pending"
-      ? "var(--nb-orange)"
-      : "var(--nb-orange)"};
+        ? "var(--nb-orange)"
+        : "var(--nb-orange)"};
 `;
 
 const BillRetailer = styled.div`
@@ -2157,13 +2231,21 @@ const WaStepIcon = styled.div`
   font-weight: 700;
   flex-shrink: 0;
   background: ${(p) =>
-    p.status === "done" ? "#dcfce7" :
-    p.status === "error" ? "#fee2e2" :
-    p.status === "loading" ? "#eff6ff" : "#f3f4f6"};
+    p.status === "done"
+      ? "#dcfce7"
+      : p.status === "error"
+        ? "#fee2e2"
+        : p.status === "loading"
+          ? "#eff6ff"
+          : "#f3f4f6"};
   color: ${(p) =>
-    p.status === "done" ? "#16a34a" :
-    p.status === "error" ? "#dc2626" :
-    p.status === "loading" ? "#2563eb" : "#9ca3af"};
+    p.status === "done"
+      ? "#16a34a"
+      : p.status === "error"
+        ? "#dc2626"
+        : p.status === "loading"
+          ? "#2563eb"
+          : "#9ca3af"};
 `;
 
 const WaSpinner = styled.div`
@@ -2198,11 +2280,17 @@ const WaResultBanner = styled.div`
   font-weight: 600;
   text-align: center;
   background: ${(p) =>
-    p.result === "success" ? "#dcfce7" :
-    p.result === "no_phone" ? "#fef9c3" : "#fee2e2"};
+    p.result === "success"
+      ? "#dcfce7"
+      : p.result === "no_phone"
+        ? "#fef9c3"
+        : "#fee2e2"};
   color: ${(p) =>
-    p.result === "success" ? "#15803d" :
-    p.result === "no_phone" ? "#92400e" : "#991b1b"};
+    p.result === "success"
+      ? "#15803d"
+      : p.result === "no_phone"
+        ? "#92400e"
+        : "#991b1b"};
 `;
 
 const WaCloseBtn = styled.button`
@@ -2215,7 +2303,9 @@ const WaCloseBtn = styled.button`
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  &:hover { background: #1558b0; }
+  &:hover {
+    background: #1558b0;
+  }
 `;
 
 export default BillAssignedToday;

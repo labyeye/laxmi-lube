@@ -52,9 +52,11 @@ function startOfDay(date) {
 router.get("/date-collections", protect, adminOnly, async (req, res) => {
   try {
     const { startDate, endDate, page = 1, limit = 15 } = req.query;
-    
+
     // If no dates provided, default to today
-    const start = startDate ? startOfDay(new Date(startDate)) : startOfDay(new Date());
+    const start = startDate
+      ? startOfDay(new Date(startDate))
+      : startOfDay(new Date());
     const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(new Date());
 
     // Calculate skip value for pagination
@@ -90,7 +92,7 @@ router.get("/date-collections", protect, adminOnly, async (req, res) => {
     // Combine the data
     const formattedReports = reports.map((report) => {
       const billCollections = collections.filter(
-        (c) => c.bill.toString() === report._id.toString()
+        (c) => c.bill.toString() === report._id.toString(),
       );
 
       return {
@@ -138,9 +140,11 @@ router.get(
   async (req, res) => {
     try {
       const { startDate, endDate } = req.query;
-      
+
       // If no dates provided, default to today
-      const start = startDate ? startOfDay(new Date(startDate)) : startOfDay(new Date());
+      const start = startDate
+        ? startOfDay(new Date(startDate))
+        : startOfDay(new Date());
       const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(new Date());
 
       const collections = await Collection.find({
@@ -234,20 +238,20 @@ router.get(
         });
         column.width = Math.min(
           Math.max(maxLength + 2, column.header.length + 2),
-          50
+          50,
         );
       });
 
       res.setHeader(
         "Content-Type",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       );
       res.setHeader(
         "Content-Disposition",
         `attachment; filename=collections_${format(
           start,
-          "yyyyMMdd"
-        )}_to_${format(end, "yyyyMMdd")}.xlsx`
+          "yyyyMMdd",
+        )}_to_${format(end, "yyyyMMdd")}.xlsx`,
       );
 
       await workbook.xlsx.write(res);
@@ -259,7 +263,7 @@ router.get(
         error: err.message,
       });
     }
-  }
+  },
 );
 
 function endOfDay(date) {
@@ -271,21 +275,21 @@ function startOfDay(date) {
   const newDate = new Date(date);
   newDate.setHours(0, 0, 0, 0);
   return newDate;
-}// Add this route to collectionRoutes.js
+} // Add this route to collectionRoutes.js
 router.get("/dsr-summary", protect, async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    
+
     if (!startDate || !endDate) {
       return res.status(400).json({
         success: false,
-        message: "Both startDate and endDate are required"
+        message: "Both startDate and endDate are required",
       });
     }
 
     const start = new Date(startDate);
     const end = new Date(endDate);
-    
+
     // Adjust end date to include the entire day
     end.setHours(23, 59, 59, 999);
 
@@ -295,67 +299,75 @@ router.get("/dsr-summary", protect, async (req, res) => {
         $match: {
           collectedOn: {
             $gte: start,
-            $lte: end
-          }
-        }
+            $lte: end,
+          },
+        },
       },
       {
         $group: {
           _id: "$collectedBy",
           total: { $sum: "$amountCollected" },
-          cash: { 
-            $sum: { 
-              $cond: [{ $eq: ["$paymentMode", "cash"] }, "$amountCollected", 0] 
-            } 
+          cash: {
+            $sum: {
+              $cond: [{ $eq: ["$paymentMode", "cash"] }, "$amountCollected", 0],
+            },
           },
-          cashTrc: { 
-            $sum: { 
-              $cond: [{ $eq: ["$paymentMode", "cash"] }, 1, 0] 
-            } 
+          cashTrc: {
+            $sum: {
+              $cond: [{ $eq: ["$paymentMode", "cash"] }, 1, 0],
+            },
           },
-          upi: { 
-            $sum: { 
-              $cond: [{ $eq: ["$paymentMode", "upi"] }, "$amountCollected", 0] 
-            } 
+          upi: {
+            $sum: {
+              $cond: [{ $eq: ["$paymentMode", "upi"] }, "$amountCollected", 0],
+            },
           },
-          upiTrc: { 
-            $sum: { 
-              $cond: [{ $eq: ["$paymentMode", "upi"] }, 1, 0] 
-            } 
+          upiTrc: {
+            $sum: {
+              $cond: [{ $eq: ["$paymentMode", "upi"] }, 1, 0],
+            },
           },
-          cheque: { 
-            $sum: { 
-              $cond: [{ $eq: ["$paymentMode", "cheque"] }, "$amountCollected", 0] 
-            } 
+          cheque: {
+            $sum: {
+              $cond: [
+                { $eq: ["$paymentMode", "cheque"] },
+                "$amountCollected",
+                0,
+              ],
+            },
           },
-          chequeTrc: { 
-            $sum: { 
-              $cond: [{ $eq: ["$paymentMode", "cheque"] }, 1, 0] 
-            } 
+          chequeTrc: {
+            $sum: {
+              $cond: [{ $eq: ["$paymentMode", "cheque"] }, 1, 0],
+            },
           },
-          bankTransfer: { 
-            $sum: { 
-              $cond: [{ $eq: ["$paymentMode", "bank_transfer"] }, "$amountCollected", 0] 
-            } 
+          bankTransfer: {
+            $sum: {
+              $cond: [
+                { $eq: ["$paymentMode", "bank_transfer"] },
+                "$amountCollected",
+                0,
+              ],
+            },
           },
-          bankTransferTrc: { 
-            $sum: { 
-              $cond: [{ $eq: ["$paymentMode", "bank_transfer"] }, 1, 0] 
-            } 
+          bankTransferTrc: {
+            $sum: {
+              $cond: [{ $eq: ["$paymentMode", "bank_transfer"] }, 1, 0],
+            },
           },
-          collectionCount: { $sum: 1 }
-        }
+          collectionCount: { $sum: 1 },
+        },
       },
       {
         $lookup: {
           from: "users",
           localField: "_id",
           foreignField: "_id",
-          as: "user"
-        }
+          as: "user",
+        },
       },
       {
-        $unwind: "$user"
+        $unwind: "$user",
       },
       {
         $project: {
@@ -369,9 +381,9 @@ router.get("/dsr-summary", protect, async (req, res) => {
           chequeTrc: 1,
           bankTransfer: 1,
           bankTransferTrc: 1,
-          collectionCount: 1
-        }
-      }
+          collectionCount: 1,
+        },
+      },
     ]);
 
     // Get assigned retailers count (you'll need to implement this based on your business logic)
@@ -379,22 +391,22 @@ router.get("/dsr-summary", protect, async (req, res) => {
     const assignedRetailers = await getAssignedRetailersCount(start, end);
 
     // Merge assigned retailers data with summary
-    const result = summary.map(item => ({
+    const result = summary.map((item) => ({
       ...item,
       assignedRetailers: assignedRetailers[item._id] || 0,
-      collectedRetailers: item.collectionCount
+      collectedRetailers: item.collectionCount,
     }));
 
     res.json({
       success: true,
-      data: result
+      data: result,
     });
   } catch (err) {
     console.error("DSR Summary error:", err);
     res.status(500).json({
       success: false,
       message: "Failed to generate DSR summary",
-      error: err.message
+      error: err.message,
     });
   }
 });
@@ -418,7 +430,7 @@ router.get(
       if (!startDate || !endDate) {
         return res.status(400).json({
           success: false,
-          message: "Both startDate and endDate are required"
+          message: "Both startDate and endDate are required",
         });
       }
 
@@ -431,64 +443,80 @@ router.get(
           $match: {
             collectedOn: {
               $gte: start,
-              $lte: end
-            }
-          }
+              $lte: end,
+            },
+          },
         },
         {
           $group: {
             _id: "$collectedBy",
             total: { $sum: "$amountCollected" },
-            cash: { 
-              $sum: { 
-                $cond: [{ $eq: ["$paymentMode", "cash"] }, "$amountCollected", 0] 
-              } 
+            cash: {
+              $sum: {
+                $cond: [
+                  { $eq: ["$paymentMode", "cash"] },
+                  "$amountCollected",
+                  0,
+                ],
+              },
             },
-            cashTrc: { 
-              $sum: { 
-                $cond: [{ $eq: ["$paymentMode", "cash"] }, 1, 0] 
-              } 
+            cashTrc: {
+              $sum: {
+                $cond: [{ $eq: ["$paymentMode", "cash"] }, 1, 0],
+              },
             },
-            upi: { 
-              $sum: { 
-                $cond: [{ $eq: ["$paymentMode", "upi"] }, "$amountCollected", 0] 
-              } 
+            upi: {
+              $sum: {
+                $cond: [
+                  { $eq: ["$paymentMode", "upi"] },
+                  "$amountCollected",
+                  0,
+                ],
+              },
             },
-            upiTrc: { 
-              $sum: { 
-                $cond: [{ $eq: ["$paymentMode", "upi"] }, 1, 0] 
-              } 
+            upiTrc: {
+              $sum: {
+                $cond: [{ $eq: ["$paymentMode", "upi"] }, 1, 0],
+              },
             },
-            cheque: { 
-              $sum: { 
-                $cond: [{ $eq: ["$paymentMode", "cheque"] }, "$amountCollected", 0] 
-              } 
+            cheque: {
+              $sum: {
+                $cond: [
+                  { $eq: ["$paymentMode", "cheque"] },
+                  "$amountCollected",
+                  0,
+                ],
+              },
             },
-            chequeTrc: { 
-              $sum: { 
-                $cond: [{ $eq: ["$paymentMode", "cheque"] }, 1, 0] 
-              } 
+            chequeTrc: {
+              $sum: {
+                $cond: [{ $eq: ["$paymentMode", "cheque"] }, 1, 0],
+              },
             },
-            bankTransfer: { 
-              $sum: { 
-                $cond: [{ $eq: ["$paymentMode", "bank_transfer"] }, "$amountCollected", 0] 
-              } 
+            bankTransfer: {
+              $sum: {
+                $cond: [
+                  { $eq: ["$paymentMode", "bank_transfer"] },
+                  "$amountCollected",
+                  0,
+                ],
+              },
             },
-            bankTransferTrc: { 
-              $sum: { 
-                $cond: [{ $eq: ["$paymentMode", "bank_transfer"] }, 1, 0] 
-              } 
+            bankTransferTrc: {
+              $sum: {
+                $cond: [{ $eq: ["$paymentMode", "bank_transfer"] }, 1, 0],
+              },
             },
-            collectionCount: { $sum: 1 }
-          }
+            collectionCount: { $sum: 1 },
+          },
         },
         {
           $lookup: {
             from: "users",
             localField: "_id",
             foreignField: "_id",
-            as: "user"
-          }
+            as: "user",
+          },
         },
         { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
         {
@@ -504,41 +532,45 @@ router.get(
             chequeTrc: 1,
             bankTransfer: 1,
             bankTransferTrc: 1,
-            collectionCount: 1
-          }
+            collectionCount: 1,
+          },
         },
-        { $sort: { total: -1 } }
+        { $sort: { total: -1 } },
       ]);
 
       const assignedRetailers = await getAssignedRetailersCount(start, end);
 
       const workbook = new exceljs.Workbook();
-      const worksheet = workbook.addWorksheet('DSR Summary');
+      const worksheet = workbook.addWorksheet("DSR Summary");
 
       worksheet.columns = [
-        { header: 'DSR Name', key: 'staffName', width: 30 },
-        { header: 'Total Collected', key: 'total', width: 18 },
-        { header: 'Cash Amount', key: 'cash', width: 15 },
-        { header: 'Cash Trx', key: 'cashTrc', width: 12 },
-        { header: 'UPI Amount', key: 'upi', width: 15 },
-        { header: 'UPI Trx', key: 'upiTrc', width: 12 },
-        { header: 'Cheque Amount', key: 'cheque', width: 15 },
-        { header: 'Cheque Trx', key: 'chequeTrc', width: 12 },
-        { header: 'Bank Transfer Amount', key: 'bankTransfer', width: 18 },
-        { header: 'Bank Transfer Trx', key: 'bankTransferTrc', width: 15 },
-        { header: 'Assigned Retailers', key: 'assignedRetailers', width: 18 },
-        { header: 'Collected Retailers', key: 'collectedRetailers', width: 18 }
+        { header: "DSR Name", key: "staffName", width: 30 },
+        { header: "Total Collected", key: "total", width: 18 },
+        { header: "Cash Amount", key: "cash", width: 15 },
+        { header: "Cash Trx", key: "cashTrc", width: 12 },
+        { header: "UPI Amount", key: "upi", width: 15 },
+        { header: "UPI Trx", key: "upiTrc", width: 12 },
+        { header: "Cheque Amount", key: "cheque", width: 15 },
+        { header: "Cheque Trx", key: "chequeTrc", width: 12 },
+        { header: "Bank Transfer Amount", key: "bankTransfer", width: 18 },
+        { header: "Bank Transfer Trx", key: "bankTransferTrc", width: 15 },
+        { header: "Assigned Retailers", key: "assignedRetailers", width: 18 },
+        { header: "Collected Retailers", key: "collectedRetailers", width: 18 },
       ];
 
       worksheet.getRow(1).eachCell((cell) => {
-        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F81BD' } };
-        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FF4F81BD" },
+        };
+        cell.alignment = { vertical: "middle", horizontal: "center" };
       });
 
       summary.forEach((row) => {
         worksheet.addRow({
-          staffName: row.staffName || 'Unknown',
+          staffName: row.staffName || "Unknown",
           total: row.total || 0,
           cash: row.cash || 0,
           cashTrc: row.cashTrc || 0,
@@ -549,69 +581,77 @@ router.get(
           bankTransfer: row.bankTransfer || 0,
           bankTransferTrc: row.bankTransferTrc || 0,
           assignedRetailers: assignedRetailers[row.staffId] || 0,
-          collectedRetailers: row.collectionCount || 0
+          collectedRetailers: row.collectionCount || 0,
         });
       });
 
       // Format numeric columns
-      [2,3,5,7,9].forEach((colIndex) => {
-        worksheet.getColumn(colIndex).numFmt = '#,##0.00';
+      [2, 3, 5, 7, 9].forEach((colIndex) => {
+        worksheet.getColumn(colIndex).numFmt = "#,##0.00";
       });
 
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', `attachment; filename=dsr_summary_${format(start, 'yyyyMMdd')}_to_${format(end, 'yyyyMMdd')}.xlsx`);
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      );
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=dsr_summary_${format(start, "yyyyMMdd")}_to_${format(end, "yyyyMMdd")}.xlsx`,
+      );
 
       await workbook.xlsx.write(res);
       res.end();
     } catch (err) {
-      console.error('DSR Excel export error:', err);
+      console.error("DSR Excel export error:", err);
       res.status(500).json({
         success: false,
-        message: 'Failed to export DSR summary',
-        error: err.message
+        message: "Failed to export DSR summary",
+        error: err.message,
       });
     }
-  }
+  },
 );
 router.get("/dsr-daily-retailers", protect, adminOnly, async (req, res) => {
   try {
     const { date } = req.query;
     const selectedDate = date ? new Date(date) : new Date();
-    const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
+    const dayOfWeek = selectedDate.toLocaleDateString("en-US", {
+      weekday: "long",
+    });
 
     // 1. Get all bills assigned for today (by collection day OR assigned today)
     const assignedBills = await Bill.find({
       $or: [
         { collectionDay: dayOfWeek, assignedTo: { $exists: true } },
-        { 
-          assignedDate: { 
-            $gte: startOfDay(selectedDate), 
-            $lte: endOfDay(selectedDate) 
-          } 
-        }
+        {
+          assignedDate: {
+            $gte: startOfDay(selectedDate),
+            $lte: endOfDay(selectedDate),
+          },
+        },
       ],
-      assignedTo: { $exists: true, $ne: null }
+      assignedTo: { $exists: true, $ne: null },
     }).populate("assignedTo", "name");
 
     // 2. Get today's collections
     const todayCollections = await Collection.find({
-      collectedOn: { 
-        $gte: startOfDay(selectedDate), 
-        $lte: endOfDay(selectedDate) 
-      }
+      collectedOn: {
+        $gte: startOfDay(selectedDate),
+        $lte: endOfDay(selectedDate),
+      },
     }).populate("bill", "retailer assignedTo");
 
     // 3. Count unique assigned retailers per DSR
     const assignedRetailersMap = new Map(); // { staffId: { name, retailers: Set() } }
 
-    assignedBills.forEach(bill => {
+    assignedBills.forEach((bill) => {
       if (!bill.assignedTo) return;
-      
+
       const staffId = bill.assignedTo._id;
       if (!assignedRetailersMap.has(staffId)) {
         assignedRetailersMap.set(staffId, {
           name: bill.assignedTo.name,
-          retailers: new Set()
+          retailers: new Set(),
         });
       }
       assignedRetailersMap.get(staffId).retailers.add(bill.retailer);
@@ -620,9 +660,9 @@ router.get("/dsr-daily-retailers", protect, adminOnly, async (req, res) => {
     // 4. Count unique collected retailers per DSR
     const collectedRetailersMap = new Map(); // { staffId: Set(retailers) }
 
-    todayCollections.forEach(collection => {
+    todayCollections.forEach((collection) => {
       if (!collection.bill?.assignedTo) return;
-      
+
       const staffId = collection.bill.assignedTo;
       if (!collectedRetailersMap.has(staffId)) {
         collectedRetailersMap.set(staffId, new Set());
@@ -631,26 +671,27 @@ router.get("/dsr-daily-retailers", protect, adminOnly, async (req, res) => {
     });
 
     // 5. Prepare final result
-    const result = Array.from(assignedRetailersMap.entries()).map(([staffId, data]) => ({
-      staffId,
-      staffName: data.name,
-      assignedRetailers: data.retailers.size,
-      collectedRetailers: collectedRetailersMap.get(staffId)?.size || 0
-    }));
+    const result = Array.from(assignedRetailersMap.entries()).map(
+      ([staffId, data]) => ({
+        staffId,
+        staffName: data.name,
+        assignedRetailers: data.retailers.size,
+        collectedRetailers: collectedRetailersMap.get(staffId)?.size || 0,
+      }),
+    );
 
     res.json({
       success: true,
       data: result,
-      date: selectedDate.toISOString().split('T')[0],
-      day: dayOfWeek
+      date: selectedDate.toISOString().split("T")[0],
+      day: dayOfWeek,
     });
-
   } catch (err) {
     console.error("DSR Daily Retailers error:", err);
     res.status(500).json({
       success: false,
       message: "Error fetching DSR retailer counts",
-      error: err.message
+      error: err.message,
     });
   }
 });
@@ -766,20 +807,20 @@ router.get(
         });
         column.width = Math.min(
           Math.max(maxLength + 2, column.header.length + 2),
-          50
+          50,
         );
       });
 
       res.setHeader(
         "Content-Type",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       );
       res.setHeader(
         "Content-Disposition",
         `attachment; filename=today_collections_${format(
           new Date(),
-          "yyyyMMdd"
-        )}.xlsx`
+          "yyyyMMdd",
+        )}.xlsx`,
       );
 
       await workbook.xlsx.write(res);
@@ -791,7 +832,7 @@ router.get(
         error: err.message,
       });
     }
-  }
+  },
 );
 // Add a new route for today's collections
 router.get("/today-collections", protect, adminOnly, async (req, res) => {
@@ -818,7 +859,7 @@ router.get("/today-collections", protect, adminOnly, async (req, res) => {
     // Combine the data
     const formattedReports = reports.map((report) => {
       const billCollections = todayCollections.filter(
-        (c) => c.bill.toString() === report._id.toString()
+        (c) => c.bill.toString() === report._id.toString(),
       );
 
       return {
@@ -971,7 +1012,7 @@ router.get("/export/excel", protect, adminOnly, async (req, res) => {
             collectedBy: collection.collectedBy?.name || "System",
             paymentDetails: getFilteredPaymentDetails(
               collection.paymentMode,
-              collection.paymentDetails
+              collection.paymentDetails,
             ),
           });
         });
@@ -990,7 +1031,7 @@ router.get("/export/excel", protect, adminOnly, async (req, res) => {
           collectedBy: collection.collectedBy?.name || "System",
           paymentDetails: getFilteredPaymentDetails(
             collection.paymentMode,
-            collection.paymentDetails
+            collection.paymentDetails,
           ),
         });
       }
@@ -1009,11 +1050,11 @@ router.get("/export/excel", protect, adminOnly, async (req, res) => {
     // Set response headers
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
     res.setHeader(
       "Content-Disposition",
-      "attachment; filename=collections_report.xlsx"
+      "attachment; filename=collections_report.xlsx",
     );
 
     // Send the workbook
@@ -1154,14 +1195,14 @@ router.get("/export/excel", protect, adminOnly, async (req, res) => {
     // Set response headers
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
     res.setHeader(
       "Content-Disposition",
       `attachment; filename=collections_report_${format(
         new Date(),
-        "yyyyMMdd_HHmmss"
-      )}.xlsx`
+        "yyyyMMdd_HHmmss",
+      )}.xlsx`,
     );
 
     // Send the workbook
@@ -1175,7 +1216,6 @@ router.get("/export/excel", protect, adminOnly, async (req, res) => {
     });
   }
 });
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TALLY-STYLE REPORT ROUTES
@@ -1209,13 +1249,21 @@ router.get("/tally/staff", protect, adminOnly, async (req, res) => {
 router.get("/tally/retailer-report", protect, adminOnly, async (req, res) => {
   try {
     const { retailerId, startDate, endDate } = req.query;
-    if (!retailerId) return res.status(400).json({ success: false, message: "retailerId required" });
+    if (!retailerId)
+      return res
+        .status(400)
+        .json({ success: false, message: "retailerId required" });
 
-    const start = startDate ? startOfDay(new Date(startDate)) : startOfDay(new Date());
+    const start = startDate
+      ? startOfDay(new Date(startDate))
+      : startOfDay(new Date());
     const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(new Date());
 
     const retailer = await Retailer.findById(retailerId).lean();
-    if (!retailer) return res.status(404).json({ success: false, message: "Retailer not found" });
+    if (!retailer)
+      return res
+        .status(404)
+        .json({ success: false, message: "Retailer not found" });
 
     const bills = await Bill.find({
       retailer: retailer.name,
@@ -1234,7 +1282,10 @@ router.get("/tally/retailer-report", protect, adminOnly, async (req, res) => {
     let totalDue = 0;
 
     const rows = bills.map((bill) => {
-      const collected = (bill.collections || []).reduce((s, c) => s + (c.amountCollected || 0), 0);
+      const collected = (bill.collections || []).reduce(
+        (s, c) => s + (c.amountCollected || 0),
+        0,
+      );
       totalBillAmount += bill.amount || 0;
       totalCollected += collected;
       totalDue += bill.dueAmount || 0;
@@ -1271,13 +1322,21 @@ router.get("/tally/retailer-report", protect, adminOnly, async (req, res) => {
 router.get("/tally/staff-report", protect, adminOnly, async (req, res) => {
   try {
     const { staffId, startDate, endDate } = req.query;
-    if (!staffId) return res.status(400).json({ success: false, message: "staffId required" });
+    if (!staffId)
+      return res
+        .status(400)
+        .json({ success: false, message: "staffId required" });
 
-    const start = startDate ? startOfDay(new Date(startDate)) : startOfDay(new Date());
+    const start = startDate
+      ? startOfDay(new Date(startDate))
+      : startOfDay(new Date());
     const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(new Date());
 
     const staff = await User.findById(staffId).select("name email").lean();
-    if (!staff) return res.status(404).json({ success: false, message: "Staff not found" });
+    if (!staff)
+      return res
+        .status(404)
+        .json({ success: false, message: "Staff not found" });
 
     // Bills assigned to this staff
     const bills = await Bill.find({
@@ -1296,13 +1355,19 @@ router.get("/tally/staff-report", protect, adminOnly, async (req, res) => {
       collectedBy: staffId,
       collectedOn: { $gte: start, $lte: end },
     })
-      .populate({ path: "bill", select: "billNumber retailer amount dueAmount billDate" })
+      .populate({
+        path: "bill",
+        select: "billNumber retailer amount dueAmount billDate",
+      })
       .sort({ collectedOn: 1 })
       .lean();
 
     let totalAssigned = bills.length;
     let totalCollectedAmount = 0;
-    let cash = 0, upi = 0, cheque = 0, bankTransfer = 0;
+    let cash = 0,
+      upi = 0,
+      cheque = 0,
+      bankTransfer = 0;
 
     const collectionRows = collections.map((c) => {
       totalCollectedAmount += c.amountCollected || 0;
@@ -1354,18 +1419,27 @@ router.get("/tally/staff-report", protect, adminOnly, async (req, res) => {
 router.get("/tally/collection-report", protect, adminOnly, async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    const start = startDate ? startOfDay(new Date(startDate)) : startOfDay(new Date());
+    const start = startDate
+      ? startOfDay(new Date(startDate))
+      : startOfDay(new Date());
     const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(new Date());
 
     const collections = await Collection.find({
       collectedOn: { $gte: start, $lte: end },
     })
-      .populate({ path: "bill", select: "billNumber retailer amount dueAmount billDate assignedTo" })
+      .populate({
+        path: "bill",
+        select: "billNumber retailer amount dueAmount billDate assignedTo",
+      })
       .populate("collectedBy", "name")
       .sort({ collectedOn: 1 })
       .lean();
 
-    let totalAmount = 0, cash = 0, upi = 0, cheque = 0, bankTransfer = 0;
+    let totalAmount = 0,
+      cash = 0,
+      upi = 0,
+      cheque = 0,
+      bankTransfer = 0;
 
     const rows = collections.map((c) => {
       const amt = c.amountCollected || 0;
@@ -1389,7 +1463,14 @@ router.get("/tally/collection-report", protect, adminOnly, async (req, res) => {
     res.json({
       success: true,
       period: { start, end },
-      summary: { totalAmount, cash, upi, cheque, bankTransfer, count: rows.length },
+      summary: {
+        totalAmount,
+        cash,
+        upi,
+        cheque,
+        bankTransfer,
+        count: rows.length,
+      },
       data: rows,
     });
   } catch (err) {
@@ -1401,7 +1482,9 @@ router.get("/tally/collection-report", protect, adminOnly, async (req, res) => {
 router.get("/tally/delivery-report", protect, adminOnly, async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    const start = startDate ? startOfDay(new Date(startDate)) : startOfDay(new Date());
+    const start = startDate
+      ? startOfDay(new Date(startDate))
+      : startOfDay(new Date());
     const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(new Date());
 
     const deliveries = await Delivery.find({
@@ -1411,11 +1494,17 @@ router.get("/tally/delivery-report", protect, adminOnly, async (req, res) => {
       .lean();
 
     let totalDeliveries = deliveries.length;
-    let delivered = 0, inTransit = 0, pending = 0, cancelled = 0;
+    let delivered = 0,
+      inTransit = 0,
+      pending = 0,
+      cancelled = 0;
     let totalOrderAmount = 0;
 
     const rows = deliveries.map((d) => {
-      const orderAmt = (d.orders || []).reduce((s, o) => s + (o.orderAmount || 0), 0);
+      const orderAmt = (d.orders || []).reduce(
+        (s, o) => s + (o.orderAmount || 0),
+        0,
+      );
       totalOrderAmount += orderAmt;
       const status = d.deliveryStatus || "Pending";
       if (status === "Delivered") delivered++;
@@ -1446,7 +1535,14 @@ router.get("/tally/delivery-report", protect, adminOnly, async (req, res) => {
     res.json({
       success: true,
       period: { start, end },
-      summary: { totalDeliveries, delivered, inTransit, pending, cancelled, totalOrderAmount },
+      summary: {
+        totalDeliveries,
+        delivered,
+        inTransit,
+        pending,
+        cancelled,
+        totalOrderAmount,
+      },
       data: rows,
     });
   } catch (err) {
@@ -1466,9 +1562,17 @@ router.get("/tally/attendance-report", protect, adminOnly, async (req, res) => {
     const query = { attendanceDate: { $gte: start, $lte: end } };
     if (staffId) query.staffId = staffId;
 
-    const records = await Attendance.find(query).sort({ attendanceDate: 1, staffName: 1 }).lean();
+    const records = await Attendance.find(query)
+      .sort({ attendanceDate: 1, staffName: 1 })
+      .lean();
 
-    const totals = { Present: 0, Absent: 0, "Half Day": 0, Leave: 0, totalHours: 0 };
+    const totals = {
+      Present: 0,
+      Absent: 0,
+      "Half Day": 0,
+      Leave: 0,
+      totalHours: 0,
+    };
     records.forEach((r) => {
       if (totals[r.status] !== undefined) totals[r.status]++;
       totals.totalHours += r.workingHours || 0;
@@ -1477,7 +1581,8 @@ router.get("/tally/attendance-report", protect, adminOnly, async (req, res) => {
     // group by staff if no staffId filter
     const staffMap = {};
     records.forEach((r) => {
-      if (!staffMap[r.staffName]) staffMap[r.staffName] = { name: r.staffName, records: [] };
+      if (!staffMap[r.staffName])
+        staffMap[r.staffName] = { name: r.staffName, records: [] };
       staffMap[r.staffName].records.push({
         date: r.attendanceDate,
         status: r.status,
@@ -1508,12 +1613,26 @@ router.get("/tally/salary-report", protect, adminOnly, async (req, res) => {
     if (month) query.salaryMonth = Number(month);
     if (year) query.salaryYear = Number(year);
 
-    const salaries = await Salary.find(query).sort({ salaryYear: -1, salaryMonth: -1, staffName: 1 }).lean();
+    const salaries = await Salary.find(query)
+      .sort({ salaryYear: -1, salaryMonth: -1, staffName: 1 })
+      .lean();
     const advances = staffId
       ? await Advance.find({ staffId }).sort({ advanceDate: -1 }).lean()
-      : await Advance.find(month && year ? { adjustedMonth: Number(month), adjustedYear: Number(year) } : {}).sort({ advanceDate: -1 }).lean();
+      : await Advance.find(
+          month && year
+            ? { adjustedMonth: Number(month), adjustedYear: Number(year) }
+            : {},
+        )
+          .sort({ advanceDate: -1 })
+          .lean();
 
-    const totals = { basicSalary: 0, advanceDeducted: 0, netPayable: 0, paidAmount: 0, pending: 0 };
+    const totals = {
+      basicSalary: 0,
+      advanceDeducted: 0,
+      netPayable: 0,
+      paidAmount: 0,
+      pending: 0,
+    };
     salaries.forEach((s) => {
       totals.basicSalary += s.basicSalary || 0;
       totals.advanceDeducted += s.advanceDeducted || 0;
@@ -1563,13 +1682,25 @@ router.get("/tally/logistics-report", protect, adminOnly, async (req, res) => {
     const query = { dispatchDateTime: { $gte: start, $lte: end } };
     if (vehicleType) query.vehicleType = vehicleType;
 
-    const deliveries = await Delivery.find(query).sort({ dispatchDateTime: 1 }).lean();
+    const deliveries = await Delivery.find(query)
+      .sort({ dispatchDateTime: 1 })
+      .lean();
 
-    const summary = { total: 0, delivered: 0, inTransit: 0, pending: 0, cancelled: 0, totalOrderValue: 0 };
+    const summary = {
+      total: 0,
+      delivered: 0,
+      inTransit: 0,
+      pending: 0,
+      cancelled: 0,
+      totalOrderValue: 0,
+    };
     const driverMap = {};
 
     deliveries.forEach((d) => {
-      const orderAmt = (d.orders || []).reduce((s, o) => s + (o.orderAmount || 0), 0);
+      const orderAmt = (d.orders || []).reduce(
+        (s, o) => s + (o.orderAmount || 0),
+        0,
+      );
       summary.total++;
       summary.totalOrderValue += orderAmt;
       const st = d.deliveryStatus || "Pending";
@@ -1579,7 +1710,13 @@ router.get("/tally/logistics-report", protect, adminOnly, async (req, res) => {
       else summary.pending++;
 
       if (!driverMap[d.driverName]) {
-        driverMap[d.driverName] = { name: d.driverName, mobile: d.driverMobile, trips: 0, value: 0, vehicles: new Set() };
+        driverMap[d.driverName] = {
+          name: d.driverName,
+          mobile: d.driverMobile,
+          trips: 0,
+          value: 0,
+          vehicles: new Set(),
+        };
       }
       driverMap[d.driverName].trips++;
       driverMap[d.driverName].value += orderAmt;
@@ -1601,7 +1738,10 @@ router.get("/tally/logistics-report", protect, adminOnly, async (req, res) => {
         vehicleNumber: d.vehicleNumber,
         vehicleType: d.vehicleType,
         orders: d.orders || [],
-        totalOrderAmount: (d.orders || []).reduce((s, o) => s + (o.orderAmount || 0), 0),
+        totalOrderAmount: (d.orders || []).reduce(
+          (s, o) => s + (o.orderAmount || 0),
+          0,
+        ),
         status: d.deliveryStatus,
         remarks: d.remarks,
       })),

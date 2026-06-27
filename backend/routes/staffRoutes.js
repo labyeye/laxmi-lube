@@ -4,7 +4,6 @@ const { protect, staffOnly } = require("../middleware/authMiddleware");
 const Bill = require("../models/Bill");
 const Collection = require("../models/Collection");
 
-
 router.get("/dashboard", protect, async (req, res) => {
   try {
     const today = new Date();
@@ -17,41 +16,41 @@ router.get("/dashboard", protect, async (req, res) => {
 
     // Calculate totals from all bills
     const totalBillAmount = allBills.reduce(
-      (sum, bill) => sum + (bill.amount || 0), 
-      0
+      (sum, bill) => sum + (bill.amount || 0),
+      0,
     );
 
     // Get today's collections
     const todayCollections = await Collection.find({
       collectedOn: { $gte: today, $lt: tomorrow },
-      collectedBy: req.user._id
+      collectedBy: req.user._id,
     }).populate("bill", "billNumber retailer amount");
 
     const totalCollectedToday = todayCollections.reduce(
-      (sum, c) => sum + (c.amountCollected || 0), 
-      0
+      (sum, c) => sum + (c.amountCollected || 0),
+      0,
     );
 
     // Get bills with due amount
-    const billsWithDue = allBills.filter(bill => 
-      (bill.dueAmount || bill.amount) > 0
+    const billsWithDue = allBills.filter(
+      (bill) => (bill.dueAmount || bill.amount) > 0,
     );
 
     // Get completed bills (paid in full)
-    const completedBills = allBills.filter(bill => 
-      (bill.dueAmount || 0) <= 0
+    const completedBills = allBills.filter(
+      (bill) => (bill.dueAmount || 0) <= 0,
     );
 
     // Overdue concept removed (no dueDate) — treat all with dueAmount>0 as outstanding
     const overdueBillsCount = billsWithDue.length;
 
     // Format collections for response
-    const formattedCollections = todayCollections.map(c => ({
+    const formattedCollections = todayCollections.map((c) => ({
       billNumber: c.bill?.billNumber || "Unknown",
       retailer: c.bill?.retailer || "Unknown",
       amount: c.amountCollected,
       date: c.collectedOn,
-      status: "Completed"
+      status: "Completed",
     }));
 
     res.json({
@@ -62,7 +61,7 @@ router.get("/dashboard", protect, async (req, res) => {
       totalCompletedBills: completedBills.length,
       overdueBillsCount,
       collectionsToday: formattedCollections,
-      recentCollections: formattedCollections.slice(0, 5)
+      recentCollections: formattedCollections.slice(0, 5),
     });
   } catch (err) {
     console.error("Dashboard error:", err);
@@ -96,7 +95,6 @@ router.get("/bills-history", protect, staffOnly, async (req, res) => {
       .json({ message: "Error fetching bills history", error: err.message });
   }
 });
-
 
 router.put("/mark-paid/:id", protect, staffOnly, async (req, res) => {
   try {

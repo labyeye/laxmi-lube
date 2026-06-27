@@ -9,7 +9,7 @@
  */
 export const hasPermission = (user, module, action) => {
   // Admin has all permissions
-  if (user?.role === 'admin') {
+  if (user?.role === "admin") {
     return true;
   }
 
@@ -24,12 +24,12 @@ export const hasPermission = (user, module, action) => {
  * @returns {boolean} - True if user has at least one permission
  */
 export const hasAnyPermission = (user, permissionChecks) => {
-  if (user?.role === 'admin') {
+  if (user?.role === "admin") {
     return true;
   }
 
-  return permissionChecks.some(({ module, action }) => 
-    hasPermission(user, module, action)
+  return permissionChecks.some(({ module, action }) =>
+    hasPermission(user, module, action),
   );
 };
 
@@ -40,12 +40,12 @@ export const hasAnyPermission = (user, permissionChecks) => {
  * @returns {boolean} - True if user has all permissions
  */
 export const hasAllPermissions = (user, permissionChecks) => {
-  if (user?.role === 'admin') {
+  if (user?.role === "admin") {
     return true;
   }
 
-  return permissionChecks.every(({ module, action }) => 
-    hasPermission(user, module, action)
+  return permissionChecks.every(({ module, action }) =>
+    hasPermission(user, module, action),
   );
 };
 
@@ -56,7 +56,7 @@ export const hasAllPermissions = (user, permissionChecks) => {
  * @returns {Object} - Object with permission flags
  */
 export const getModulePermissions = (user, module) => {
-  if (user?.role === 'admin') {
+  if (user?.role === "admin") {
     // Return all permissions as true for admin
     return {
       view: true,
@@ -65,7 +65,7 @@ export const getModulePermissions = (user, module) => {
       delete: true,
       assign: true,
       approve: true,
-      export: true
+      export: true,
     };
   }
 
@@ -79,7 +79,7 @@ export const getModulePermissions = (user, module) => {
  * @returns {boolean} - True if user can view module
  */
 export const canAccessModule = (user, module) => {
-  return hasPermission(user, module, 'view');
+  return hasPermission(user, module, "view");
 };
 
 /**
@@ -88,21 +88,21 @@ export const canAccessModule = (user, module) => {
  * @returns {Array} - Array of module names
  */
 export const getAccessibleModules = (user) => {
-  if (user?.role === 'admin') {
+  if (user?.role === "admin") {
     return [
-      'dashboard',
-      'bills',
-      'collections',
-      'products',
-      'retailers',
-      'orders',
-      'deliveries',
-      'users',
-      'reports',
-      'salary',
-      'advances',
-      'attendance',
-      'settings'
+      "dashboard",
+      "bills",
+      "collections",
+      "products",
+      "retailers",
+      "orders",
+      "deliveries",
+      "users",
+      "reports",
+      "salary",
+      "advances",
+      "attendance",
+      "settings",
     ];
   }
 
@@ -124,11 +124,11 @@ export const getAccessibleModules = (user) => {
  * @returns {Array} - Filtered navigation items
  */
 export const filterNavigation = (navItems, user) => {
-  if (user?.role === 'admin') {
+  if (user?.role === "admin") {
     return navItems;
   }
 
-  return navItems.filter(item => {
+  return navItems.filter((item) => {
     if (!item.module) return true; // Items without module are always shown
     return canAccessModule(user, item.module);
   });
@@ -140,7 +140,7 @@ export const filterNavigation = (navItems, user) => {
  * @returns {boolean} - True if user is admin
  */
 export const isAdmin = (user) => {
-  return user?.role === 'admin';
+  return user?.role === "admin";
 };
 
 /**
@@ -149,7 +149,7 @@ export const isAdmin = (user) => {
  * @returns {boolean} - True if user is staff
  */
 export const isStaff = (user) => {
-  return user?.role === 'staff';
+  return user?.role === "staff";
 };
 
 /**
@@ -158,7 +158,7 @@ export const isStaff = (user) => {
  * @returns {boolean} - True if user is retailer
  */
 export const isRetailer = (user) => {
-  return user?.role === 'retailer';
+  return user?.role === "retailer";
 };
 
 /**
@@ -168,17 +168,19 @@ export const isRetailer = (user) => {
  * @returns {string} - Permission level description
  */
 export const getPermissionLevel = (user, module) => {
-  if (user?.role === 'admin') {
-    return 'Full Access';
+  if (user?.role === "admin") {
+    return "Full Access";
   }
 
   const permissions = getModulePermissions(user, module);
-  const actions = Object.entries(permissions).filter(([_, value]) => value === true);
-  
-  if (actions.length === 0) return 'No Access';
-  if (actions.length === 1 && actions[0][0] === 'view') return 'View Only';
-  if (actions.length === Object.keys(permissions).length) return 'Full Access';
-  
+  const actions = Object.entries(permissions).filter(
+    ([_, value]) => value === true,
+  );
+
+  if (actions.length === 0) return "No Access";
+  if (actions.length === 1 && actions[0][0] === "view") return "View Only";
+  if (actions.length === Object.keys(permissions).length) return "Full Access";
+
   return `Limited (${actions.length} permissions)`;
 };
 
@@ -193,5 +195,5 @@ export default {
   isAdmin,
   isStaff,
   isRetailer,
-  getPermissionLevel
+  getPermissionLevel,
 };

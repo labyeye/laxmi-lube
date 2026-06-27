@@ -2,11 +2,11 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
 const { protect, adminOnly } = require("../middleware/authMiddleware");
-const bcrypt = require('bcryptjs');
+const bcrypt = require("bcryptjs");
 
 router.get("/", protect, adminOnly, async (req, res) => {
   try {
-    const users = await User.find().select("-password"); 
+    const users = await User.find().select("-password");
     res.json(users);
   } catch (err) {
     res
@@ -27,16 +27,16 @@ router.post("/", protect, adminOnly, async (req, res) => {
     const user = new User({
       name,
       email,
-      password, 
+      password,
       role,
     });
 
-    await user.save(); 
+    await user.save();
 
     const userResponse = user.toObject();
-    delete userResponse.password; 
+    delete userResponse.password;
 
-    res.status(201).json(userResponse); 
+    res.status(201).json(userResponse);
   } catch (err) {
     res.status(400).json({ message: "Error adding user", error: err.message });
   }
@@ -76,7 +76,7 @@ router.put("/:id", protect, adminOnly, async (req, res) => {
     const updatedUser = await User.findByIdAndUpdate(
       req.params.id,
       { $set: updateData },
-      { new: true }
+      { new: true },
     ).select("-password");
 
     if (!updatedUser) {
@@ -95,11 +95,11 @@ router.put("/:id", protect, adminOnly, async (req, res) => {
 router.patch("/:id/permissions", protect, adminOnly, async (req, res) => {
   try {
     const { permissions } = req.body;
-    
+
     const updatedUser = await User.findByIdAndUpdate(
       req.params.id,
       { $set: { permissions } },
-      { new: true }
+      { new: true },
     ).select("-password");
 
     if (!updatedUser) {
@@ -108,7 +108,9 @@ router.patch("/:id/permissions", protect, adminOnly, async (req, res) => {
 
     res.json(updatedUser);
   } catch (err) {
-    res.status(400).json({ message: "Error updating permissions", error: err.message });
+    res
+      .status(400)
+      .json({ message: "Error updating permissions", error: err.message });
   }
 });
 // Add this to userRoutes.js
@@ -129,7 +131,9 @@ router.get("/staff", protect, adminOnly, async (req, res) => {
     const staffMembers = await User.find({ role: "staff" }).select("-password");
     res.json(staffMembers);
   } catch (err) {
-    res.status(500).json({ message: "Error fetching staff members", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Error fetching staff members", error: err.message });
   }
 });
 router.get("/:id", protect, adminOnly, async (req, res) => {

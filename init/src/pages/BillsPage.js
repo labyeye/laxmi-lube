@@ -196,11 +196,14 @@ const BillsPage = () => {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("https://backend.laxmilube.in/api/bills/import", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
+      const response = await fetch(
+        "https://backend.laxmilube.in/api/bills/import",
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        },
+      );
 
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);

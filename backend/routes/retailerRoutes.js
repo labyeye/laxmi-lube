@@ -262,7 +262,8 @@ router.post(
 
 router.put("/:id", protect, adminOnly, async (req, res) => {
   try {
-    const { name, address1, address2, assignedTo, dayAssigned, phone } = req.body;
+    const { name, address1, address2, assignedTo, dayAssigned, phone } =
+      req.body;
     const retailer = await Retailer.findById(req.params.id);
 
     if (!retailer) {

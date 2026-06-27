@@ -116,7 +116,17 @@ const DeliverySchema = new mongoose.Schema(
     // Status Tracking
     deliveryStatus: {
       type: String,
-      enum: ["Pending", "Assigned", "Out for Delivery", "In Transit", "Reached Outlet", "Delivered", "Failed", "Returned", "Cancelled"],
+      enum: [
+        "Pending",
+        "Assigned",
+        "Out for Delivery",
+        "In Transit",
+        "Reached Outlet",
+        "Delivered",
+        "Failed",
+        "Returned",
+        "Cancelled",
+      ],
       default: "Pending",
       index: true,
     },

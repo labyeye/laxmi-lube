@@ -21,7 +21,7 @@ const ReportPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [, setShowDatePicker] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [dateRange, setDateRange] = useState({
@@ -51,7 +51,7 @@ const ReportPage = () => {
             Authorization: `Bearer ${token}`,
           },
           responseType: "blob",
-        }
+        },
       );
 
       const blob = new Blob([response.data], {
@@ -60,7 +60,7 @@ const ReportPage = () => {
 
       const filename = `today_collections_${format(
         new Date(),
-        "yyyyMMdd"
+        "yyyyMMdd",
       )}.xlsx`;
       saveAs(blob, filename);
     } catch (error) {
@@ -132,12 +132,6 @@ const ReportPage = () => {
     setShowDatePicker(false);
   };
 
-  const handleDateChange = (days) => {
-    const newDate = subDays(selectedDate, days);
-    setSelectedDate(newDate);
-    setPagination({ ...pagination, page: 1 });
-  };
-
   const handleDownloadDateCollections = async () => {
     try {
       setLoading(true);
@@ -158,7 +152,7 @@ const ReportPage = () => {
             endDate: format(dateRange.endDate, "yyyy-MM-dd"),
           },
           responseType: "blob",
-        }
+        },
       );
 
       const blob = new Blob([response.data], {
@@ -167,7 +161,7 @@ const ReportPage = () => {
 
       const filename = `collections_${format(
         dateRange.startDate,
-        "yyyyMMdd"
+        "yyyyMMdd",
       )}_to_${format(dateRange.endDate, "yyyyMMdd")}.xlsx`;
       saveAs(blob, filename);
     } catch (error) {
@@ -214,14 +208,13 @@ const ReportPage = () => {
                   : handleDownloadTodayCollections
               }
             >
-              <FaFileExcel /> Export{" "} Collections
+              <FaFileExcel /> Export Collections
             </ExportButton>
           </ActionsContainer>
         </Header>
 
         {showHistory && (
           <>
-            // Replace the DateNavigation component with this:
             <DateRangeContainer>
               <DateRangeGroup>
                 <DateLabel>From:</DateLabel>
@@ -332,7 +325,7 @@ const ReportPage = () => {
                             <td>
                               {format(
                                 new Date(collection.paymentDate),
-                                "dd/MM/yyyy"
+                                "dd/MM/yyyy",
                               )}
                             </td>
                             <td>{collection.collectedByName || "System"}</td>
@@ -371,7 +364,7 @@ const ReportPage = () => {
                                       <div key={key}>
                                         <strong>{key}:</strong> {value || "N/A"}
                                       </div>
-                                    )
+                                    ),
                                   )
                                 ) : (
                                   <div>No payment details</div>
@@ -396,7 +389,7 @@ const ReportPage = () => {
                             <td>N/A</td>
                             <td>No collections</td>
                           </tr>,
-                        ]
+                        ],
                   )
                 ) : (
                   <tr>
@@ -446,15 +439,6 @@ const ReportPage = () => {
   );
 };
 
-const DateNavigation = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding: 10px;
-  background-color: var(--nb-muted);
-  border-radius: 4px;
-`;
 const DateRangeContainer = styled.div`
   display: flex;
   align-items: center;
@@ -500,34 +484,6 @@ const SearchButton = styled.button`
   &:hover {
     background-color: var(--nb-blue);
   }
-`;
-
-const DateNavButton = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 15px;
-  background-color: var(--nb-blue);
-  color: var(--nb-white);
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
-
-  &:hover {
-    background-color: var(--nb-blue);
-  }
-
-  &:disabled {
-    background-color: var(--nb-border);
-    cursor: not-allowed;
-  }
-`;
-
-const DateDisplay = styled.div`
-  font-weight: 600;
-  color: var(--nb-ink);
 `;
 
 const PaginationContainer = styled.div`

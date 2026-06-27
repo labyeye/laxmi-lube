@@ -1,7 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 import Layout from "../components/Layout";
-import { FaSearch, FaTimes, FaFilter, FaEdit, FaTrash, FaPlus, FaUpload } from "react-icons/fa";
+import {
+  FaSearch,
+  FaTimes,
+  FaFilter,
+  FaEdit,
+  FaTrash,
+  FaPlus,
+  FaUpload,
+} from "react-icons/fa";
 import * as xlsx from "xlsx";
 import DynamicForm from "../components/DynamicForm";
 import {
@@ -107,10 +115,22 @@ const ProductList = () => {
   };
 
   const handleSave = async () => {
-    if (!editForm.name?.trim()) { setEditError("Product Name is required."); return; }
-    if (!editForm.code?.trim()) { setEditError("Product Code is required."); return; }
-    if (editForm.price === "" || editForm.price === undefined) { setEditError("Price is required."); return; }
-    if (editForm.stock === "" || editForm.stock === undefined) { setEditError("Stock is required."); return; }
+    if (!editForm.name?.trim()) {
+      setEditError("Product Name is required.");
+      return;
+    }
+    if (!editForm.code?.trim()) {
+      setEditError("Product Code is required.");
+      return;
+    }
+    if (editForm.price === "" || editForm.price === undefined) {
+      setEditError("Price is required.");
+      return;
+    }
+    if (editForm.stock === "" || editForm.stock === undefined) {
+      setEditError("Stock is required.");
+      return;
+    }
     try {
       setSaving(true);
       setEditError("");
@@ -193,10 +213,14 @@ const ProductList = () => {
           const jsonData = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
 
           const headers = jsonData[0] || [];
-          const lowerHeaders = headers.map((h) => String(h).toLowerCase().trim());
+          const lowerHeaders = headers.map((h) =>
+            String(h).toLowerCase().trim(),
+          );
 
           const hasCode = lowerHeaders.some((h) => h.includes("code"));
-          const hasName = lowerHeaders.some((h) => h.includes("product name") || h.includes("name"));
+          const hasName = lowerHeaders.some(
+            (h) => h.includes("product name") || h.includes("name"),
+          );
           const hasPrice = lowerHeaders.some((h) => h.includes("price"));
           const hasWeight = lowerHeaders.some((h) => h.includes("weight"));
           const hasStock = lowerHeaders.some((h) => h.includes("stock"));
@@ -211,7 +235,8 @@ const ProductList = () => {
           resolve(`Error reading Excel file: ${validationError.message}`);
         }
       };
-      reader.onerror = () => resolve("Error reading file. Please check if the file is valid.");
+      reader.onerror = () =>
+        resolve("Error reading file. Please check if the file is valid.");
       reader.readAsArrayBuffer(selectedFile);
     });
   };
@@ -238,11 +263,14 @@ const ProductList = () => {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("https://backend.laxmilube.in/api/products/import", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
+      const response = await fetch(
+        "https://backend.laxmilube.in/api/products/import",
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        },
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -270,7 +298,9 @@ const ProductList = () => {
           try {
             const data = JSON.parse(line);
             if (data.type === "result") {
-              setMessage(`Successfully imported ${data.importedCount} products. ${data.errorCount} records had errors.`);
+              setMessage(
+                `Successfully imported ${data.importedCount} products. ${data.errorCount} records had errors.`,
+              );
               if (data.errorCount > 0) {
                 const exampleErrors = data.errors?.join("; ") || "";
                 setError(`Some rows had errors. ${exampleErrors}`);
@@ -296,7 +326,9 @@ const ProductList = () => {
 
   // ── Filter helpers ──
   const companyOptions = useMemo(() => {
-    return [...new Set(records.map((r) => r.data?.company).filter(Boolean))].sort();
+    return [
+      ...new Set(records.map((r) => r.data?.company).filter(Boolean)),
+    ].sort();
   }, [records]);
 
   const activeFilterCount = useMemo(() => {
@@ -323,20 +355,33 @@ const ProductList = () => {
       result = result.filter((r) => {
         const d = r.data || {};
         return (
-          String(d.name || "").toLowerCase().includes(q) ||
-          String(d.code || "").toLowerCase().includes(q) ||
-          String(d.company || "").toLowerCase().includes(q)
+          String(d.name || "")
+            .toLowerCase()
+            .includes(q) ||
+          String(d.code || "")
+            .toLowerCase()
+            .includes(q) ||
+          String(d.company || "")
+            .toLowerCase()
+            .includes(q)
         );
       });
     }
     if (selectedCompany !== "all") {
       result = result.filter((r) => r.data?.company === selectedCompany);
     }
-    if (stockFilter === "instock") result = result.filter((r) => Number(r.data?.stock) > 0);
-    else if (stockFilter === "outofstock") result = result.filter((r) => Number(r.data?.stock) === 0);
-    else if (stockFilter === "low") result = result.filter((r) => Number(r.data?.stock) > 0 && Number(r.data?.stock) <= 10);
-    if (minPrice !== "") result = result.filter((r) => Number(r.data?.price) >= Number(minPrice));
-    if (maxPrice !== "") result = result.filter((r) => Number(r.data?.price) <= Number(maxPrice));
+    if (stockFilter === "instock")
+      result = result.filter((r) => Number(r.data?.stock) > 0);
+    else if (stockFilter === "outofstock")
+      result = result.filter((r) => Number(r.data?.stock) === 0);
+    else if (stockFilter === "low")
+      result = result.filter(
+        (r) => Number(r.data?.stock) > 0 && Number(r.data?.stock) <= 10,
+      );
+    if (minPrice !== "")
+      result = result.filter((r) => Number(r.data?.price) >= Number(minPrice));
+    if (maxPrice !== "")
+      result = result.filter((r) => Number(r.data?.price) <= Number(maxPrice));
     return result;
   }, [records, searchTerm, selectedCompany, stockFilter, minPrice, maxPrice]);
 
@@ -344,7 +389,9 @@ const ProductList = () => {
     <Layout>
       <TopBar>
         <PageHeader>Product List</PageHeader>
-        <Stats>{filteredRecords.length} of {records.length} products</Stats>
+        <Stats>
+          {filteredRecords.length} of {records.length} products
+        </Stats>
         <AddButton onClick={openAddModal}>
           <FaPlus size={12} /> Add Product
         </AddButton>
@@ -360,11 +407,16 @@ const ProductList = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           {searchTerm && (
-            <ClearBtn onClick={() => setSearchTerm("")}><FaTimes size={12} /></ClearBtn>
+            <ClearBtn onClick={() => setSearchTerm("")}>
+              <FaTimes size={12} />
+            </ClearBtn>
           )}
         </SearchContainer>
 
-        <FilterToggle onClick={() => setShowFilters((v) => !v)} active={showFilters || activeFilterCount > 0}>
+        <FilterToggle
+          onClick={() => setShowFilters((v) => !v)}
+          active={showFilters || activeFilterCount > 0}
+        >
           <FaFilter size={13} />
           Filters
           {activeFilterCount > 0 && <Badge>{activeFilterCount}</Badge>}
@@ -379,23 +431,49 @@ const ProductList = () => {
         <FilterPanel>
           <FilterGroup>
             <FilterLabel>Company</FilterLabel>
-            <FilterSelect value={selectedCompany} onChange={(e) => setSelectedCompany(e.target.value)}>
+            <FilterSelect
+              value={selectedCompany}
+              onChange={(e) => setSelectedCompany(e.target.value)}
+            >
               <option value="all">All Companies</option>
-              {companyOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+              {companyOptions.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </FilterSelect>
           </FilterGroup>
           <FilterGroup>
             <FilterLabel>Stock Status</FilterLabel>
-            <FilterSelect value={stockFilter} onChange={(e) => setStockFilter(e.target.value)}>
-              {STOCK_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+            <FilterSelect
+              value={stockFilter}
+              onChange={(e) => setStockFilter(e.target.value)}
+            >
+              {STOCK_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
             </FilterSelect>
           </FilterGroup>
           <FilterGroup>
             <FilterLabel>Price Range (₹)</FilterLabel>
             <PriceRow>
-              <PriceInput type="number" placeholder="Min" value={minPrice} min={0} onChange={(e) => setMinPrice(e.target.value)} />
+              <PriceInput
+                type="number"
+                placeholder="Min"
+                value={minPrice}
+                min={0}
+                onChange={(e) => setMinPrice(e.target.value)}
+              />
               <PriceSep>–</PriceSep>
-              <PriceInput type="number" placeholder="Max" value={maxPrice} min={0} onChange={(e) => setMaxPrice(e.target.value)} />
+              <PriceInput
+                type="number"
+                placeholder="Max"
+                value={maxPrice}
+                min={0}
+                onChange={(e) => setMaxPrice(e.target.value)}
+              />
             </PriceRow>
           </FilterGroup>
         </FilterPanel>
@@ -403,10 +481,38 @@ const ProductList = () => {
 
       {activeFilterCount > 0 && (
         <ChipsRow>
-          {selectedCompany !== "all" && <Chip>Company: {selectedCompany}<ChipRemove onClick={() => setSelectedCompany("all")}><FaTimes size={10} /></ChipRemove></Chip>}
-          {stockFilter !== "all" && <Chip>{STOCK_OPTIONS.find((o) => o.value === stockFilter)?.label}<ChipRemove onClick={() => setStockFilter("all")}><FaTimes size={10} /></ChipRemove></Chip>}
-          {minPrice !== "" && <Chip>Min ₹{minPrice}<ChipRemove onClick={() => setMinPrice("")}><FaTimes size={10} /></ChipRemove></Chip>}
-          {maxPrice !== "" && <Chip>Max ₹{maxPrice}<ChipRemove onClick={() => setMaxPrice("")}><FaTimes size={10} /></ChipRemove></Chip>}
+          {selectedCompany !== "all" && (
+            <Chip>
+              Company: {selectedCompany}
+              <ChipRemove onClick={() => setSelectedCompany("all")}>
+                <FaTimes size={10} />
+              </ChipRemove>
+            </Chip>
+          )}
+          {stockFilter !== "all" && (
+            <Chip>
+              {STOCK_OPTIONS.find((o) => o.value === stockFilter)?.label}
+              <ChipRemove onClick={() => setStockFilter("all")}>
+                <FaTimes size={10} />
+              </ChipRemove>
+            </Chip>
+          )}
+          {minPrice !== "" && (
+            <Chip>
+              Min ₹{minPrice}
+              <ChipRemove onClick={() => setMinPrice("")}>
+                <FaTimes size={10} />
+              </ChipRemove>
+            </Chip>
+          )}
+          {maxPrice !== "" && (
+            <Chip>
+              Max ₹{maxPrice}
+              <ChipRemove onClick={() => setMaxPrice("")}>
+                <FaTimes size={10} />
+              </ChipRemove>
+            </Chip>
+          )}
         </ChipsRow>
       )}
 
@@ -435,7 +541,10 @@ const ProductList = () => {
             <tbody>
               {filteredRecords.length === 0 ? (
                 <tr>
-                  <Td colSpan={10} style={{ textAlign: "center", opacity: 0.5 }}>
+                  <Td
+                    colSpan={10}
+                    style={{ textAlign: "center", opacity: 0.5 }}
+                  >
                     No products found
                   </Td>
                 </tr>
@@ -447,23 +556,37 @@ const ProductList = () => {
                     <tr key={record._id}>
                       <Td>{index + 1}</Td>
                       <Td>{d.company || "—"}</Td>
-                      <Td><CodeBadge>{d.code || "—"}</CodeBadge></Td>
-                      <Td><strong>{d.name || "—"}</strong></Td>
+                      <Td>
+                        <CodeBadge>{d.code || "—"}</CodeBadge>
+                      </Td>
+                      <Td>
+                        <strong>{d.name || "—"}</strong>
+                      </Td>
                       <Td>₹{d.price ?? "—"}</Td>
                       <Td>₹{d.mrp ?? "—"}</Td>
                       <Td>{d.weight ?? "—"}</Td>
                       <Td>{d.scheme ?? "—"}</Td>
                       <Td>
-                        <StockBadge low={stock <= 10 && stock > 0} out={stock === 0}>
+                        <StockBadge
+                          low={stock <= 10 && stock > 0}
+                          out={stock === 0}
+                        >
                           {stock}
                         </StockBadge>
                       </Td>
                       <Td>
                         <ActionGroup>
-                          <ActionBtn title="Edit product" onClick={() => openEdit(record)}>
+                          <ActionBtn
+                            title="Edit product"
+                            onClick={() => openEdit(record)}
+                          >
                             <FaEdit size={14} />
                           </ActionBtn>
-                          <ActionBtn title="Delete product" danger onClick={() => openDelete(record)}>
+                          <ActionBtn
+                            title="Delete product"
+                            danger
+                            onClick={() => openDelete(record)}
+                          >
                             <FaTrash size={14} />
                           </ActionBtn>
                         </ActionGroup>
@@ -483,7 +606,9 @@ const ProductList = () => {
           <ModalBox onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>Edit Product</ModalTitle>
-              <ModalClose onClick={closeEdit}><FaTimes /></ModalClose>
+              <ModalClose onClick={closeEdit}>
+                <FaTimes />
+              </ModalClose>
             </ModalHeader>
             <ModalBody>
               {PRODUCT_FIELDS.map((field) => (
@@ -495,7 +620,9 @@ const ProductList = () => {
                     onChange={(e) =>
                       handleEditChange(
                         field.key,
-                        field.type === "number" ? e.target.value : e.target.value
+                        field.type === "number"
+                          ? e.target.value
+                          : e.target.value,
                       )
                     }
                     min={field.type === "number" ? 0 : undefined}
@@ -520,7 +647,9 @@ const ProductList = () => {
           <ModalBox small onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>Delete Product</ModalTitle>
-              <ModalClose onClick={closeDelete}><FaTimes /></ModalClose>
+              <ModalClose onClick={closeDelete}>
+                <FaTimes />
+              </ModalClose>
             </ModalHeader>
             <ModalBody>
               <DeleteMsg>
@@ -544,14 +673,22 @@ const ProductList = () => {
           <ModalBox onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>Add Product</ModalTitle>
-              <ModalClose onClick={closeAddModal}><FaTimes /></ModalClose>
+              <ModalClose onClick={closeAddModal}>
+                <FaTimes />
+              </ModalClose>
             </ModalHeader>
 
             <TabRow>
-              <TabButton active={addTab === "manual"} onClick={() => setAddTab("manual")}>
+              <TabButton
+                active={addTab === "manual"}
+                onClick={() => setAddTab("manual")}
+              >
                 Manual Entry
               </TabButton>
-              <TabButton active={addTab === "import"} onClick={() => setAddTab("import")}>
+              <TabButton
+                active={addTab === "import"}
+                onClick={() => setAddTab("import")}
+              >
                 Excel Import
               </TabButton>
             </TabRow>
@@ -576,16 +713,29 @@ const ProductList = () => {
                 <ImportForm onSubmit={handleImport}>
                   <FormGroup>
                     <FormLabel>Upload Products Excel File</FormLabel>
-                    <FormInput type="file" accept=".xlsx,.xls" onChange={handleFileChange} />
+                    <FormInput
+                      type="file"
+                      accept=".xlsx,.xls"
+                      onChange={handleFileChange}
+                    />
                     {file && <SmallText>{file.name}</SmallText>}
                   </FormGroup>
 
                   <SmallText>
-                    Required columns: Code, Product Name, Price, Weight, Stock. Scheme is optional.
+                    Required columns: Code, Product Name, Price, Weight, Stock.
+                    Scheme is optional.
                   </SmallText>
 
-                  <ModalFooter style={{ padding: 0, borderTop: "none", marginTop: "0.75rem" }}>
-                    <CancelBtn type="button" onClick={closeAddModal}>Cancel</CancelBtn>
+                  <ModalFooter
+                    style={{
+                      padding: 0,
+                      borderTop: "none",
+                      marginTop: "0.75rem",
+                    }}
+                  >
+                    <CancelBtn type="button" onClick={closeAddModal}>
+                      Cancel
+                    </CancelBtn>
                     <SaveBtn type="submit" disabled={importLoading || !file}>
                       <FaUpload size={12} style={{ marginRight: 6 }} />
                       {importLoading ? "Uploading..." : "Import Products"}
@@ -677,7 +827,9 @@ const ClearBtn = styled.button`
   padding: 0;
   display: flex;
   align-items: center;
-  &:hover { opacity: 0.8; }
+  &:hover {
+    opacity: 0.8;
+  }
 `;
 
 const FilterToggle = styled.button`
@@ -685,15 +837,18 @@ const FilterToggle = styled.button`
   align-items: center;
   gap: 0.4rem;
   padding: 0.5rem 1rem;
-  border: 1px solid ${({ active }) => active ? "var(--nb-blue)" : "var(--nb-border)"};
+  border: 1px solid
+    ${({ active }) => (active ? "var(--nb-blue)" : "var(--nb-border)")};
   border-radius: 6px;
-  background: ${({ active }) => active ? "var(--nb-blue)" : "var(--nb-white)"};
-  color: ${({ active }) => active ? "#fff" : "var(--nb-ink)"};
+  background: ${({ active }) => (active ? "var(--nb-blue)" : "var(--nb-white)")};
+  color: ${({ active }) => (active ? "#fff" : "var(--nb-ink)")};
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
-  &:hover { border-color: var(--nb-blue); }
+  &:hover {
+    border-color: var(--nb-blue);
+  }
 `;
 
 const Badge = styled.span`
@@ -715,7 +870,9 @@ const ClearAllBtn = styled.button`
   cursor: pointer;
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
-  &:hover { text-decoration: underline; }
+  &:hover {
+    text-decoration: underline;
+  }
 `;
 
 const FilterPanel = styled.div`
@@ -754,7 +911,9 @@ const FilterSelect = styled.select`
   font-size: 0.875rem;
   outline: none;
   cursor: pointer;
-  &:focus { border-color: var(--nb-blue); }
+  &:focus {
+    border-color: var(--nb-blue);
+  }
 `;
 
 const PriceRow = styled.div`
@@ -772,9 +931,13 @@ const PriceInput = styled.input`
   color: var(--nb-ink);
   font-size: 0.875rem;
   outline: none;
-  &:focus { border-color: var(--nb-blue); }
+  &:focus {
+    border-color: var(--nb-blue);
+  }
   &::-webkit-outer-spin-button,
-  &::-webkit-inner-spin-button { -webkit-appearance: none; }
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+  }
 `;
 
 const PriceSep = styled.span`
@@ -811,7 +974,9 @@ const ChipRemove = styled.button`
   display: flex;
   align-items: center;
   opacity: 0.75;
-  &:hover { opacity: 1; }
+  &:hover {
+    opacity: 1;
+  }
 `;
 
 const ErrorMessage = styled.div`
@@ -883,8 +1048,7 @@ const StockBadge = styled.span`
   font-weight: 600;
   background: ${({ out, low }) =>
     out ? "#fee2e2" : low ? "#fef9c3" : "#dcfce7"};
-  color: ${({ out, low }) =>
-    out ? "#dc2626" : low ? "#a16207" : "#166534"};
+  color: ${({ out, low }) => (out ? "#dc2626" : low ? "#a16207" : "#166534")};
 `;
 
 const ActionGroup = styled.div`
@@ -898,16 +1062,16 @@ const ActionBtn = styled.button`
   justify-content: center;
   width: 30px;
   height: 30px;
-  border: 1px solid ${({ danger }) => danger ? "#fca5a5" : "var(--nb-border)"};
+  border: 1px solid ${({ danger }) => (danger ? "#fca5a5" : "var(--nb-border)")};
   border-radius: 6px;
-  background: ${({ danger }) => danger ? "#fff1f1" : "var(--nb-white)"};
-  color: ${({ danger }) => danger ? "#dc2626" : "var(--nb-ink)"};
+  background: ${({ danger }) => (danger ? "#fff1f1" : "var(--nb-white)")};
+  color: ${({ danger }) => (danger ? "#dc2626" : "var(--nb-ink)")};
   cursor: pointer;
   transition: all 0.15s;
   &:hover {
-    background: ${({ danger }) => danger ? "#fee2e2" : "var(--nb-muted)"};
-    border-color: ${({ danger }) => danger ? "#f87171" : "var(--nb-blue)"};
-    color: ${({ danger }) => danger ? "#b91c1c" : "var(--nb-blue)"};
+    background: ${({ danger }) => (danger ? "#fee2e2" : "var(--nb-muted)")};
+    border-color: ${({ danger }) => (danger ? "#f87171" : "var(--nb-blue)")};
+    color: ${({ danger }) => (danger ? "#b91c1c" : "var(--nb-blue)")};
   }
 `;
 
@@ -927,8 +1091,8 @@ const ModalBox = styled.div`
   background: var(--nb-white);
   border-radius: 12px;
   width: 100%;
-  max-width: ${({ small }) => small ? "420px" : "560px"};
-  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  max-width: ${({ small }) => (small ? "420px" : "560px")};
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
   max-height: 90vh;
@@ -958,7 +1122,9 @@ const ModalClose = styled.button`
   font-size: 1rem;
   display: flex;
   align-items: center;
-  &:hover { opacity: 1; }
+  &:hover {
+    opacity: 1;
+  }
 `;
 
 const ModalBody = styled.div`
@@ -979,8 +1145,8 @@ const TabButton = styled.button`
   border: 1px solid var(--nb-border);
   border-radius: 6px;
   padding: 0.45rem 0.75rem;
-  background: ${({ active }) => active ? "var(--nb-blue)" : "var(--nb-white)"};
-  color: ${({ active }) => active ? "#fff" : "var(--nb-ink)"};
+  background: ${({ active }) => (active ? "var(--nb-blue)" : "var(--nb-white)")};
+  color: ${({ active }) => (active ? "#fff" : "var(--nb-ink)")};
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
@@ -1029,9 +1195,13 @@ const FormInput = styled.input`
   color: var(--nb-ink);
   background: var(--nb-white);
   outline: none;
-  &:focus { border-color: var(--nb-blue); }
+  &:focus {
+    border-color: var(--nb-blue);
+  }
   &::-webkit-outer-spin-button,
-  &::-webkit-inner-spin-button { -webkit-appearance: none; }
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+  }
 `;
 
 const EditError = styled.div`
@@ -1057,7 +1227,9 @@ const CancelBtn = styled.button`
   color: var(--nb-ink);
   font-size: 0.9rem;
   cursor: pointer;
-  &:hover { background: var(--nb-muted); }
+  &:hover {
+    background: var(--nb-muted);
+  }
 `;
 
 const SaveBtn = styled.button`
@@ -1069,8 +1241,13 @@ const SaveBtn = styled.button`
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  &:disabled { opacity: 0.6; cursor: not-allowed; }
-  &:hover:not(:disabled) { opacity: 0.9; }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
 `;
 
 const DeleteConfirmBtn = styled.button`
@@ -1082,8 +1259,13 @@ const DeleteConfirmBtn = styled.button`
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  &:disabled { opacity: 0.6; cursor: not-allowed; }
-  &:hover:not(:disabled) { background: #b91c1c; }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  &:hover:not(:disabled) {
+    background: #b91c1c;
+  }
 `;
 
 export default ProductList;

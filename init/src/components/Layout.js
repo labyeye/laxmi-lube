@@ -611,7 +611,7 @@ const CategoryIcon = styled.div`
     height: 32px;
     padding: 8px; /* space around icon */
     background: #0072bc;
-    color: #FFFFFF;
+    color: #ffffff;
     border-radius: 8px;
     box-shadow: var(--nb-shadow-sm);
     flex-shrink: 0;
@@ -682,7 +682,7 @@ const NavItem = styled.li`
     color: var(--nb-white);
 
     svg {
-    color: var(--nb-white);
+      color: var(--nb-white);
     }
 
     span {

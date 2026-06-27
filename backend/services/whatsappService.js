@@ -7,12 +7,17 @@ const ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
 
 // ── Template names (must match approved Meta templates) ───────────────────────
 // Retailer receipt template: sends PDF + two quick-reply buttons
-const RETAILER_RECEIPT_TEMPLATE = process.env.WHATSAPP_RETAILER_TEMPLATE || "collection_receipt";
+const RETAILER_RECEIPT_TEMPLATE =
+  process.env.WHATSAPP_RETAILER_TEMPLATE || "collection_receipt";
 // Admin notification template: plain text update for admin
-const ADMIN_NOTIFY_TEMPLATE = process.env.WHATSAPP_ADMIN_TEMPLATE || "collection_admin_notify";
+const ADMIN_NOTIFY_TEMPLATE =
+  process.env.WHATSAPP_ADMIN_TEMPLATE || "collection_admin_notify";
 
 function headers() {
-  return { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" };
+  return {
+    Authorization: `Bearer ${ACCESS_TOKEN}`,
+    "Content-Type": "application/json",
+  };
 }
 
 /**
@@ -25,11 +30,9 @@ async function uploadPDF(pdfBuffer, filename) {
   form.append("messaging_product", "whatsapp");
   form.append("type", "application/pdf");
 
-  const res = await axios.post(
-    `${BASE_URL}/${PHONE_NUMBER_ID}/media`,
-    form,
-    { headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, ...form.getHeaders() } }
-  );
+  const res = await axios.post(`${BASE_URL}/${PHONE_NUMBER_ID}/media`, form, {
+    headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, ...form.getHeaders() },
+  });
   return res.data.id;
 }
 
@@ -47,7 +50,13 @@ async function uploadPDF(pdfBuffer, filename) {
  * @param {Object} params     - { retailerName, amount, billNumber, date, staffName }
  * @param {string} collectionId - used as button payload so webhook can identify which collection
  */
-async function sendRetailerReceipt(phone, pdfBuffer, filename, params, collectionId) {
+async function sendRetailerReceipt(
+  phone,
+  pdfBuffer,
+  filename,
+  params,
+  collectionId,
+) {
   const mediaId = await uploadPDF(pdfBuffer, filename);
   const to = `91${phone}`; // India country code
 
@@ -61,7 +70,9 @@ async function sendRetailerReceipt(phone, pdfBuffer, filename, params, collectio
       components: [
         {
           type: "header",
-          parameters: [{ type: "document", document: { id: mediaId, filename } }],
+          parameters: [
+            { type: "document", document: { id: mediaId, filename } },
+          ],
         },
         {
           type: "body",
@@ -77,19 +88,27 @@ async function sendRetailerReceipt(phone, pdfBuffer, filename, params, collectio
           type: "button",
           sub_type: "quick_reply",
           index: "0",
-          parameters: [{ type: "payload", payload: `RECEIVED:${collectionId}` }],
+          parameters: [
+            { type: "payload", payload: `RECEIVED:${collectionId}` },
+          ],
         },
         {
           type: "button",
           sub_type: "quick_reply",
           index: "1",
-          parameters: [{ type: "payload", payload: `NOT_RECEIVED:${collectionId}` }],
+          parameters: [
+            { type: "payload", payload: `NOT_RECEIVED:${collectionId}` },
+          ],
         },
       ],
     },
   };
 
-  const res = await axios.post(`${BASE_URL}/${PHONE_NUMBER_ID}/messages`, body, { headers: headers() });
+  const res = await axios.post(
+    `${BASE_URL}/${PHONE_NUMBER_ID}/messages`,
+    body,
+    { headers: headers() },
+  );
   return res.data;
 }
 
@@ -128,7 +147,11 @@ async function sendAdminNotification(adminPhone, params) {
     },
   };
 
-  const res = await axios.post(`${BASE_URL}/${PHONE_NUMBER_ID}/messages`, body, { headers: headers() });
+  const res = await axios.post(
+    `${BASE_URL}/${PHONE_NUMBER_ID}/messages`,
+    body,
+    { headers: headers() },
+  );
   return res.data;
 }
 

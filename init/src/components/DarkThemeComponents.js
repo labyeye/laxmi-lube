@@ -21,7 +21,9 @@ export const DarkCard = styled.div`
   padding: ${(props) => props.padding || "1.5rem"};
   box-shadow: var(--nb-shadow-md);
   margin-bottom: ${(props) => props.marginBottom || "1.5rem"};
-  transition: transform var(--nb-transition), box-shadow var(--nb-transition);
+  transition:
+    transform var(--nb-transition),
+    box-shadow var(--nb-transition);
 
   &:hover {
     transform: translateY(-2px);
@@ -114,7 +116,9 @@ export const PrimaryButton = styled.button`
   font-size: ${(props) => (props.size === "large" ? "1rem" : "0.9rem")};
   font-weight: 700;
   cursor: pointer;
-  transition: transform var(--nb-transition), box-shadow var(--nb-transition);
+  transition:
+    transform var(--nb-transition),
+    box-shadow var(--nb-transition);
   box-shadow: var(--nb-shadow-md);
 
   &:hover {
@@ -155,7 +159,9 @@ export const IconButton = styled.button`
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform var(--nb-transition), box-shadow var(--nb-transition);
+  transition:
+    transform var(--nb-transition),
+    box-shadow var(--nb-transition);
   box-shadow: var(--nb-shadow-sm);
 
   &:hover {
@@ -188,7 +194,9 @@ export const Input = styled.input`
   border-radius: 0.5rem;
   padding: 0.75rem 1rem;
   font-size: 0.95rem;
-  transition: box-shadow var(--nb-transition), transform var(--nb-transition);
+  transition:
+    box-shadow var(--nb-transition),
+    transform var(--nb-transition);
 
   &:focus {
     outline: none;
@@ -217,7 +225,9 @@ export const TextArea = styled.textarea`
   resize: vertical;
   min-height: 100px;
   font-family: inherit;
-  transition: box-shadow var(--nb-transition), transform var(--nb-transition);
+  transition:
+    box-shadow var(--nb-transition),
+    transform var(--nb-transition);
 
   &:focus {
     outline: none;
@@ -239,7 +249,9 @@ export const Select = styled.select`
   padding: 0.75rem 1rem;
   font-size: 0.95rem;
   cursor: pointer;
-  transition: box-shadow var(--nb-transition), transform var(--nb-transition);
+  transition:
+    box-shadow var(--nb-transition),
+    transform var(--nb-transition);
 
   &:focus {
     outline: none;
@@ -328,7 +340,9 @@ export const Badge = styled.span`
     }
   }};
   color: ${(props) =>
-    props.variant === "success" || props.variant === "warning" || props.variant === "error"
+    props.variant === "success" ||
+    props.variant === "warning" ||
+    props.variant === "error"
       ? "var(--nb-white)"
       : "var(--nb-ink)"};
   border: 1px solid var(--nb-border);
@@ -367,7 +381,7 @@ export const EmptyState = styled.div`
   padding: 3rem;
   text-align: center;
   color: var(--nb-blue-medium);
-  
+
   svg {
     color: var(--nb-blue);
     font-size: 3rem;

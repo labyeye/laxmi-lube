@@ -444,7 +444,7 @@ const CollectionIcon = styled.div`
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: var(--nb-blue)20;
+  background-color: var(--nb-blue) 20;
   color: var(--nb-blue);
   display: flex;
   align-items: center;
@@ -515,7 +515,7 @@ const HistoryIcon = styled.div`
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: var(--nb-blue)20;
+  background-color: var(--nb-blue) 20;
   color: var(--nb-blue);
   display: flex;
   align-items: center;

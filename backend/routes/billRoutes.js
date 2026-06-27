@@ -42,10 +42,11 @@ router.post("/", protect, adminOnly, async (req, res) => {
 
     // Validate required fields
     if (!billNumber || !retailer || !amount || !billDate || !collectionDay) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: "Missing required fields", 
-        error: "Bill number, retailer, amount, bill date, and collection day are required" 
+        message: "Missing required fields",
+        error:
+          "Bill number, retailer, amount, bill date, and collection day are required",
       });
     }
 
@@ -63,30 +64,30 @@ router.post("/", protect, adminOnly, async (req, res) => {
     res.status(201).json({ success: true, data: newBill });
   } catch (err) {
     console.error("Error creating bill:", err);
-    
+
     // Handle duplicate key error
     if (err.code === 11000) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: "Bill number already exists", 
-        error: "A bill with this number already exists in the system" 
+        message: "Bill number already exists",
+        error: "A bill with this number already exists in the system",
       });
     }
-    
+
     // Handle validation errors
-    if (err.name === 'ValidationError') {
-      const messages = Object.values(err.errors).map(e => e.message);
-      return res.status(400).json({ 
+    if (err.name === "ValidationError") {
+      const messages = Object.values(err.errors).map((e) => e.message);
+      return res.status(400).json({
         success: false,
-        message: "Validation failed", 
-        error: messages.join(', ') 
+        message: "Validation failed",
+        error: messages.join(", "),
       });
     }
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       success: false,
-      message: "Failed to add bill", 
-      error: err.message 
+      message: "Failed to add bill",
+      error: err.message,
     });
   }
 });
@@ -123,11 +124,11 @@ router.put("/:billId", protect, adminOnly, async (req, res) => {
 
     // Find the bill
     const bill = await Bill.findById(req.params.billId);
-    
+
     if (!bill) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "Bill not found" 
+        message: "Bill not found",
       });
     }
 
@@ -145,30 +146,30 @@ router.put("/:billId", protect, adminOnly, async (req, res) => {
     res.json(bill);
   } catch (err) {
     console.error("Error updating bill:", err);
-    
+
     // Handle duplicate key error
     if (err.code === 11000) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: "Bill number already exists", 
-        error: "A bill with this number already exists in the system" 
+        message: "Bill number already exists",
+        error: "A bill with this number already exists in the system",
       });
     }
-    
+
     // Handle validation errors
-    if (err.name === 'ValidationError') {
-      const messages = Object.values(err.errors).map(e => e.message);
-      return res.status(400).json({ 
+    if (err.name === "ValidationError") {
+      const messages = Object.values(err.errors).map((e) => e.message);
+      return res.status(400).json({
         success: false,
-        message: "Validation failed", 
-        error: messages.join(', ') 
+        message: "Validation failed",
+        error: messages.join(", "),
       });
     }
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       success: false,
-      message: "Failed to update bill", 
-      error: err.message 
+      message: "Failed to update bill",
+      error: err.message,
     });
   }
 });
@@ -186,7 +187,7 @@ router.put("/:billId/assign", protect, adminOnly, async (req, res) => {
         assignedTo: staffId,
         assignedDate: new Date(),
       },
-      { new: true }
+      { new: true },
     ).populate("assignedTo", "name");
 
     if (!bill) {
@@ -228,7 +229,7 @@ router.get("/", protect, async (req, res) => {
       const collectedAmount =
         bill.collections.reduce(
           (sum, collection) => sum + (collection.amountCollected || 0),
-          0
+          0,
         ) || 0;
 
       const dueAmount = Math.max(0, bill.amount - collectedAmount);
@@ -290,9 +291,9 @@ router.delete("/:id", protect, adminOnly, async (req, res) => {
       {
         deleted: true,
         deletedAt: new Date(),
-        deletedBy: req.user._id,  // Optional: Track who deleted it
+        deletedBy: req.user._id, // Optional: Track who deleted it
       },
-      { new: true }
+      { new: true },
     );
 
     if (!bill) {
@@ -301,7 +302,9 @@ router.delete("/:id", protect, adminOnly, async (req, res) => {
 
     res.json({ message: "Bill marked as deleted", bill });
   } catch (err) {
-    res.status(500).json({ message: "Failed to delete bill", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to delete bill", error: err.message });
   }
 });
 router.post(
@@ -380,8 +383,8 @@ router.post(
           const getValue = (obj, possibleNames) => {
             const key = Object.keys(obj).find((k) =>
               possibleNames.some(
-                (name) => k.toLowerCase() === name.toLowerCase()
-              )
+                (name) => k.toLowerCase() === name.toLowerCase(),
+              ),
             );
             return key ? obj[key] : null;
           };
@@ -429,7 +432,7 @@ router.post(
               errors.push(
                 `Row ${
                   index + 2
-                }: Invalid collection day format "${collectionDayInput}" - defaulting to Sunday`
+                }: Invalid collection day format "${collectionDayInput}" - defaulting to Sunday`,
               );
             }
           }
@@ -440,7 +443,7 @@ router.post(
             errors.push(
               `Row ${
                 index + 2
-              }: Duplicate bill ${billNo} for customer ${custName} in this file`
+              }: Duplicate bill ${billNo} for customer ${custName} in this file`,
             );
             continue;
           }
@@ -459,14 +462,14 @@ router.post(
             if (isNaN(billDate.getTime())) {
               // Try alternative date formats if the first attempt fails
               billDate = new Date(
-                billDateValue.replace(/(\d{2})-(\d{2})-(\d{4})/, "$2/$1/$3")
+                billDateValue.replace(/(\d{2})-(\d{2})-(\d{4})/, "$2/$1/$3"),
               );
             }
           }
 
           if (isNaN(billDate.getTime())) {
             errors.push(
-              `Row ${index + 2}: Invalid date format for ${billDateValue}`
+              `Row ${index + 2}: Invalid date format for ${billDateValue}`,
             );
             continue;
           }
@@ -517,7 +520,7 @@ router.post(
               errors.push(
                 `Row ${
                   index + 2
-                }: Bill number ${billNo} for customer ${custName} already exists in database`
+                }: Bill number ${billNo} for customer ${custName} already exists in database`,
               );
               continue;
             }
@@ -536,7 +539,7 @@ router.post(
               type: "progress",
               current: processedRows,
               total: totalRows,
-            }) + "\n"
+            }) + "\n",
           );
         } catch (error) {
           errors.push(`Row ${index + 2}: ${error.message}`);
@@ -566,17 +569,17 @@ router.post(
           type: "error",
           message: "Failed to import bills",
           error: error.message,
-        }) + "\n"
+        }) + "\n",
       );
     } finally {
       res.end();
     }
-  }
+  },
 );
 router.get("/assigned-customers", protect, staffOnly, async (req, res) => {
   try {
     const bills = await Bill.find({ assignedTo: req.user._id }).distinct(
-      "retailer"
+      "retailer",
     );
     res.json(bills);
   } catch (err) {
@@ -606,7 +609,14 @@ router.get("/by-collection-day/:day", protect, async (req, res) => {
 });
 router.get("/bills-assigned-today", protect, staffOnly, async (req, res) => {
   try {
-    console.log('[DEBUG] /bills-assigned-today called by user:', req.user?._id, 'role:', req.user?.role, 'query:', req.query);
+    console.log(
+      "[DEBUG] /bills-assigned-today called by user:",
+      req.user?._id,
+      "role:",
+      req.user?.role,
+      "query:",
+      req.query,
+    );
     const query = {
       assignedTo: req.user._id,
       status: { $ne: "Paid" },

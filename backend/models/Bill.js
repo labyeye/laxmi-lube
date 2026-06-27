@@ -14,7 +14,7 @@ const BillSchema = new mongoose.Schema(
       trim: true,
       index: true,
     },
-    deleted: { type: Boolean, default: false }, 
+    deleted: { type: Boolean, default: false },
     amount: {
       type: Number,
       required: [true, "Amount is required"],
@@ -102,7 +102,7 @@ const BillSchema = new mongoose.Schema(
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-  }
+  },
 );
 
 // Add virtuals and methods as before...
@@ -147,7 +147,7 @@ BillSchema.methods.calculateRemainingAmount = async function () {
   await this.populate("collections");
   const totalCollected = this.collections.reduce(
     (sum, collection) => sum + collection.amountCollected,
-    0
+    0,
   );
   return Math.max(0, this.amount - totalCollected);
 };

@@ -6,7 +6,7 @@ export const PageContainer = styled.div`
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  
+
   @media (min-width: 768px) {
     padding: 2rem;
   }
@@ -43,7 +43,7 @@ export const Header = styled.div`
   margin-bottom: 1.5rem;
   flex-direction: column;
   gap: 1rem;
-  
+
   @media (min-width: 768px) {
     flex-direction: row;
     margin-bottom: 2rem;
@@ -66,12 +66,12 @@ export const Title = styled.div`
   svg {
     color: var(--nb-ink);
   }
-  
+
   @media (min-width: 768px) {
     width: auto;
     justify-content: flex-start;
     gap: 1rem;
-    
+
     h1 {
       font-size: 1.8rem;
     }
@@ -133,10 +133,14 @@ export const Label = styled.label`
 export const Input = styled.input`
   width: 100%;
   padding: 0.625rem 0.75rem;
-  border: 1px solid ${(props) => (props.hasError ? "var(--nb-orange)" : "var(--nb-border)")};
+  border: 1px solid
+    ${(props) => (props.hasError ? "var(--nb-orange)" : "var(--nb-border)")};
   border-radius: var(--nb-radius-sm);
   font-size: 0.875rem;
-  transition: box-shadow var(--nb-transition), transform var(--nb-transition), border-color var(--nb-transition);
+  transition:
+    box-shadow var(--nb-transition),
+    transform var(--nb-transition),
+    border-color var(--nb-transition);
   background-color: var(--nb-cream);
   color: var(--nb-ink);
   min-height: 2.5rem;
@@ -155,7 +159,8 @@ export const Input = styled.input`
 export const Select = styled.select`
   width: 100%;
   padding: 0.625rem 0.75rem;
-  border: 1px solid ${(props) => (props.hasError ? "var(--nb-orange)" : "var(--nb-border)")};
+  border: 1px solid
+    ${(props) => (props.hasError ? "var(--nb-orange)" : "var(--nb-border)")};
   border-radius: var(--nb-radius-sm);
   font-size: 0.875rem;
   background-color: var(--nb-cream);
@@ -200,12 +205,12 @@ export const Button = styled.button`
   transition: all var(--nb-transition);
   width: 100%;
   max-width: 200px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 
   &:hover {
     background-color: var(--nb-blue-medium);
     transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   }
 
   &:disabled {
@@ -226,7 +231,7 @@ export const ButtonGroup = styled.div`
   gap: 0.75rem;
   margin-top: 1rem;
   flex-direction: column;
-  
+
   @media (min-width: 480px) {
     flex-direction: row;
     gap: 1rem;
@@ -243,14 +248,14 @@ export const PrimaryButton = styled.button`
   cursor: pointer;
   transition: all var(--nb-transition);
   width: 100%;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 
   &:hover {
     background-color: var(--nb-blue-medium);
     transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   }
-  
+
   @media (min-width: 480px) {
     padding: 0.75rem 1.5rem;
     flex: 1;
@@ -271,9 +276,9 @@ export const SecondaryButton = styled.button`
   &:hover {
     background-color: var(--nb-muted);
     transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   }
-  
+
   @media (min-width: 480px) {
     padding: 0.75rem 1.5rem;
     flex: 1;
@@ -286,7 +291,7 @@ export const ActionButtons = styled.div`
   gap: 0.5rem;
   flex-wrap: wrap;
   justify-content: center;
-  
+
   @media (min-width: 768px) {
     justify-content: flex-start;
   }
@@ -299,7 +304,9 @@ export const ActionButton = styled.button`
   border-radius: var(--nb-radius-sm);
   padding: 0.5rem;
   cursor: pointer;
-  transition: transform var(--nb-transition), box-shadow var(--nb-transition);
+  transition:
+    transform var(--nb-transition),
+    box-shadow var(--nb-transition);
   box-shadow: var(--nb-shadow-sm);
 
   &:hover {
@@ -311,19 +318,19 @@ export const ActionButton = styled.button`
 export const AssignButton = styled(ActionButton).attrs({
   bgColor: "var(--nb-blue)",
   color: "var(--nb-white)",
-  hoverBgColor: "var(--nb-blue)"
+  hoverBgColor: "var(--nb-blue)",
 })``;
 
 export const EditButton = styled(ActionButton).attrs({
   bgColor: "var(--nb-white)",
   color: "var(--nb-ink)",
-  hoverBgColor: "var(--nb-white)"
+  hoverBgColor: "var(--nb-white)",
 })``;
 
 export const DeleteButton = styled(ActionButton).attrs({
   bgColor: "var(--nb-orange)",
   color: "var(--nb-white)",
-  hoverBgColor: "var(--nb-orange)"
+  hoverBgColor: "var(--nb-orange)",
 })``;
 
 // File Upload Components
@@ -349,7 +356,9 @@ export const FileInputLabel = styled.label`
   cursor: pointer;
   font-size: 0.875rem;
   text-align: center;
-  transition: transform var(--nb-transition), box-shadow var(--nb-transition);
+  transition:
+    transform var(--nb-transition),
+    box-shadow var(--nb-transition);
   width: 100%;
   box-shadow: var(--nb-shadow-sm);
 
@@ -412,7 +421,7 @@ export const SearchBox = styled.div`
     color: var(--nb-ink);
     margin-right: 0.5rem;
   }
-  
+
   @media (min-width: 768px) {
     width: 300px;
   }
@@ -470,24 +479,28 @@ export const StatusBadge = styled.span`
   text-transform: capitalize;
   white-space: nowrap;
   border: 1px solid var(--nb-border);
-  
+
   background-color: ${(props) =>
     props.status === "Paid" || props.status === "paid"
       ? "var(--nb-blue)"
       : props.status === "Partially Paid" || props.status === "partially paid"
-      ? "var(--nb-orange)"
-      : props.status === "Unpaid" || props.status === "unpaid" || props.status === "pending"
-      ? "var(--nb-white)"
-      : "var(--nb-white)"};
-      
+        ? "var(--nb-orange)"
+        : props.status === "Unpaid" ||
+            props.status === "unpaid" ||
+            props.status === "pending"
+          ? "var(--nb-white)"
+          : "var(--nb-white)"};
+
   color: ${(props) =>
     props.status === "Paid" || props.status === "paid"
       ? "var(--nb-white)"
       : props.status === "Partially Paid" || props.status === "partially paid"
-      ? "var(--nb-white)"
-      : props.status === "Unpaid" || props.status === "unpaid" || props.status === "pending"
-      ? "var(--nb-orange)"
-      : "var(--nb-ink)"};
+        ? "var(--nb-white)"
+        : props.status === "Unpaid" ||
+            props.status === "unpaid" ||
+            props.status === "pending"
+          ? "var(--nb-orange)"
+          : "var(--nb-ink)"};
 `;
 
 // Message Components
@@ -511,11 +524,11 @@ export const Message = styled.div`
 `;
 
 export const SuccessMessage = styled(Message).attrs({
-  type: "success"
+  type: "success",
 })``;
 
 export const ErrorMessage = styled(Message).attrs({
-  type: "error"
+  type: "error",
 })`
   white-space: pre-line;
 `;
@@ -607,10 +620,10 @@ export const ModalHeader = styled.div`
     font-size: 1.15rem;
     color: var(--nb-ink);
   }
-  
+
   @media (min-width: 768px) {
     padding: 1.5rem;
-    
+
     h3 {
       font-size: 1.25rem;
     }
@@ -632,7 +645,7 @@ export const CloseButton = styled.button`
 
 export const Form = styled.form`
   padding: 1.25rem;
-  
+
   @media (min-width: 768px) {
     padding: 1.5rem;
   }

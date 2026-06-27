@@ -1,6 +1,6 @@
-import React from 'react';
-import { usePermissions } from '../hooks/usePermissions';
-import styled from 'styled-components';
+import React from "react";
+import { usePermissions } from "../hooks/usePermissions";
+import styled from "styled-components";
 
 /**
  * Component wrapper that conditionally renders children based on user permissions
@@ -36,14 +36,18 @@ export const AdminOnly = ({ children, fallback = null }) => {
 /**
  * Component that shows content if user has ANY of the specified permissions
  */
-export const HasAnyPermission = ({ permissions, children, fallback = null }) => {
+export const HasAnyPermission = ({
+  permissions,
+  children,
+  fallback = null,
+}) => {
   const { user, loading } = usePermissions();
   const { hasPermission } = usePermissions();
 
   if (loading) return null;
 
-  const hasAny = permissions.some(({ module, action }) => 
-    hasPermission(module, action)
+  const hasAny = permissions.some(({ module, action }) =>
+    hasPermission(module, action),
   );
 
   return hasAny ? <>{children}</> : fallback;
@@ -52,13 +56,17 @@ export const HasAnyPermission = ({ permissions, children, fallback = null }) => 
 /**
  * Component that shows content if user has ALL of the specified permissions
  */
-export const HasAllPermissions = ({ permissions, children, fallback = null }) => {
+export const HasAllPermissions = ({
+  permissions,
+  children,
+  fallback = null,
+}) => {
   const { hasPermission, loading } = usePermissions();
 
   if (loading) return null;
 
-  const hasAll = permissions.every(({ module, action }) => 
-    hasPermission(module, action)
+  const hasAll = permissions.every(({ module, action }) =>
+    hasPermission(module, action),
   );
 
   return hasAll ? <>{children}</> : fallback;
@@ -67,17 +75,22 @@ export const HasAllPermissions = ({ permissions, children, fallback = null }) =>
 /**
  * Component that shows different content based on user role
  */
-export const RoleBasedContent = ({ admin, staff, retailer, fallback = null }) => {
+export const RoleBasedContent = ({
+  admin,
+  staff,
+  retailer,
+  fallback = null,
+}) => {
   const { user, loading } = usePermissions();
 
   if (loading) return null;
 
   switch (user?.role) {
-    case 'admin':
+    case "admin":
       return admin || fallback;
-    case 'staff':
+    case "staff":
       return staff || fallback;
-    case 'retailer':
+    case "retailer":
       return retailer || fallback;
     default:
       return fallback;
@@ -87,7 +100,12 @@ export const RoleBasedContent = ({ admin, staff, retailer, fallback = null }) =>
 /**
  * Higher-order component for protecting routes/pages
  */
-export const withPermission = (Component, module, action, FallbackComponent = null) => {
+export const withPermission = (
+  Component,
+  module,
+  action,
+  FallbackComponent = null,
+) => {
   return (props) => {
     const { hasPermission, loading } = usePermissions();
 
@@ -112,7 +130,8 @@ const AccessDenied = () => (
     <AccessDeniedIcon>🔒</AccessDeniedIcon>
     <AccessDeniedTitle>Access Denied</AccessDeniedTitle>
     <AccessDeniedText>
-      You don't have permission to access this feature. Please contact your administrator.
+      You don't have permission to access this feature. Please contact your
+      administrator.
     </AccessDeniedText>
   </AccessDeniedContainer>
 );

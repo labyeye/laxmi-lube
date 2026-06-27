@@ -4,8 +4,7 @@ import styled from "styled-components";
 const normalizeValue = (field, value) => {
   if (value !== undefined && value !== null) return value;
   if (field.default !== undefined) return field.default;
-  if (field.type === "multi-select" || field.type === "multi_select")
-    return [];
+  if (field.type === "multi-select" || field.type === "multi_select") return [];
   if (field.type === "relation" && field.multi) return [];
   if (field.type === "boolean") return false;
   return "";
@@ -18,7 +17,9 @@ const isVisibleForRole = (field, role) => {
 
 const isVisibleForView = (field, view) => {
   if (field.showInForm !== undefined || field.showInList !== undefined) {
-    return view === "form" ? field.showInForm !== false : field.showInList !== false;
+    return view === "form"
+      ? field.showInForm !== false
+      : field.showInList !== false;
   }
   if (!field.visible || field.visible.length === 0) return true;
   return field.visible.includes(view);
@@ -86,9 +87,7 @@ const DynamicForm = ({
                   value={value}
                   disabled={readOnly}
                   hasError={!!fieldError}
-                  onChange={(e) =>
-                    handleFieldChange(field.key, e.target.value)
-                  }
+                  onChange={(e) => handleFieldChange(field.key, e.target.value)}
                 />
               )}
 
@@ -118,7 +117,8 @@ const DynamicForm = ({
                 </Select>
               )}
 
-              {(field.type === "multi-select" || field.type === "multi_select") && (
+              {(field.type === "multi-select" ||
+                field.type === "multi_select") && (
                 <Select
                   multiple
                   value={Array.isArray(value) ? value : []}
@@ -128,8 +128,8 @@ const DynamicForm = ({
                     handleFieldChange(
                       field.key,
                       Array.from(e.target.selectedOptions).map(
-                        (opt) => opt.value
-                      )
+                        (opt) => opt.value,
+                      ),
                     )
                   }
                 >
@@ -181,8 +181,8 @@ const DynamicForm = ({
                     handleFieldChange(
                       field.key,
                       Array.from(e.target.selectedOptions).map(
-                        (opt) => opt.value
-                      )
+                        (opt) => opt.value,
+                      ),
                     )
                   }
                 >
@@ -202,7 +202,10 @@ const DynamicForm = ({
 
       {!readOnly && (
         <ButtonRow>
-          <Button type={asForm ? "submit" : "button"} onClick={!asForm ? handleSubmit : undefined}>
+          <Button
+            type={asForm ? "submit" : "button"}
+            onClick={!asForm ? handleSubmit : undefined}
+          >
             {submitLabel}
           </Button>
         </ButtonRow>
@@ -248,8 +251,8 @@ const Label = styled.label`
 const Input = styled.input`
   width: 100%;
   padding: 0.625rem 0.75rem;
-  border: 1px solid ${(props) =>
-    props.hasError ? "var(--nb-orange)" : "var(--nb-border)"};
+  border: 1px solid
+    ${(props) => (props.hasError ? "var(--nb-orange)" : "var(--nb-border)")};
   border-radius: 0.375rem;
   font-size: 0.9rem;
   background: var(--nb-white);
@@ -258,8 +261,8 @@ const Input = styled.input`
 const Select = styled.select`
   width: 100%;
   padding: 0.625rem 0.75rem;
-  border: 1px solid ${(props) =>
-    props.hasError ? "var(--nb-orange)" : "var(--nb-border)"};
+  border: 1px solid
+    ${(props) => (props.hasError ? "var(--nb-orange)" : "var(--nb-border)")};
   border-radius: 0.375rem;
   font-size: 0.9rem;
   background: var(--nb-white);

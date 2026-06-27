@@ -14,8 +14,13 @@ const getAuthHeaders = () => ({
 });
 
 const DAYS = [
-  "Monday", "Tuesday", "Wednesday", "Thursday",
-  "Friday", "Saturday", "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
 ];
 
 const RetailerAdd = () => {
@@ -23,10 +28,14 @@ const RetailerAdd = () => {
   const { getModuleName } = useModules();
 
   const [form, setForm] = useState({
-    name: "", address1: "", address2: "",
+    name: "",
+    address1: "",
+    address2: "",
     phone: "",
-    assignedTo: "", dayAssigned: "",
-    email: "", password: "",
+    assignedTo: "",
+    dayAssigned: "",
+    email: "",
+    password: "",
   });
   const [confirmPassword, setConfirmPassword] = useState("");
   const [createLogin, setCreateLogin] = useState(false);
@@ -40,15 +49,19 @@ const RetailerAdd = () => {
 
   const [file, setFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
-  const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
+  const [importProgress, setImportProgress] = useState({
+    current: 0,
+    total: 0,
+  });
   const [importMessage, setImportMessage] = useState("");
   const [importError, setImportError] = useState("");
 
   useEffect(() => {
-    axios.get(`${API_BASE}/users`, { headers: getAuthHeaders() })
+    axios
+      .get(`${API_BASE}/users`, { headers: getAuthHeaders() })
       .then((res) => {
         const staff = (res.data || []).filter(
-          (u) => u.role === "staff" || u.role === "admin"
+          (u) => u.role === "staff" || u.role === "admin",
         );
         setStaffList(staff);
       })
@@ -64,22 +77,29 @@ const RetailerAdd = () => {
     const errs = {};
     if (!form.name.trim()) errs.name = "Retailer name is required";
     if (!form.address1.trim()) errs.address1 = "Address is required";
-    if (form.phone && !/^[6-9]\d{9}$/.test(form.phone)) errs.phone = "Enter a valid 10-digit mobile number";
+    if (form.phone && !/^[6-9]\d{9}$/.test(form.phone))
+      errs.phone = "Enter a valid 10-digit mobile number";
     if (createLogin) {
       if (!form.email.trim()) errs.email = "Email is required";
-      else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = "Enter a valid email";
+      else if (!/\S+@\S+\.\S+/.test(form.email))
+        errs.email = "Enter a valid email";
       if (!form.password) errs.password = "Password is required";
       else if (form.password.length < 6) errs.password = "Minimum 6 characters";
-      if (form.password !== confirmPassword) errs.confirmPassword = "Passwords do not match";
+      if (form.password !== confirmPassword)
+        errs.confirmPassword = "Passwords do not match";
     }
     return errs;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage(""); setError("");
+    setMessage("");
+    setError("");
     const errs = validate();
-    if (Object.keys(errs).length > 0) { setFieldErrors(errs); return; }
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      return;
+    }
     setLoading(true);
     try {
       const payload = {
@@ -94,12 +114,27 @@ const RetailerAdd = () => {
         payload.email = form.email.trim();
         payload.password = form.password;
       }
-      await axios.post(`${API_BASE}/retailers`, payload, { headers: getAuthHeaders() });
-      setMessage(createLogin
-        ? "Retailer added with login credentials!"
-        : "Retailer added successfully!");
-      setForm({ name: "", address1: "", address2: "", phone: "", assignedTo: "", dayAssigned: "", email: "", password: "" });
-      setConfirmPassword(""); setCreateLogin(false); setFieldErrors({});
+      await axios.post(`${API_BASE}/retailers`, payload, {
+        headers: getAuthHeaders(),
+      });
+      setMessage(
+        createLogin
+          ? "Retailer added with login credentials!"
+          : "Retailer added successfully!",
+      );
+      setForm({
+        name: "",
+        address1: "",
+        address2: "",
+        phone: "",
+        assignedTo: "",
+        dayAssigned: "",
+        email: "",
+        password: "",
+      });
+      setConfirmPassword("");
+      setCreateLogin(false);
+      setFieldErrors({});
     } catch (err) {
       setError(err.response?.data?.message || "Failed to add retailer");
     } finally {
@@ -109,13 +144,19 @@ const RetailerAdd = () => {
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
-    setImportMessage(""); setImportError("");
+    setImportMessage("");
+    setImportError("");
   };
 
   const handleImport = async (e) => {
     e.preventDefault();
-    if (!file) { setImportError("Please select a file"); return; }
-    setImportLoading(true); setImportError(""); setImportMessage("");
+    if (!file) {
+      setImportError("Please select a file");
+      return;
+    }
+    setImportLoading(true);
+    setImportError("");
+    setImportMessage("");
     setImportProgress({ current: 0, total: 0 });
     const formData = new FormData();
     formData.append("file", file);
@@ -126,7 +167,8 @@ const RetailerAdd = () => {
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok)
+        throw new Error(`HTTP error! status: ${response.status}`);
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -140,11 +182,18 @@ const RetailerAdd = () => {
           if (!line.trim()) continue;
           try {
             const data = JSON.parse(line);
-            if (data.type === "progress") setImportProgress({ current: data.current, total: data.total });
+            if (data.type === "progress")
+              setImportProgress({ current: data.current, total: data.total });
             else if (data.type === "result") {
-              setImportMessage(`Successfully imported ${data.importedCount} retailers. ${data.errorCount} records had errors.`);
-              if (data.errorCount > 0) setImportError(`Some rows had errors:\n${data.errors?.join(";\n") || ""}`);
-            } else if (data.type === "error") setImportError(data.message || "Failed to import retailers");
+              setImportMessage(
+                `Successfully imported ${data.importedCount} retailers. ${data.errorCount} records had errors.`,
+              );
+              if (data.errorCount > 0)
+                setImportError(
+                  `Some rows had errors:\n${data.errors?.join(";\n") || ""}`,
+                );
+            } else if (data.type === "error")
+              setImportError(data.message || "Failed to import retailers");
           } catch {}
         }
       }
@@ -166,19 +215,29 @@ const RetailerAdd = () => {
       <PageWrapper>
         <PageHeader>
           <HeaderLeft>
-            <BackBtn onClick={() => navigate("/admin/view-retailer")}>← Back</BackBtn>
+            <BackBtn onClick={() => navigate("/admin/view-retailer")}>
+              ← Back
+            </BackBtn>
             <div>
               <PageTitle>Add {retailerLabel}</PageTitle>
-              <PageSubtitle>Create a new {retailerLabel.toLowerCase()} account</PageSubtitle>
+              <PageSubtitle>
+                Create a new {retailerLabel.toLowerCase()} account
+              </PageSubtitle>
             </div>
           </HeaderLeft>
         </PageHeader>
 
         <TabRow>
-          <Tab active={activeTab === "manual"} onClick={() => setActiveTab("manual")}>
+          <Tab
+            active={activeTab === "manual"}
+            onClick={() => setActiveTab("manual")}
+          >
             ✏️ Manual Entry
           </Tab>
-          <Tab active={activeTab === "excel"} onClick={() => setActiveTab("excel")}>
+          <Tab
+            active={activeTab === "excel"}
+            onClick={() => setActiveTab("excel")}
+          >
             📊 Excel Import
           </Tab>
         </TabRow>
@@ -187,7 +246,10 @@ const RetailerAdd = () => {
           <Card>
             <CardHeader>
               <CardTitle>Retailer Details</CardTitle>
-              <CardSubtitle>Fill in the information below to add a {retailerLabel.toLowerCase()}</CardSubtitle>
+              <CardSubtitle>
+                Fill in the information below to add a{" "}
+                {retailerLabel.toLowerCase()}
+              </CardSubtitle>
             </CardHeader>
 
             <form onSubmit={handleSubmit}>
@@ -195,34 +257,66 @@ const RetailerAdd = () => {
                 <SectionLabel>Basic Information</SectionLabel>
                 <FormGrid>
                   <FieldGroup fullWidth>
-                    <Label>Retailer Name <Required>*</Required></Label>
-                    <Input type="text" placeholder="Enter retailer / shop name"
-                      value={form.name} onChange={(e) => handleChange("name", e.target.value)}
-                      hasError={!!fieldErrors.name} />
-                    {fieldErrors.name && <FieldError>{fieldErrors.name}</FieldError>}
+                    <Label>
+                      Retailer Name <Required>*</Required>
+                    </Label>
+                    <Input
+                      type="text"
+                      placeholder="Enter retailer / shop name"
+                      value={form.name}
+                      onChange={(e) => handleChange("name", e.target.value)}
+                      hasError={!!fieldErrors.name}
+                    />
+                    {fieldErrors.name && (
+                      <FieldError>{fieldErrors.name}</FieldError>
+                    )}
                   </FieldGroup>
                   <FieldGroup fullWidth>
-                    <Label>Address Line 1 <Required>*</Required></Label>
-                    <Input type="text" placeholder="Street, building, area"
-                      value={form.address1} onChange={(e) => handleChange("address1", e.target.value)}
-                      hasError={!!fieldErrors.address1} />
-                    {fieldErrors.address1 && <FieldError>{fieldErrors.address1}</FieldError>}
+                    <Label>
+                      Address Line 1 <Required>*</Required>
+                    </Label>
+                    <Input
+                      type="text"
+                      placeholder="Street, building, area"
+                      value={form.address1}
+                      onChange={(e) => handleChange("address1", e.target.value)}
+                      hasError={!!fieldErrors.address1}
+                    />
+                    {fieldErrors.address1 && (
+                      <FieldError>{fieldErrors.address1}</FieldError>
+                    )}
                   </FieldGroup>
                   <FieldGroup fullWidth>
-                    <Label>Address Line 2 <Optional>(optional)</Optional></Label>
-                    <Input type="text" placeholder="Landmark, city, pincode"
-                      value={form.address2} onChange={(e) => handleChange("address2", e.target.value)} />
+                    <Label>
+                      Address Line 2 <Optional>(optional)</Optional>
+                    </Label>
+                    <Input
+                      type="text"
+                      placeholder="Landmark, city, pincode"
+                      value={form.address2}
+                      onChange={(e) => handleChange("address2", e.target.value)}
+                    />
                   </FieldGroup>
                   <FieldGroup fullWidth>
-                    <Label>WhatsApp / Mobile Number <Optional>(for receipt delivery)</Optional></Label>
+                    <Label>
+                      WhatsApp / Mobile Number{" "}
+                      <Optional>(for receipt delivery)</Optional>
+                    </Label>
                     <Input
                       type="tel"
                       placeholder="10-digit mobile number e.g. 9876543210"
                       value={form.phone}
-                      onChange={(e) => handleChange("phone", e.target.value.replace(/\D/g, "").slice(0, 10))}
+                      onChange={(e) =>
+                        handleChange(
+                          "phone",
+                          e.target.value.replace(/\D/g, "").slice(0, 10),
+                        )
+                      }
                       hasError={!!fieldErrors.phone}
                     />
-                    {fieldErrors.phone && <FieldError>{fieldErrors.phone}</FieldError>}
+                    {fieldErrors.phone && (
+                      <FieldError>{fieldErrors.phone}</FieldError>
+                    )}
                   </FieldGroup>
                 </FormGrid>
               </Section>
@@ -234,18 +328,34 @@ const RetailerAdd = () => {
                 <FormGrid>
                   <FieldGroup>
                     <Label>Assign To Staff</Label>
-                    <StyledSelect value={form.assignedTo} onChange={(e) => handleChange("assignedTo", e.target.value)}>
+                    <StyledSelect
+                      value={form.assignedTo}
+                      onChange={(e) =>
+                        handleChange("assignedTo", e.target.value)
+                      }
+                    >
                       <option value="">— Select staff member —</option>
                       {staffList.map((s) => (
-                        <option key={s._id} value={s._id}>{s.name || s.email}</option>
+                        <option key={s._id} value={s._id}>
+                          {s.name || s.email}
+                        </option>
                       ))}
                     </StyledSelect>
                   </FieldGroup>
                   <FieldGroup>
                     <Label>Collection Day</Label>
-                    <StyledSelect value={form.dayAssigned} onChange={(e) => handleChange("dayAssigned", e.target.value)}>
+                    <StyledSelect
+                      value={form.dayAssigned}
+                      onChange={(e) =>
+                        handleChange("dayAssigned", e.target.value)
+                      }
+                    >
                       <option value="">— Select day —</option>
-                      {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
+                      {DAYS.map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
                     </StyledSelect>
                   </FieldGroup>
                 </FormGrid>
@@ -254,10 +364,18 @@ const RetailerAdd = () => {
               <Divider />
 
               <Section>
-                <ToggleSection onClick={() => { setCreateLogin((v) => !v); setFieldErrors({}); }}>
+                <ToggleSection
+                  onClick={() => {
+                    setCreateLogin((v) => !v);
+                    setFieldErrors({});
+                  }}
+                >
                   <ToggleInfo>
                     <ToggleTitle>Create Login Account</ToggleTitle>
-                    <ToggleDesc>Give this retailer portal access with an email &amp; password</ToggleDesc>
+                    <ToggleDesc>
+                      Give this retailer portal access with an email &amp;
+                      password
+                    </ToggleDesc>
                   </ToggleInfo>
                   <ToggleSwitch active={createLogin}>
                     <ToggleKnob active={createLogin} />
@@ -266,44 +384,86 @@ const RetailerAdd = () => {
 
                 {createLogin && (
                   <CredentialsBox>
-                    <SectionLabel style={{ marginBottom: "1rem" }}>Login Credentials</SectionLabel>
+                    <SectionLabel style={{ marginBottom: "1rem" }}>
+                      Login Credentials
+                    </SectionLabel>
                     <FormGrid>
                       <FieldGroup fullWidth>
-                        <Label>Email / Login ID <Required>*</Required></Label>
+                        <Label>
+                          Email / Login ID <Required>*</Required>
+                        </Label>
                         <InputWithIcon>
                           <InputIcon>✉</InputIcon>
-                          <InputPadded type="email" placeholder="retailer@example.com"
-                            value={form.email} onChange={(e) => handleChange("email", e.target.value)}
-                            hasError={!!fieldErrors.email} />
+                          <InputPadded
+                            type="email"
+                            placeholder="retailer@example.com"
+                            value={form.email}
+                            onChange={(e) =>
+                              handleChange("email", e.target.value)
+                            }
+                            hasError={!!fieldErrors.email}
+                          />
                         </InputWithIcon>
-                        {fieldErrors.email && <FieldError>{fieldErrors.email}</FieldError>}
+                        {fieldErrors.email && (
+                          <FieldError>{fieldErrors.email}</FieldError>
+                        )}
                       </FieldGroup>
                       <FieldGroup>
-                        <Label>Password <Required>*</Required></Label>
+                        <Label>
+                          Password <Required>*</Required>
+                        </Label>
                         <InputWithIcon>
                           <InputIcon>🔒</InputIcon>
-                          <InputPadded type={showPassword ? "text" : "password"} placeholder="Min. 6 characters"
-                            value={form.password} onChange={(e) => handleChange("password", e.target.value)}
-                            hasError={!!fieldErrors.password} />
-                          <EyeBtn type="button" onClick={() => setShowPassword((v) => !v)}>
+                          <InputPadded
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Min. 6 characters"
+                            value={form.password}
+                            onChange={(e) =>
+                              handleChange("password", e.target.value)
+                            }
+                            hasError={!!fieldErrors.password}
+                          />
+                          <EyeBtn
+                            type="button"
+                            onClick={() => setShowPassword((v) => !v)}
+                          >
                             {showPassword ? "🙈" : "👁"}
                           </EyeBtn>
                         </InputWithIcon>
-                        {fieldErrors.password && <FieldError>{fieldErrors.password}</FieldError>}
+                        {fieldErrors.password && (
+                          <FieldError>{fieldErrors.password}</FieldError>
+                        )}
                       </FieldGroup>
                       <FieldGroup>
-                        <Label>Confirm Password <Required>*</Required></Label>
+                        <Label>
+                          Confirm Password <Required>*</Required>
+                        </Label>
                         <InputWithIcon>
                           <InputIcon>🔒</InputIcon>
-                          <InputPadded type={showPassword ? "text" : "password"} placeholder="Re-enter password"
+                          <InputPadded
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Re-enter password"
                             value={confirmPassword}
-                            onChange={(e) => { setConfirmPassword(e.target.value); if (fieldErrors.confirmPassword) setFieldErrors((p) => ({ ...p, confirmPassword: "" })); }}
-                            hasError={!!fieldErrors.confirmPassword} />
+                            onChange={(e) => {
+                              setConfirmPassword(e.target.value);
+                              if (fieldErrors.confirmPassword)
+                                setFieldErrors((p) => ({
+                                  ...p,
+                                  confirmPassword: "",
+                                }));
+                            }}
+                            hasError={!!fieldErrors.confirmPassword}
+                          />
                         </InputWithIcon>
-                        {fieldErrors.confirmPassword && <FieldError>{fieldErrors.confirmPassword}</FieldError>}
+                        {fieldErrors.confirmPassword && (
+                          <FieldError>{fieldErrors.confirmPassword}</FieldError>
+                        )}
                       </FieldGroup>
                     </FormGrid>
-                    <InfoNote>ℹ The retailer will use this email and password to log into the portal.</InfoNote>
+                    <InfoNote>
+                      ℹ The retailer will use this email and password to log
+                      into the portal.
+                    </InfoNote>
                   </CredentialsBox>
                 )}
               </Section>
@@ -312,7 +472,12 @@ const RetailerAdd = () => {
               {error && <ErrorBanner>{error}</ErrorBanner>}
 
               <FormActions>
-                <CancelBtn type="button" onClick={() => navigate("/admin/view-retailer")}>Cancel</CancelBtn>
+                <CancelBtn
+                  type="button"
+                  onClick={() => navigate("/admin/view-retailer")}
+                >
+                  Cancel
+                </CancelBtn>
                 <SubmitBtn type="submit" disabled={loading}>
                   {loading && <Spinner />}
                   {loading ? "Saving..." : `Add ${retailerLabel}`}
@@ -326,41 +491,81 @@ const RetailerAdd = () => {
           <Card>
             <CardHeader>
               <CardTitle>Import {retailersLabel} from Excel</CardTitle>
-              <CardSubtitle>Upload a spreadsheet to add multiple {retailersLabel.toLowerCase()} at once</CardSubtitle>
+              <CardSubtitle>
+                Upload a spreadsheet to add multiple{" "}
+                {retailersLabel.toLowerCase()} at once
+              </CardSubtitle>
             </CardHeader>
 
             <form onSubmit={handleImport}>
               <Section>
-                <DropZone onClick={() => document.getElementById("fileInput").click()} hasFile={!!file}>
+                <DropZone
+                  onClick={() => document.getElementById("fileInput").click()}
+                  hasFile={!!file}
+                >
                   <DropIcon>{file ? "📄" : "📂"}</DropIcon>
-                  <DropText>{file ? file.name : "Click to choose an Excel file"}</DropText>
-                  <DropHint>{file ? "Click to change file" : "Supports .xlsx and .xls"}</DropHint>
-                  <FileInputHidden id="fileInput" type="file" accept=".xlsx, .xls" onChange={handleFileChange} />
+                  <DropText>
+                    {file ? file.name : "Click to choose an Excel file"}
+                  </DropText>
+                  <DropHint>
+                    {file ? "Click to change file" : "Supports .xlsx and .xls"}
+                  </DropHint>
+                  <FileInputHidden
+                    id="fileInput"
+                    type="file"
+                    accept=".xlsx, .xls"
+                    onChange={handleFileChange}
+                  />
                 </DropZone>
 
                 {importLoading && importProgress.total > 0 && (
                   <ProgressWrap>
                     <ProgressHeader>
                       <span>Importing...</span>
-                      <span>{importProgress.current} / {importProgress.total}</span>
+                      <span>
+                        {importProgress.current} / {importProgress.total}
+                      </span>
                     </ProgressHeader>
                     <ProgressBar>
-                      <ProgressFill pct={Math.round((importProgress.current / importProgress.total) * 100)} />
+                      <ProgressFill
+                        pct={Math.round(
+                          (importProgress.current / importProgress.total) * 100,
+                        )}
+                      />
                     </ProgressBar>
                   </ProgressWrap>
                 )}
 
                 <TemplateNote>
-                  <strong>Required columns:</strong> Retailer Name, Address 1 &nbsp;|&nbsp;
-                  <strong>Optional:</strong> Address 2, Assigned To, Day Assigned
+                  <strong>Required columns:</strong> Retailer Name, Address 1
+                  &nbsp;|&nbsp;
+                  <strong>Optional:</strong> Address 2, Assigned To, Day
+                  Assigned
                 </TemplateNote>
               </Section>
 
-              {importMessage && <SuccessBanner style={{ margin: "0 1.5rem" }}>{importMessage}</SuccessBanner>}
-              {importError && <ErrorBanner style={{ margin: "0 1.5rem" }}>{importError}</ErrorBanner>}
+              {importMessage && (
+                <SuccessBanner style={{ margin: "0 1.5rem" }}>
+                  {importMessage}
+                </SuccessBanner>
+              )}
+              {importError && (
+                <ErrorBanner style={{ margin: "0 1.5rem" }}>
+                  {importError}
+                </ErrorBanner>
+              )}
 
               <FormActions>
-                <CancelBtn type="button" onClick={() => { setFile(null); setImportError(""); setImportMessage(""); }}>Clear</CancelBtn>
+                <CancelBtn
+                  type="button"
+                  onClick={() => {
+                    setFile(null);
+                    setImportError("");
+                    setImportMessage("");
+                  }}
+                >
+                  Clear
+                </CancelBtn>
                 <SubmitBtn type="submit" disabled={importLoading || !file}>
                   {importLoading && <Spinner />}
                   {importLoading ? "Uploading..." : `Upload ${retailersLabel}`}
@@ -410,7 +615,9 @@ const BackBtn = styled.button`
   box-shadow: var(--nb-shadow-sm);
   white-space: nowrap;
   transition: box-shadow var(--nb-transition);
-  &:hover { box-shadow: var(--nb-shadow-md); }
+  &:hover {
+    box-shadow: var(--nb-shadow-md);
+  }
 `;
 
 const PageTitle = styled.h1`
@@ -497,7 +704,9 @@ const FormGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
-  @media (max-width: 600px) { grid-template-columns: 1fr; }
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const FieldGroup = styled.div`
@@ -576,7 +785,9 @@ const EyeBtn = styled.button`
   font-size: 0.9rem;
   padding: 0;
   opacity: 0.6;
-  &:hover { opacity: 1; }
+  &:hover {
+    opacity: 1;
+  }
 `;
 
 const InputPadded = styled.input`
@@ -707,7 +918,9 @@ const CancelBtn = styled.button`
   cursor: pointer;
   box-shadow: var(--nb-shadow-sm);
   transition: box-shadow var(--nb-transition);
-  &:hover { box-shadow: var(--nb-shadow-md); }
+  &:hover {
+    box-shadow: var(--nb-shadow-md);
+  }
 `;
 
 const SubmitBtn = styled.button`
@@ -723,9 +936,16 @@ const SubmitBtn = styled.button`
   font-weight: 700;
   cursor: pointer;
   box-shadow: var(--nb-shadow-md);
-  transition: box-shadow var(--nb-transition), opacity var(--nb-transition);
-  &:disabled { opacity: 0.6; cursor: not-allowed; }
-  &:not(:disabled):hover { box-shadow: var(--nb-shadow-lg); }
+  transition:
+    box-shadow var(--nb-transition),
+    opacity var(--nb-transition);
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  &:not(:disabled):hover {
+    box-shadow: var(--nb-shadow-lg);
+  }
 `;
 
 const Spinner = styled.div`
@@ -744,15 +964,21 @@ const DropZone = styled.div`
   justify-content: center;
   gap: 0.5rem;
   padding: 2.5rem 1.5rem;
-  border: 2px dashed ${(p) => (p.hasFile ? "var(--nb-blue)" : "var(--nb-border)")};
+  border: 2px dashed
+    ${(p) => (p.hasFile ? "var(--nb-blue)" : "var(--nb-border)")};
   border-radius: var(--nb-radius);
   cursor: pointer;
   background: ${(p) => (p.hasFile ? "rgba(70,92,136,0.05)" : "transparent")};
   transition: all var(--nb-transition);
-  &:hover { border-color: var(--nb-blue); background: rgba(70, 92, 136, 0.04); }
+  &:hover {
+    border-color: var(--nb-blue);
+    background: rgba(70, 92, 136, 0.04);
+  }
 `;
 
-const DropIcon = styled.div`font-size: 2.5rem;`;
+const DropIcon = styled.div`
+  font-size: 2.5rem;
+`;
 
 const DropText = styled.p`
   font-size: 0.95rem;
@@ -768,9 +994,13 @@ const DropHint = styled.p`
   margin: 0;
 `;
 
-const FileInputHidden = styled.input`display: none;`;
+const FileInputHidden = styled.input`
+  display: none;
+`;
 
-const ProgressWrap = styled.div`margin-top: 1rem;`;
+const ProgressWrap = styled.div`
+  margin-top: 1rem;
+`;
 
 const ProgressHeader = styled.div`
   display: flex;

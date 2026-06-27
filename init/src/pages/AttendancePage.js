@@ -47,14 +47,18 @@ const AttendancePage = () => {
         fetchMonthlyAttendance();
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStaff, selectedDate, selectedMonth, selectedYear, view]);
 
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("https://backend.laxmilube.in/api/users", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        "https://backend.laxmilube.in/api/users",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       const staffUsers = response.data.filter((user) => user.role === "staff");
       setUsers(staffUsers);
       if (staffUsers.length > 0) {
@@ -143,9 +147,13 @@ const AttendancePage = () => {
         alert("Attendance updated successfully!");
       } else {
         // Create new
-        await axios.post("https://backend.laxmilube.in/api/attendance", payload, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await axios.post(
+          "https://backend.laxmilube.in/api/attendance",
+          payload,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
         alert("Attendance saved successfully!");
       }
 
@@ -663,7 +671,8 @@ const StatusButtonGroup = styled.div`
 
 const StatusButton = styled.button`
   padding: 12px 16px;
-  border: 1px solid ${(props) => (props.active ? props.color : "var(--nb-border)")};
+  border: 1px solid
+    ${(props) => (props.active ? props.color : "var(--nb-border)")};
   background: ${(props) => (props.active ? props.color : "var(--nb-white)")};
   color: ${(props) => (props.active ? "var(--nb-white)" : "var(--nb-ink)")};
   border-radius: 8px;

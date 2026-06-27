@@ -47,9 +47,12 @@ const DeliveryCreate = () => {
   const fetchRetailers = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("https://backend.laxmilube.in/api/retailers", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        "https://backend.laxmilube.in/api/retailers",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       setRetailers(response.data.data || response.data || []);
     } catch (err) {
       console.error("Error fetching retailers:", err);
@@ -59,9 +62,12 @@ const DeliveryCreate = () => {
   const fetchStaff = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("https://backend.laxmilube.in/api/users", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        "https://backend.laxmilube.in/api/users",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       const staff = response.data.filter((u) => u.role === "staff");
       setStaffList(staff);
     } catch (err) {
@@ -128,7 +134,7 @@ const DeliveryCreate = () => {
         });
         const orderAmount = items.reduce((s, it) => s + it.totalSale, 0);
         return { ...o, deliveredItems: items, orderAmount };
-      })
+      }),
     );
   };
 
@@ -291,57 +297,103 @@ const DeliveryCreate = () => {
                 <h4>
                   <FaBoxOpen /> Select Approved Orders *
                   {availableOrders.length > 0 && (
-                    <span style={{ fontWeight: 400, fontSize: "0.85rem", color: "#64748b", marginLeft: 8 }}>
+                    <span
+                      style={{
+                        fontWeight: 400,
+                        fontSize: "0.85rem",
+                        color: "#64748b",
+                        marginLeft: 8,
+                      }}
+                    >
                       ({availableOrders.length} approved orders found)
                     </span>
                   )}
                 </h4>
                 {availableOrders.length === 0 ? (
                   <NoOrdersMsg>
-                    ⚠️ No approved orders found for this retailer. Orders must be approved before creating a delivery.
+                    ⚠️ No approved orders found for this retailer. Orders must
+                    be approved before creating a delivery.
                   </NoOrdersMsg>
                 ) : (
                   <OrdersGrid>
                     {availableOrders.map((order) => {
-                      const selOrder = selectedOrders.find((o) => o.orderId === order._id);
+                      const selOrder = selectedOrders.find(
+                        (o) => o.orderId === order._id,
+                      );
                       const isSelected = !!selOrder;
                       return (
-                        <OrderCard
-                          key={order._id}
-                          selected={isSelected}
-                        >
+                        <OrderCard key={order._id} selected={isSelected}>
                           {/* Click header to toggle selection */}
-                          <OrderCardTop onClick={() => handleOrderSelection(order)}>
-                            <span className="order-num">Order #{order._id.slice(-6).toUpperCase()}</span>
-                            {isSelected ? <SelectedBadge>✓ Selected</SelectedBadge> : <SelectHint>Click to select</SelectHint>}
-                          </OrderCardTop>
-                          <div className="order-date" onClick={() => handleOrderSelection(order)}>
-                            📅 {new Date(order.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                          </div>
-                          <div className="order-amount" onClick={() => handleOrderSelection(order)}>
-                            💰 ₹{isSelected
-                              ? selOrder.orderAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                              : order.totalOrderValue?.toLocaleString("en-IN")}
-                            {isSelected && selOrder.orderAmount < order.totalOrderValue && (
-                              <PartialTag>Partial</PartialTag>
+                          <OrderCardTop
+                            onClick={() => handleOrderSelection(order)}
+                          >
+                            <span className="order-num">
+                              Order #{order._id.slice(-6).toUpperCase()}
+                            </span>
+                            {isSelected ? (
+                              <SelectedBadge>✓ Selected</SelectedBadge>
+                            ) : (
+                              <SelectHint>Click to select</SelectHint>
                             )}
+                          </OrderCardTop>
+                          <div
+                            className="order-date"
+                            onClick={() => handleOrderSelection(order)}
+                          >
+                            📅{" "}
+                            {new Date(order.createdAt).toLocaleDateString(
+                              "en-IN",
+                              {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                              },
+                            )}
+                          </div>
+                          <div
+                            className="order-amount"
+                            onClick={() => handleOrderSelection(order)}
+                          >
+                            💰 ₹
+                            {isSelected
+                              ? selOrder.orderAmount.toLocaleString("en-IN", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })
+                              : order.totalOrderValue?.toLocaleString("en-IN")}
+                            {isSelected &&
+                              selOrder.orderAmount < order.totalOrderValue && (
+                                <PartialTag>Partial</PartialTag>
+                              )}
                           </div>
 
                           {/* Item-wise include/exclude toggle — shown only when selected */}
                           {isSelected && (
                             <ItemQtyEditor>
                               <ItemQtyHeader>
-                                <span>Product</span><span>Qty</span><span>Send?</span>
+                                <span>Product</span>
+                                <span>Qty</span>
+                                <span>Send?</span>
                               </ItemQtyHeader>
                               {selOrder.deliveredItems.map((item, idx) => {
                                 const included = item.deliverQty > 0;
                                 return (
                                   <ItemQtyRow key={idx} $excluded={!included}>
-                                    <ItemName title={item.name} $excluded={!included}>{item.name}</ItemName>
-                                    <ItemOrdered $excluded={!included}>{item.orderedQty}</ItemOrdered>
+                                    <ItemName
+                                      title={item.name}
+                                      $excluded={!included}
+                                    >
+                                      {item.name}
+                                    </ItemName>
+                                    <ItemOrdered $excluded={!included}>
+                                      {item.orderedQty}
+                                    </ItemOrdered>
                                     <ToggleSwitch
                                       $on={included}
-                                      onClick={(e) => { e.stopPropagation(); handleItemToggle(order._id, idx); }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleItemToggle(order._id, idx);
+                                      }}
                                     >
                                       <ToggleKnob $on={included} />
                                     </ToggleSwitch>
@@ -352,7 +404,14 @@ const DeliveryCreate = () => {
                           )}
 
                           {order.approvedAt && (
-                            <ApprovedOn onClick={() => handleOrderSelection(order)}>✅ Approved: {new Date(order.approvedAt).toLocaleDateString("en-IN")}</ApprovedOn>
+                            <ApprovedOn
+                              onClick={() => handleOrderSelection(order)}
+                            >
+                              ✅ Approved:{" "}
+                              {new Date(order.approvedAt).toLocaleDateString(
+                                "en-IN",
+                              )}
+                            </ApprovedOn>
                           )}
                         </OrderCard>
                       );
@@ -361,8 +420,17 @@ const DeliveryCreate = () => {
                 )}
                 {selectedOrders.length > 0 && (
                   <SelectedSummary>
-                    <strong>{selectedOrders.length} order{selectedOrders.length > 1 ? "s" : ""} selected</strong>
-                    &nbsp;— Total: <strong>₹{selectedOrders.reduce((s, o) => s + (o.orderAmount || 0), 0).toLocaleString("en-IN")}</strong>
+                    <strong>
+                      {selectedOrders.length} order
+                      {selectedOrders.length > 1 ? "s" : ""} selected
+                    </strong>
+                    &nbsp;— Total:{" "}
+                    <strong>
+                      ₹
+                      {selectedOrders
+                        .reduce((s, o) => s + (o.orderAmount || 0), 0)
+                        .toLocaleString("en-IN")}
+                    </strong>
                   </SelectedSummary>
                 )}
               </OrderSelectionContainer>
@@ -536,7 +604,8 @@ const OrdersGrid = styled.div`
 `;
 
 const OrderCard = styled.div`
-  border: 1px solid ${(props) => (props.selected ? "#2563eb" : "var(--nb-border)")};
+  border: 1px solid
+    ${(props) => (props.selected ? "#2563eb" : "var(--nb-border)")};
   background-color: ${(props) => (props.selected ? "#eff6ff" : "var(--nb-white)")};
   padding: 12px;
   border-radius: 8px;
@@ -583,20 +652,6 @@ const SelectedBadge = styled.span`
   border-radius: 20px;
 `;
 
-const ItemsList = styled.ul`
-  list-style: none;
-  padding: 6px 0 0;
-  margin: 6px 0 0;
-  border-top: 1px solid #e2e8f0;
-  font-size: 0.78rem;
-  color: #475569;
-  li {
-    display: flex;
-    justify-content: space-between;
-    padding: 2px 0;
-  }
-`;
-
 const ApprovedOn = styled.div`
   font-size: 0.75rem;
   color: #059669;
@@ -637,7 +692,9 @@ const ItemQtyHeader = styled.div`
   text-transform: uppercase;
   margin-bottom: 4px;
   text-align: center;
-  span:first-child { text-align: left; }
+  span:first-child {
+    text-align: left;
+  }
 `;
 
 const ItemQtyRow = styled.div`
@@ -647,7 +704,9 @@ const ItemQtyRow = styled.div`
   align-items: center;
   padding: 4px 0;
   border-bottom: 1px solid #f1f5f9;
-  &:last-child { border-bottom: none; }
+  &:last-child {
+    border-bottom: none;
+  }
   opacity: ${(p) => (p.$excluded ? 0.4 : 1)};
   transition: opacity 0.2s;
 `;
@@ -688,7 +747,7 @@ const ToggleKnob = styled.div`
   top: 3px;
   left: ${(p) => (p.$on ? "19px" : "3px")};
   transition: left 0.2s;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 `;
 
 const NoOrdersMsg = styled.div`

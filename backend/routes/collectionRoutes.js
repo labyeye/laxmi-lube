@@ -7,11 +7,17 @@ const { protect } = require("../middleware/authMiddleware");
 const { format } = require("date-fns");
 const exceljs = require("exceljs");
 const { generateReceiptPDF } = require("../services/pdfService");
-const { sendRetailerReceipt, sendAdminNotification } = require("../services/whatsappService");
+const {
+  sendRetailerReceipt,
+  sendAdminNotification,
+} = require("../services/whatsappService");
 
 // ── Shared WhatsApp trigger (used by auto-send and manual endpoint) ───────────
 const PAYMENT_MODE_LABELS = {
-  Cash: "Cash", cheque: "Cheque", bank_transfer: "Bank Transfer", upi: "UPI",
+  Cash: "Cash",
+  cheque: "Cheque",
+  bank_transfer: "Bank Transfer",
+  upi: "UPI",
 };
 
 async function triggerWhatsApp(collectionId) {
@@ -25,16 +31,20 @@ async function triggerWhatsApp(collectionId) {
   const retailer = await Retailer.findOne({ name: bill?.retailer });
   const staffName = collection.collectedBy?.name || "Staff";
   const billNumber = bill?.billNumber || "N/A";
-  const collectionDate = format(new Date(collection.collectedOn), "dd MMM yyyy");
+  const collectionDate = format(
+    new Date(collection.collectedOn),
+    "dd MMM yyyy",
+  );
   const amountFormatted = parseFloat(collection.amountCollected).toFixed(2);
-  const paymentModeLabel = PAYMENT_MODE_LABELS[collection.paymentMode] || collection.paymentMode;
+  const paymentModeLabel =
+    PAYMENT_MODE_LABELS[collection.paymentMode] || collection.paymentMode;
 
   const pdfBuffer = await generateReceiptPDF(
     collection,
     bill,
     retailer,
     collection.collectedBy,
-    process.env.COMPANY_NAME || "Distribution Co."
+    process.env.COMPANY_NAME || "Distribution Co.",
   );
   const pdfFilename = `receipt_${billNumber}_${Date.now()}.pdf`;
 
@@ -45,8 +55,14 @@ async function triggerWhatsApp(collectionId) {
       retailer.phone,
       pdfBuffer,
       pdfFilename,
-      { retailerName: retailer.name, amount: amountFormatted, billNumber, date: collectionDate, staffName },
-      collectionId.toString()
+      {
+        retailerName: retailer.name,
+        amount: amountFormatted,
+        billNumber,
+        date: collectionDate,
+        staffName,
+      },
+      collectionId.toString(),
     );
     waStatus = "sent";
   }
@@ -74,9 +90,7 @@ async function triggerWhatsApp(collectionId) {
 // ── Helper function to filter payment details by payment mode ─────────────────
 const getFilteredPaymentDetails = (paymentMode, paymentDetails) => {
   if (!paymentDetails) {
-    return paymentMode === "Cash" 
-      ? { receiptNumber: "Money Received" } 
-      : null;
+    return paymentMode === "Cash" ? { receiptNumber: "Money Received" } : null;
   }
 
   const modeSpecificDetails = {
@@ -156,7 +170,7 @@ router.get("/export/today-collections/excel", protect, async (req, res) => {
     // Add data rows
     collections.forEach((collection) => {
       const paymentDetails = collection.paymentDetails || {};
-      
+
       worksheet.addRow({
         retailer: collection.bill?.retailer || "N/A",
         billNumber: collection.bill?.billNumber || "N/A",
@@ -165,18 +179,21 @@ router.get("/export/today-collections/excel", protect, async (req, res) => {
           : "N/A",
         collectionAmount: collection.amountCollected,
         dueAmount: collection.bill?.dueAmount || 0,
-        paymentMode: collection.paymentMode 
-  ? collection.paymentMode.charAt(0).toUpperCase() + collection.paymentMode.slice(1).toLowerCase()
-  : "N/A",
+        paymentMode: collection.paymentMode
+          ? collection.paymentMode.charAt(0).toUpperCase() +
+            collection.paymentMode.slice(1).toLowerCase()
+          : "N/A",
         paymentDate: format(new Date(collection.collectedOn), "dd/MM/yyyy"),
         collectedBy: collection.collectedBy?.name || "System",
         chequeNumber: paymentDetails.chequeNumber || "",
         bankName: paymentDetails.bankName || "",
         upiId: paymentDetails.upiId || "",
-        transactionId: paymentDetails.transactionId || paymentDetails.upiTransactionId || "",
-        receiptNumber: collection.paymentMode === "Cash" 
-          ? (paymentDetails.receiptNumber || "Money Received")
-          : ""
+        transactionId:
+          paymentDetails.transactionId || paymentDetails.upiTransactionId || "",
+        receiptNumber:
+          collection.paymentMode === "Cash"
+            ? paymentDetails.receiptNumber || "Money Received"
+            : "",
       });
     });
 
@@ -196,21 +213,21 @@ router.get("/export/today-collections/excel", protect, async (req, res) => {
       });
       column.width = Math.min(
         Math.max(maxLength + 2, column.header.length + 2),
-        50
+        50,
       );
     });
 
     // Set response headers
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
     res.setHeader(
       "Content-Disposition",
       `attachment; filename=today_collections_${format(
         new Date(),
-        "yyyyMMdd"
-      )}.xlsx`
+        "yyyyMMdd",
+      )}.xlsx`,
     );
 
     // Send the workbook
@@ -232,19 +249,32 @@ router.get("/next-receipt-number", protect, async (req, res) => {
     const nextNumber = String(count + 1).padStart(4, "0");
     res.json({ receiptNumber: nextNumber });
   } catch (err) {
-    res.status(500).json({ message: "Failed to generate receipt number", error: err.message });
+    res
+      .status(500)
+      .json({
+        message: "Failed to generate receipt number",
+        error: err.message,
+      });
   }
 });
 
 // Create a new collection
 router.post("/", protect, async (req, res) => {
   try {
-    const { bill, amountCollected, paymentMode, remarks, paymentDetails,collectedOn } = req.body;
+    const {
+      bill,
+      amountCollected,
+      paymentMode,
+      remarks,
+      paymentDetails,
+      collectedOn,
+    } = req.body;
 
     // Validate required fields
     if (!bill || !amountCollected || !paymentMode || !collectedOn) {
       return res.status(400).json({
-        message: "Bill ID, amount collected, payment mode and collection date are required",
+        message:
+          "Bill ID, amount collected, payment mode and collection date are required",
       });
     }
 
@@ -286,12 +316,14 @@ router.post("/", protect, async (req, res) => {
         break;
       case "cheque":
         if (!paymentDetails?.chequeNumber || !paymentDetails?.bankName) {
-          validationError = "Cheque number and bank name are required for cheque payments";
+          validationError =
+            "Cheque number and bank name are required for cheque payments";
         }
         break;
       case "bank_transfer":
         if (!paymentDetails?.transactionId || !paymentDetails?.bankName) {
-          validationError = "Transaction ID and bank name are required for bank transfers";
+          validationError =
+            "Transaction ID and bank name are required for bank transfers";
         }
         break;
     }
@@ -305,9 +337,10 @@ router.post("/", protect, async (req, res) => {
       bill,
       amountCollected: amount,
       paymentMode,
-      paymentDetails: paymentMode === "Cash" 
-        ? { receiptNumber: paymentDetails?.receiptNumber || "Money Received" }
-        : paymentDetails,
+      paymentDetails:
+        paymentMode === "Cash"
+          ? { receiptNumber: paymentDetails?.receiptNumber || "Money Received" }
+          : paymentDetails,
       collectedBy: req.user._id,
       remarks,
       collectedOn: new Date(collectedOn), // Use the provided date
@@ -349,11 +382,11 @@ router.get("/", protect, async (req, res) => {
       const bills = await Bill.find({
         $or: [
           { billNumber: { $regex: search, $options: "i" } },
-          { retailer: { $regex: search, $options: "i" } }
-        ]
+          { retailer: { $regex: search, $options: "i" } },
+        ],
       }).select("_id");
-      
-      filter.bill = { $in: bills.map(b => b._id) };
+
+      filter.bill = { $in: bills.map((b) => b._id) };
     }
 
     if (startDate || endDate) {
@@ -412,7 +445,9 @@ router.post("/:id/send-whatsapp", protect, async (req, res) => {
     });
   } catch (err) {
     console.error("Manual WhatsApp send error:", err.message);
-    await Collection.findByIdAndUpdate(req.params.id, { whatsappStatus: "pending" }).catch(() => {});
+    await Collection.findByIdAndUpdate(req.params.id, {
+      whatsappStatus: "pending",
+    }).catch(() => {});
     res.status(500).json({
       success: false,
       message: err.message || "Failed to send WhatsApp message",

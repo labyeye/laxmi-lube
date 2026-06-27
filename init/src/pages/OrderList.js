@@ -3,7 +3,13 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import styled from "styled-components";
 import Layout from "../components/Layout";
-import { FaSearch, FaFileExcel, FaPlus, FaTrash, FaTimes } from "react-icons/fa";
+import {
+  FaSearch,
+  FaFileExcel,
+  FaPlus,
+  FaTrash,
+  FaTimes,
+} from "react-icons/fa";
 import { format } from "date-fns";
 
 const OrderList = () => {
@@ -132,30 +138,6 @@ const OrderList = () => {
     }
   };
 
-  const handleStatusChange = async (orderId, status) => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-      await axios.patch(
-        `https://backend.laxmilube.in/api/orders/${orderId}/status`,
-        { status },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-
-      // Update local state
-      setOrders(
-        orders.map((order) =>
-          order._id === orderId ? { ...order, status } : order,
-        ),
-      );
-    } catch (err) {
-      setError("Failed to update order status. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleApprove = async (orderId) => {
     if (!window.confirm("Are you sure you want to approve this order?")) return;
@@ -172,9 +154,12 @@ const OrderList = () => {
       if (response.data.success) {
         alert("Order approved successfully!");
         // Refresh orders
-        const ordersRes = await axios.get("https://backend.laxmilube.in/api/orders", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const ordersRes = await axios.get(
+          "https://backend.laxmilube.in/api/orders",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
         setOrders(ordersRes.data);
       }
     } catch (err) {
@@ -200,9 +185,12 @@ const OrderList = () => {
       if (response.data.success) {
         alert("Order rejected successfully!");
         // Refresh orders
-        const ordersRes = await axios.get("https://backend.laxmilube.in/api/orders", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const ordersRes = await axios.get(
+          "https://backend.laxmilube.in/api/orders",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
         setOrders(ordersRes.data);
       }
     } catch (err) {
@@ -229,9 +217,12 @@ const OrderList = () => {
           `Bill generated successfully! Bill Number: ${response.data.bill.billNumber}`,
         );
         // Refresh orders
-        const ordersRes = await axios.get("https://backend.laxmilube.in/api/orders", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const ordersRes = await axios.get(
+          "https://backend.laxmilube.in/api/orders",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
         setOrders(ordersRes.data);
       }
     } catch (err) {
@@ -258,7 +249,10 @@ const OrderList = () => {
   const addOrderItem = () => {
     setNewOrder((prev) => ({
       ...prev,
-      items: [...prev.items, { productId: "", quantity: 1, otherScheme: 0, remarks: "" }],
+      items: [
+        ...prev.items,
+        { productId: "", quantity: 1, otherScheme: 0, remarks: "" },
+      ],
     }));
   };
 
@@ -276,7 +270,10 @@ const OrderList = () => {
         i === index
           ? {
               ...item,
-              [key]: key === "quantity" || key === "otherScheme" ? Number(value) : value,
+              [key]:
+                key === "quantity" || key === "otherScheme"
+                  ? Number(value)
+                  : value,
             }
           : item,
       ),
@@ -299,7 +296,9 @@ const OrderList = () => {
 
     for (const item of newOrder.items) {
       if (!item.productId || !item.quantity || item.quantity <= 0) {
-        setCreateError("Please select product and valid quantity for all items");
+        setCreateError(
+          "Please select product and valid quantity for all items",
+        );
         return;
       }
     }
@@ -529,7 +528,12 @@ const OrderList = () => {
                   <Label>Retailer</Label>
                   <Select
                     value={newOrder.retailerId}
-                    onChange={(e) => setNewOrder((prev) => ({ ...prev, retailerId: e.target.value }))}
+                    onChange={(e) =>
+                      setNewOrder((prev) => ({
+                        ...prev,
+                        retailerId: e.target.value,
+                      }))
+                    }
                   >
                     <option value="">Select Retailer</option>
                     {retailers.map((retailer) => (
@@ -547,7 +551,9 @@ const OrderList = () => {
                         <Label>Product</Label>
                         <Select
                           value={item.productId}
-                          onChange={(e) => updateOrderItem(index, "productId", e.target.value)}
+                          onChange={(e) =>
+                            updateOrderItem(index, "productId", e.target.value)
+                          }
                         >
                           <option value="">Select Product</option>
                           {products.map((product) => (
@@ -564,7 +570,9 @@ const OrderList = () => {
                           type="number"
                           min="1"
                           value={item.quantity}
-                          onChange={(e) => updateOrderItem(index, "quantity", e.target.value)}
+                          onChange={(e) =>
+                            updateOrderItem(index, "quantity", e.target.value)
+                          }
                         />
                       </FilterGroup>
 
@@ -574,7 +582,13 @@ const OrderList = () => {
                           type="number"
                           min="0"
                           value={item.otherScheme}
-                          onChange={(e) => updateOrderItem(index, "otherScheme", e.target.value)}
+                          onChange={(e) =>
+                            updateOrderItem(
+                              index,
+                              "otherScheme",
+                              e.target.value,
+                            )
+                          }
                         />
                       </FilterGroup>
                     </FormRow>
@@ -584,13 +598,18 @@ const OrderList = () => {
                       <Input
                         type="text"
                         value={item.remarks}
-                        onChange={(e) => updateOrderItem(index, "remarks", e.target.value)}
+                        onChange={(e) =>
+                          updateOrderItem(index, "remarks", e.target.value)
+                        }
                         placeholder="Optional"
                       />
                     </FilterGroup>
 
                     {newOrder.items.length > 1 && (
-                      <DeleteItemBtn type="button" onClick={() => removeOrderItem(index)}>
+                      <DeleteItemBtn
+                        type="button"
+                        onClick={() => removeOrderItem(index)}
+                      >
                         <FaTrash /> Remove Item
                       </DeleteItemBtn>
                     )}

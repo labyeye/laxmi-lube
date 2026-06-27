@@ -6,52 +6,97 @@ import receiptPdfUrl from "../assets/Receipt.pdf";
 // To adjust: change the numbers below, then use the Preview button to verify.
 // ─────────────────────────────────────────────────────────────────────────────
 const POS = {
-  receiptNo:      { x: 86,  y: 189 }, // after "RECEIPT NO."
+  receiptNo: { x: 86, y: 189 }, // after "RECEIPT NO."
   // Date placed as DD/MM/YYYY starting in the first date box (top-right)
-  dateD1:         { x: 430, y: 235 }, // D
-  dateD2:         { x: 445, y: 235 }, // D
-  dateM1:         { x: 460, y: 235 }, // M
-  dateM2:         { x: 476, y: 235 }, // M
-  dateY1:         { x: 492, y: 235 }, // Y
-  dateY2:         { x: 507, y: 235 }, // Y
-  dateY3:         { x: 523, y: 235 }, // Y
-  dateY4:         { x: 538, y: 235 }, // Y
-  retailerName:   { x: 120, y: 160 }, // after "RECEIVED FROM M/s"
-  amountWords:    { x: 120, y: 137 }, // after "AMOUNT IN WORDS"
-  amountNum:      { x: 440, y: 132 }, // inside ₹ box (right side)
+  dateD1: { x: 430, y: 235 }, // D
+  dateD2: { x: 445, y: 235 }, // D
+  dateM1: { x: 460, y: 235 }, // M
+  dateM2: { x: 476, y: 235 }, // M
+  dateY1: { x: 492, y: 235 }, // Y
+  dateY2: { x: 507, y: 235 }, // Y
+  dateY3: { x: 523, y: 235 }, // Y
+  dateY4: { x: 538, y: 235 }, // Y
+  retailerName: { x: 120, y: 160 }, // after "RECEIVED FROM M/s"
+  amountWords: { x: 120, y: 137 }, // after "AMOUNT IN WORDS"
+  amountNum: { x: 440, y: 132 }, // inside ₹ box (right side)
   // Payment mode — an "X" is drawn inside the correct box
-  cashMark:       { x: 132, y: 107 }, // inside CASH box
-  upiMark:        { x: 190, y: 107 }, // inside UPI box
-  chequeMark:     { x: 220, y: 107 }, // same row; no dedicated box, placed left
-  bankMark:       { x: 220, y: 107 },
-  chequeNo:       { x: 342, y: 110.5 }, // after "CHEQUE No."
-  chequeDt:       { x: 440, y: 110.5 }, // after "DT"
-  invoiceNo:      { x: 130, y: 85  }, // after "AGAINST INVOICE NO:"
+  cashMark: { x: 132, y: 107 }, // inside CASH box
+  upiMark: { x: 190, y: 107 }, // inside UPI box
+  chequeMark: { x: 220, y: 107 }, // same row; no dedicated box, placed left
+  bankMark: { x: 220, y: 107 },
+  chequeNo: { x: 342, y: 110.5 }, // after "CHEQUE No."
+  chequeDt: { x: 440, y: 110.5 }, // after "DT"
+  invoiceNo: { x: 130, y: 85 }, // after "AGAINST INVOICE NO:"
 };
 
 // ─── Number → Indian Words ────────────────────────────────────────────────────
 const _ones = [
-  "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
-  "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
-  "Seventeen", "Eighteen", "Nineteen",
+  "",
+  "One",
+  "Two",
+  "Three",
+  "Four",
+  "Five",
+  "Six",
+  "Seven",
+  "Eight",
+  "Nine",
+  "Ten",
+  "Eleven",
+  "Twelve",
+  "Thirteen",
+  "Fourteen",
+  "Fifteen",
+  "Sixteen",
+  "Seventeen",
+  "Eighteen",
+  "Nineteen",
 ];
-const _tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+const _tens = [
+  "",
+  "",
+  "Twenty",
+  "Thirty",
+  "Forty",
+  "Fifty",
+  "Sixty",
+  "Seventy",
+  "Eighty",
+  "Ninety",
+];
 
 function _words(n) {
   if (n === 0) return "";
   if (n < 20) return _ones[n];
-  if (n < 100) return _tens[Math.floor(n / 10)] + (n % 10 ? " " + _ones[n % 10] : "");
-  return _ones[Math.floor(n / 100)] + " Hundred" + (n % 100 ? " " + _words(n % 100) : "");
+  if (n < 100)
+    return _tens[Math.floor(n / 10)] + (n % 10 ? " " + _ones[n % 10] : "");
+  return (
+    _ones[Math.floor(n / 100)] +
+    " Hundred" +
+    (n % 100 ? " " + _words(n % 100) : "")
+  );
 }
 
 export function toWords(amount) {
   const n = Math.round(Math.abs(amount));
   if (n === 0) return "Zero Only";
-  let rem = n, parts = [];
-  if (rem >= 10000000) { parts.push(_words(Math.floor(rem / 10000000)) + " Crore"); rem %= 10000000; }
-  if (rem >= 100000)   { parts.push(_words(Math.floor(rem / 100000))   + " Lakh");  rem %= 100000;   }
-  if (rem >= 1000)     { parts.push(_words(Math.floor(rem / 1000))     + " Thousand"); rem %= 1000;  }
-  if (rem > 0)         { parts.push(_words(rem)); }
+  let rem = n,
+    parts = [];
+  if (rem >= 10000000) {
+    parts.push(_words(Math.floor(rem / 10000000)) + " Crore");
+    rem %= 10000000;
+  }
+  if (rem >= 100000) {
+    parts.push(_words(Math.floor(rem / 100000)) + " Lakh");
+    rem %= 100000;
+  }
+  if (rem >= 1000) {
+    parts.push(_words(Math.floor(rem / 1000)) + " Thousand");
+    rem %= 1000;
+  }
+  if (rem > 0) {
+    parts.push(_words(rem));
+  }
   return parts.join(" ") + " Only";
 }
 
@@ -82,7 +127,9 @@ export async function generateReceiptPdf(data) {
   const put = (text, pos, size = 10, bold = false) => {
     if (!text || !pos) return;
     page.drawText(String(text), {
-      x: pos.x, y: pos.y, size,
+      x: pos.x,
+      y: pos.y,
+      size,
       font: bold ? boldFont : font,
       color: rgb(0, 0, 0),
     });
@@ -93,20 +140,36 @@ export async function generateReceiptPdf(data) {
     if (!pos) return;
     const { x, y } = pos;
     const green = rgb(0, 0.6, 0);
-    page.drawLine({ start: { x, y: y + 3 }, end: { x: x + 3, y }, thickness: 1.5, color: green });
-    page.drawLine({ start: { x: x + 3, y }, end: { x: x + 9, y: y + 8 }, thickness: 1.5, color: green });
+    page.drawLine({
+      start: { x, y: y + 3 },
+      end: { x: x + 3, y },
+      thickness: 1.5,
+      color: green,
+    });
+    page.drawLine({
+      start: { x: x + 3, y },
+      end: { x: x + 9, y: y + 8 },
+      thickness: 1.5,
+      color: green,
+    });
   };
 
   // Draws a red X at the given position
   const putX = (pos, size = 11) => {
-    page.drawText("X", { x: pos.x, y: pos.y, size, font: boldFont, color: rgb(0.85, 0, 0) });
+    page.drawText("X", {
+      x: pos.x,
+      y: pos.y,
+      size,
+      font: boldFont,
+      color: rgb(0.85, 0, 0),
+    });
   };
 
   // Receipt No (serial / receipt number from cash payment)
   if (data.receiptNumber) put(data.receiptNumber, POS.receiptNo, 10, true);
 
   // Date — split into individual digits for the D D M M Y Y Y Y boxes
-  const dateStr = data.rawDate ? data.rawDate : "";          // "dd/mm/yyyy" format
+  const dateStr = data.rawDate ? data.rawDate : ""; // "dd/mm/yyyy" format
   if (dateStr && dateStr.length >= 10) {
     const [dd, mm, yyyy] = dateStr.split("/");
     put((dd || "  ")[0], POS.dateD1, 10, true);
@@ -143,7 +206,7 @@ export async function generateReceiptPdf(data) {
   // Cheque details — show actual values for cheque, "NA" for all other modes
   if (mode === "cheque") {
     put(data.chequeNumber || "", POS.chequeNo, 9);
-    put(data.chequeDate   || "", POS.chequeDt, 9);
+    put(data.chequeDate || "", POS.chequeDt, 9);
   } else {
     put("NA", POS.chequeNo, 9);
     put("NA", POS.chequeDt, 9);
@@ -157,9 +220,9 @@ export async function generateReceiptPdf(data) {
 
 export function downloadPdf(pdfBytes, filename = "receipt.pdf") {
   const blob = new Blob([pdfBytes], { type: "application/pdf" });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement("a");
-  a.href     = url;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);

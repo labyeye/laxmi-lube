@@ -26,9 +26,12 @@ const AdvancePage = () => {
   const fetchAdvances = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("https://backend.laxmilube.in/api/advances", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        "https://backend.laxmilube.in/api/advances",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       setAdvances(response.data);
     } catch (error) {
       console.error("Error fetching advances:", error);
@@ -39,9 +42,12 @@ const AdvancePage = () => {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("https://backend.laxmilube.in/api/users", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        "https://backend.laxmilube.in/api/users",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       // Filter to show only staff members, not admin
       const staffMembers = response.data.filter(
         (user) => user.role === "staff",
@@ -373,7 +379,9 @@ const AdvancePage = () => {
                       {new Date(advance.advanceDate).toLocaleDateString()}
                     </Td>
                     <Td>{advance.staffName}</Td>
-                    <Td style={{ fontWeight: "600", color: "var(--nb-orange)" }}>
+                    <Td
+                      style={{ fontWeight: "600", color: "var(--nb-orange)" }}
+                    >
                       ₹ {advance.advanceAmount.toFixed(2)}
                     </Td>
                     <Td>{advance.reason || "-"}</Td>

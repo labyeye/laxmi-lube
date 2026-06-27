@@ -25,9 +25,12 @@ const getRecordLabel = (record) => {
 };
 
 export const fetchModuleDefinition = async (moduleKey) => {
-  const response = await axios.get(`${API_BASE}/modules/definition/${moduleKey}`, {
-    headers: getAuthHeaders(),
-  });
+  const response = await axios.get(
+    `${API_BASE}/modules/definition/${moduleKey}`,
+    {
+      headers: getAuthHeaders(),
+    },
+  );
   return response.data;
 };
 
@@ -49,7 +52,7 @@ export const createRecord = async (moduleKey, data) => {
   const response = await axios.post(
     `${API_BASE}/records/${moduleKey}`,
     { data },
-    { headers: getAuthHeaders() }
+    { headers: getAuthHeaders() },
   );
   return response.data;
 };
@@ -58,15 +61,18 @@ export const updateRecord = async (moduleKey, id, data) => {
   const response = await axios.put(
     `${API_BASE}/records/${moduleKey}/${id}`,
     { data },
-    { headers: getAuthHeaders() }
+    { headers: getAuthHeaders() },
   );
   return response.data;
 };
 
 export const deleteRecord = async (moduleKey, id) => {
-  const response = await axios.delete(`${API_BASE}/records/${moduleKey}/${id}`, {
-    headers: getAuthHeaders(),
-  });
+  const response = await axios.delete(
+    `${API_BASE}/records/${moduleKey}/${id}`,
+    {
+      headers: getAuthHeaders(),
+    },
+  );
   return response.data;
 };
 
@@ -100,7 +106,7 @@ export const hydrateModuleDefinition = async (moduleKey) => {
       }
 
       return field;
-    })
+    }),
   );
 
   return { ...definition, fields };

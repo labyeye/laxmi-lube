@@ -17,9 +17,12 @@ const SalaryLedgerPage = () => {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("https://backend.laxmilube.in/api/users", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        "https://backend.laxmilube.in/api/users",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       // Filter to show only staff members, not admin
       const staffMembers = response.data.filter(
         (user) => user.role === "staff",
@@ -375,7 +378,9 @@ const SalaryLedgerPage = () => {
                       <SummaryLabel>Final Balance</SummaryLabel>
                       <SummaryValue
                         color={
-                          getTotals().finalBalance >= 0 ? "var(--nb-blue)" : "var(--nb-orange)"
+                          getTotals().finalBalance >= 0
+                            ? "var(--nb-blue)"
+                            : "var(--nb-orange)"
                         }
                       >
                         ₹ {Math.abs(getTotals().finalBalance).toFixed(2)}

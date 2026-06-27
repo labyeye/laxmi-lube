@@ -25,10 +25,7 @@ const API_BASE = "https://backend.laxmilube.in/api/reports";
 const token = () => localStorage.getItem("token");
 const auth = () => ({ headers: { Authorization: `Bearer ${token()}` } });
 
-const fmt = (d) =>
-  d
-    ? format(new Date(d), "dd/MM/yyyy")
-    : "—";
+const fmt = (d) => (d ? format(new Date(d), "dd/MM/yyyy") : "—");
 
 const INR = (n) =>
   "₹" +
@@ -93,9 +90,7 @@ const REPORT_TYPES = [
 // ─── Main Page ─────────────────────────────────────────────────────────────
 const TallyReportPage = () => {
   const [activeType, setActiveType] = useState(null);
-  const [startDate, setStartDate] = useState(
-    format(new Date(), "yyyy-MM-dd")
-  );
+  const [startDate, setStartDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
 
   // selectors
@@ -111,7 +106,7 @@ const TallyReportPage = () => {
 
   // extra filters
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
-  const [filterYear, setFilterYear]   = useState(new Date().getFullYear());
+  const [filterYear, setFilterYear] = useState(new Date().getFullYear());
   const [vehicleType, setVehicleType] = useState("");
 
   // fetch selectors
@@ -122,7 +117,12 @@ const TallyReportPage = () => {
         .then((r) => setRetailers(r.data.data || []))
         .catch(() => setError("Failed to load retailers"));
     }
-    if ((activeType === "staff" || activeType === "attendance" || activeType === "salary") && staffList.length === 0) {
+    if (
+      (activeType === "staff" ||
+        activeType === "attendance" ||
+        activeType === "salary") &&
+      staffList.length === 0
+    ) {
       axios
         .get(`${API_BASE}/tally/staff`, auth())
         .then((r) => setStaffList(r.data.data || []))
@@ -149,14 +149,17 @@ const TallyReportPage = () => {
       } else if (activeType === "delivery") {
         url = `${API_BASE}/tally/delivery-report?startDate=${startDate}&endDate=${endDate}`;
       } else if (activeType === "attendance") {
-        url = `${API_BASE}/tally/attendance-report?startDate=${startDate}&endDate=${endDate}`
-          + (selectedStaff ? `&staffId=${selectedStaff._id}` : "");
+        url =
+          `${API_BASE}/tally/attendance-report?startDate=${startDate}&endDate=${endDate}` +
+          (selectedStaff ? `&staffId=${selectedStaff._id}` : "");
       } else if (activeType === "salary") {
-        url = `${API_BASE}/tally/salary-report?month=${filterMonth}&year=${filterYear}`
-          + (selectedStaff ? `&staffId=${selectedStaff._id}` : "");
+        url =
+          `${API_BASE}/tally/salary-report?month=${filterMonth}&year=${filterYear}` +
+          (selectedStaff ? `&staffId=${selectedStaff._id}` : "");
       } else if (activeType === "logistics") {
-        url = `${API_BASE}/tally/logistics-report?startDate=${startDate}&endDate=${endDate}`
-          + (vehicleType ? `&vehicleType=${vehicleType}` : "");
+        url =
+          `${API_BASE}/tally/logistics-report?startDate=${startDate}&endDate=${endDate}` +
+          (vehicleType ? `&vehicleType=${vehicleType}` : "");
       }
       const res = await axios.get(url, auth());
       setReportData(res.data);
@@ -165,7 +168,16 @@ const TallyReportPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeType, selectedRetailer, selectedStaff, startDate, endDate, filterMonth, filterYear, vehicleType]);
+  }, [
+    activeType,
+    selectedRetailer,
+    selectedStaff,
+    startDate,
+    endDate,
+    filterMonth,
+    filterYear,
+    vehicleType,
+  ]);
 
   const handlePrint = () => window.print();
 
@@ -184,7 +196,11 @@ const TallyReportPage = () => {
         windowHeight: element.scrollHeight,
       });
 
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
 
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
@@ -210,7 +226,17 @@ const TallyReportPage = () => {
         sliceCanvas.width = canvas.width;
         sliceCanvas.height = slicePx;
         const ctx = sliceCanvas.getContext("2d");
-        ctx.drawImage(canvas, 0, yPx, canvas.width, slicePx, 0, 0, canvas.width, slicePx);
+        ctx.drawImage(
+          canvas,
+          0,
+          yPx,
+          canvas.width,
+          slicePx,
+          0,
+          0,
+          canvas.width,
+          slicePx,
+        );
         const sliceData = sliceCanvas.toDataURL("image/png");
 
         pdf.addImage(sliceData, "PNG", margin, margin, printW, sliceH);
@@ -248,9 +274,13 @@ const TallyReportPage = () => {
               </PrintBtn>
               <DownloadBtn onClick={handleDownloadPDF} disabled={pdfLoading}>
                 {pdfLoading ? (
-                  <><FaSpinner className="spin" /> Generating…</>
+                  <>
+                    <FaSpinner className="spin" /> Generating…
+                  </>
                 ) : (
-                  <><FaFilePdf /> Download PDF</>
+                  <>
+                    <FaFilePdf /> Download PDF
+                  </>
                 )}
               </DownloadBtn>
             </BtnGroup>
@@ -285,7 +315,7 @@ const TallyReportPage = () => {
                     value={selectedRetailer?._id || ""}
                     onChange={(e) =>
                       setSelectedRetailer(
-                        retailers.find((r) => r._id === e.target.value) || null
+                        retailers.find((r) => r._id === e.target.value) || null,
                       )
                     }
                   >
@@ -307,7 +337,7 @@ const TallyReportPage = () => {
                     value={selectedStaff?._id || ""}
                     onChange={(e) =>
                       setSelectedStaff(
-                        staffList.find((s) => s._id === e.target.value) || null
+                        staffList.find((s) => s._id === e.target.value) || null,
                       )
                     }
                   >
@@ -328,12 +358,16 @@ const TallyReportPage = () => {
                   <StyledSelect
                     value={selectedStaff?._id || ""}
                     onChange={(e) =>
-                      setSelectedStaff(staffList.find((s) => s._id === e.target.value) || null)
+                      setSelectedStaff(
+                        staffList.find((s) => s._id === e.target.value) || null,
+                      )
                     }
                   >
                     <option value="">-- All Staff --</option>
                     {staffList.map((s) => (
-                      <option key={s._id} value={s._id}>{s.name}</option>
+                      <option key={s._id} value={s._id}>
+                        {s.name}
+                      </option>
                     ))}
                   </StyledSelect>
                 </SelectGroup>
@@ -346,12 +380,16 @@ const TallyReportPage = () => {
                   <StyledSelect
                     value={selectedStaff?._id || ""}
                     onChange={(e) =>
-                      setSelectedStaff(staffList.find((s) => s._id === e.target.value) || null)
+                      setSelectedStaff(
+                        staffList.find((s) => s._id === e.target.value) || null,
+                      )
                     }
                   >
                     <option value="">-- All Staff --</option>
                     {staffList.map((s) => (
-                      <option key={s._id} value={s._id}>{s.name}</option>
+                      <option key={s._id} value={s._id}>
+                        {s.name}
+                      </option>
                     ))}
                   </StyledSelect>
                 </SelectGroup>
@@ -362,17 +400,40 @@ const TallyReportPage = () => {
                 <>
                   <DateGroup>
                     <SelectLabel>Month</SelectLabel>
-                    <StyledSelect value={filterMonth} onChange={(e) => setFilterMonth(Number(e.target.value))}>
-                      {["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].map((m,i) => (
-                        <option key={i+1} value={i+1}>{m}</option>
+                    <StyledSelect
+                      value={filterMonth}
+                      onChange={(e) => setFilterMonth(Number(e.target.value))}
+                    >
+                      {[
+                        "Jan",
+                        "Feb",
+                        "Mar",
+                        "Apr",
+                        "May",
+                        "Jun",
+                        "Jul",
+                        "Aug",
+                        "Sep",
+                        "Oct",
+                        "Nov",
+                        "Dec",
+                      ].map((m, i) => (
+                        <option key={i + 1} value={i + 1}>
+                          {m}
+                        </option>
                       ))}
                     </StyledSelect>
                   </DateGroup>
                   <DateGroup>
                     <SelectLabel>Year</SelectLabel>
-                    <StyledSelect value={filterYear} onChange={(e) => setFilterYear(Number(e.target.value))}>
-                      {[2023,2024,2025,2026,2027].map((y) => (
-                        <option key={y} value={y}>{y}</option>
+                    <StyledSelect
+                      value={filterYear}
+                      onChange={(e) => setFilterYear(Number(e.target.value))}
+                    >
+                      {[2023, 2024, 2025, 2026, 2027].map((y) => (
+                        <option key={y} value={y}>
+                          {y}
+                        </option>
                       ))}
                     </StyledSelect>
                   </DateGroup>
@@ -383,7 +444,10 @@ const TallyReportPage = () => {
               {activeType === "logistics" && (
                 <SelectGroup>
                   <SelectLabel>Vehicle Type</SelectLabel>
-                  <StyledSelect value={vehicleType} onChange={(e) => setVehicleType(e.target.value)}>
+                  <StyledSelect
+                    value={vehicleType}
+                    onChange={(e) => setVehicleType(e.target.value)}
+                  >
                     <option value="">-- All Types --</option>
                     <option value="Bike">Bike</option>
                     <option value="Tempo">Tempo</option>
@@ -444,22 +508,16 @@ const TallyReportPage = () => {
         {/* ── Report Output ──────────────────────────────────── */}
         {reportData && (
           <ReportWrap id="report-print-area">
-            {activeType === "retailer" && (
-              <RetailerReport data={reportData} />
-            )}
+            {activeType === "retailer" && <RetailerReport data={reportData} />}
             {activeType === "staff" && <StaffReport data={reportData} />}
             {activeType === "collection" && (
               <CollectionReport data={reportData} />
             )}
-            {activeType === "delivery" && (
-              <DeliveryReport data={reportData} />
-            )}
+            {activeType === "delivery" && <DeliveryReport data={reportData} />}
             {activeType === "attendance" && (
               <AttendanceReport data={reportData} />
             )}
-            {activeType === "salary" && (
-              <SalaryReport data={reportData} />
-            )}
+            {activeType === "salary" && <SalaryReport data={reportData} />}
             {activeType === "logistics" && (
               <LogisticsReport data={reportData} />
             )}
@@ -538,7 +596,11 @@ const RetailerReport = ({ data }) => (
               <tr key={`c-${j}`} style={{ background: "#f0fdf4" }}>
                 <Td
                   colSpan={7}
-                  style={{ paddingLeft: 40, fontSize: "0.8rem", color: "#059669" }}
+                  style={{
+                    paddingLeft: 40,
+                    fontSize: "0.8rem",
+                    color: "#059669",
+                  }}
                 >
                   ↳ {fmt(c.date)} &nbsp;|&nbsp; {c.mode} &nbsp;|&nbsp;{" "}
                   {INR(c.amount)} &nbsp;|&nbsp; by {c.collectedBy}
@@ -862,32 +924,113 @@ const DeliveryReport = ({ data }) => (
             {/* Order breakdown row */}
             {(d.orders || []).length > 0 && (
               <tr style={{ background: "#f0f9ff" }}>
-                <Td colSpan={8} style={{ paddingLeft: 32, fontSize: "0.8rem", color: "#475569" }}>
+                <Td
+                  colSpan={8}
+                  style={{
+                    paddingLeft: 32,
+                    fontSize: "0.8rem",
+                    color: "#475569",
+                  }}
+                >
                   {d.orders.map((o, j) => (
-                    <div key={j} style={{ marginBottom: j < d.orders.length - 1 ? 8 : 0 }}>
-                      <strong style={{ color: "#1e40af" }}>Order #{o.orderNumber}</strong>
-                      {" — "}{INR(o.orderAmount || o.amount)}
+                    <div
+                      key={j}
+                      style={{ marginBottom: j < d.orders.length - 1 ? 8 : 0 }}
+                    >
+                      <strong style={{ color: "#1e40af" }}>
+                        Order #{o.orderNumber}
+                      </strong>
+                      {" — "}
+                      {INR(o.orderAmount || o.amount)}
                       {(o.deliveredItems || []).length > 0 && (
-                        <table style={{ marginTop: 4, fontSize: "0.75rem", borderCollapse: "collapse", width: "100%" }}>
+                        <table
+                          style={{
+                            marginTop: 4,
+                            fontSize: "0.75rem",
+                            borderCollapse: "collapse",
+                            width: "100%",
+                          }}
+                        >
                           <thead>
                             <tr style={{ background: "#dbeafe" }}>
-                              <th style={{ padding: "2px 8px", textAlign: "left" }}>Product</th>
-                              <th style={{ padding: "2px 8px", textAlign: "center" }}>Ordered</th>
-                              <th style={{ padding: "2px 8px", textAlign: "center" }}>Delivered</th>
-                              <th style={{ padding: "2px 8px", textAlign: "right" }}>Value</th>
+                              <th
+                                style={{
+                                  padding: "2px 8px",
+                                  textAlign: "left",
+                                }}
+                              >
+                                Product
+                              </th>
+                              <th
+                                style={{
+                                  padding: "2px 8px",
+                                  textAlign: "center",
+                                }}
+                              >
+                                Ordered
+                              </th>
+                              <th
+                                style={{
+                                  padding: "2px 8px",
+                                  textAlign: "center",
+                                }}
+                              >
+                                Delivered
+                              </th>
+                              <th
+                                style={{
+                                  padding: "2px 8px",
+                                  textAlign: "right",
+                                }}
+                              >
+                                Value
+                              </th>
                             </tr>
                           </thead>
                           <tbody>
                             {o.deliveredItems.map((item, k) => (
-                              <tr key={k} style={{ background: k % 2 === 0 ? "#f0f9ff" : "#e0f2fe" }}>
-                                <td style={{ padding: "2px 8px" }}>{item.name}</td>
-                                <td style={{ padding: "2px 8px", textAlign: "center", color: "#64748b" }}>{item.orderedQty}</td>
-                                <td style={{ padding: "2px 8px", textAlign: "center", fontWeight: 700,
-                                  color: item.deliverQty < item.orderedQty ? "#d97706" : "#059669" }}>
+                              <tr
+                                key={k}
+                                style={{
+                                  background:
+                                    k % 2 === 0 ? "#f0f9ff" : "#e0f2fe",
+                                }}
+                              >
+                                <td style={{ padding: "2px 8px" }}>
+                                  {item.name}
+                                </td>
+                                <td
+                                  style={{
+                                    padding: "2px 8px",
+                                    textAlign: "center",
+                                    color: "#64748b",
+                                  }}
+                                >
+                                  {item.orderedQty}
+                                </td>
+                                <td
+                                  style={{
+                                    padding: "2px 8px",
+                                    textAlign: "center",
+                                    fontWeight: 700,
+                                    color:
+                                      item.deliverQty < item.orderedQty
+                                        ? "#d97706"
+                                        : "#059669",
+                                  }}
+                                >
                                   {item.deliverQty}
                                   {item.deliverQty < item.orderedQty && " ⚠️"}
                                 </td>
-                                <td style={{ padding: "2px 8px", textAlign: "right", fontWeight: 600 }}>{INR(item.totalSale)}</td>
+                                <td
+                                  style={{
+                                    padding: "2px 8px",
+                                    textAlign: "right",
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  {INR(item.totalSale)}
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -896,7 +1039,15 @@ const DeliveryReport = ({ data }) => (
                     </div>
                   ))}
                   {d.remarks && (
-                    <em style={{ color: "#7c3aed", display: "block", marginTop: 4 }}>Remarks: {d.remarks}</em>
+                    <em
+                      style={{
+                        color: "#7c3aed",
+                        display: "block",
+                        marginTop: 4,
+                      }}
+                    >
+                      Remarks: {d.remarks}
+                    </em>
                   )}
                 </Td>
               </tr>
@@ -919,50 +1070,89 @@ const DeliveryReport = ({ data }) => (
 
 // ─── Attendance Report ──────────────────────────────────────────────────────
 const STATUS_ATT_COLOR = {
-  Present:    { bg: "#dcfce7", color: "#166534" },
-  Absent:     { bg: "#fee2e2", color: "#991b1b" },
+  Present: { bg: "#dcfce7", color: "#166534" },
+  Absent: { bg: "#fee2e2", color: "#991b1b" },
   "Half Day": { bg: "#fef9c3", color: "#854d0e" },
-  Leave:      { bg: "#ede9fe", color: "#5b21b6" },
+  Leave: { bg: "#ede9fe", color: "#5b21b6" },
 };
 
 const AttendanceReport = ({ data }) => (
   <div>
     <TallyHeader>
       <CompanyName>ATTENDANCE REPORT</CompanyName>
-      <PeriodLine>Period: {fmt(data.period?.start)} — {fmt(data.period?.end)}</PeriodLine>
+      <PeriodLine>
+        Period: {fmt(data.period?.start)} — {fmt(data.period?.end)}
+      </PeriodLine>
     </TallyHeader>
 
     <SummaryGrid>
-      <SummaryCard $accent="#059669"><SummaryVal style={{color:"#059669"}}>{data.summary?.Present||0}</SummaryVal><SummaryLbl>Present</SummaryLbl></SummaryCard>
-      <SummaryCard $accent="#dc2626"><SummaryVal style={{color:"#dc2626"}}>{data.summary?.Absent||0}</SummaryVal><SummaryLbl>Absent</SummaryLbl></SummaryCard>
-      <SummaryCard $accent="#d97706"><SummaryVal style={{color:"#d97706"}}>{data.summary?.["Half Day"]||0}</SummaryVal><SummaryLbl>Half Day</SummaryLbl></SummaryCard>
-      <SummaryCard $accent="#7c3aed"><SummaryVal style={{color:"#7c3aed"}}>{data.summary?.Leave||0}</SummaryVal><SummaryLbl>Leave</SummaryLbl></SummaryCard>
-      <SummaryCard $accent="#0891b2"><SummaryVal style={{color:"#0891b2"}}>{(data.summary?.totalHours||0).toFixed(1)}h</SummaryVal><SummaryLbl>Total Hours</SummaryLbl></SummaryCard>
+      <SummaryCard $accent="#059669">
+        <SummaryVal style={{ color: "#059669" }}>
+          {data.summary?.Present || 0}
+        </SummaryVal>
+        <SummaryLbl>Present</SummaryLbl>
+      </SummaryCard>
+      <SummaryCard $accent="#dc2626">
+        <SummaryVal style={{ color: "#dc2626" }}>
+          {data.summary?.Absent || 0}
+        </SummaryVal>
+        <SummaryLbl>Absent</SummaryLbl>
+      </SummaryCard>
+      <SummaryCard $accent="#d97706">
+        <SummaryVal style={{ color: "#d97706" }}>
+          {data.summary?.["Half Day"] || 0}
+        </SummaryVal>
+        <SummaryLbl>Half Day</SummaryLbl>
+      </SummaryCard>
+      <SummaryCard $accent="#7c3aed">
+        <SummaryVal style={{ color: "#7c3aed" }}>
+          {data.summary?.Leave || 0}
+        </SummaryVal>
+        <SummaryLbl>Leave</SummaryLbl>
+      </SummaryCard>
+      <SummaryCard $accent="#0891b2">
+        <SummaryVal style={{ color: "#0891b2" }}>
+          {(data.summary?.totalHours || 0).toFixed(1)}h
+        </SummaryVal>
+        <SummaryLbl>Total Hours</SummaryLbl>
+      </SummaryCard>
     </SummaryGrid>
 
     {(data.data || []).map((staff, si) => (
-      <div key={si} style={{marginBottom:24}}>
+      <div key={si} style={{ marginBottom: 24 }}>
         <SectionTitle>{staff.name}</SectionTitle>
         <TallyTable>
           <thead>
             <tr>
-              <Th>Date</Th><Th>Status</Th><Th>In Time</Th><Th>Out Time</Th><Th align="right">Hours</Th><Th>Remarks</Th>
+              <Th>Date</Th>
+              <Th>Status</Th>
+              <Th>In Time</Th>
+              <Th>Out Time</Th>
+              <Th align="right">Hours</Th>
+              <Th>Remarks</Th>
             </tr>
           </thead>
           <tbody>
-            {(staff.records||[]).map((r,i) => (
-              <tr key={i} style={{background: i%2===0?"#fff":"#f8fafc"}}>
+            {(staff.records || []).map((r, i) => (
+              <tr
+                key={i}
+                style={{ background: i % 2 === 0 ? "#fff" : "#f8fafc" }}
+              >
                 <Td>{fmt(r.date)}</Td>
                 <Td>
                   <StatusBadge
                     style={STATUS_ATT_COLOR[r.status]}
                     $status={r.status}
-                  >{r.status}</StatusBadge>
+                  >
+                    {r.status}
+                  </StatusBadge>
                 </Td>
-                <Td>{r.inTime||"—"}</Td>
-                <Td>{r.outTime||"—"}</Td>
-                <Td align="right">{r.workingHours?`${r.workingHours}h`:"—"}</Td>
-                <Td>{r.remarks||"—"}</Td>
+                <Td>{r.inTime || "—"}</Td>
+                <Td>{r.outTime || "—"}</Td>
+                <Td align="right">
+                  {r.workingHours ? `${r.workingHours}h` : "—"}
+                </Td>
+                <Td>{r.remarks || "—"}</Td>
               </tr>
             ))}
           </tbody>
@@ -973,7 +1163,20 @@ const AttendanceReport = ({ data }) => (
 );
 
 // ─── Salary Report ───────────────────────────────────────────────────────────
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 const SalaryReport = ({ data }) => (
   <div>
@@ -982,60 +1185,128 @@ const SalaryReport = ({ data }) => (
     </TallyHeader>
 
     <SummaryGrid>
-      <SummaryCard><SummaryVal>{INR(data.summary?.basicSalary)}</SummaryVal><SummaryLbl>Basic Salary</SummaryLbl></SummaryCard>
-      <SummaryCard $accent="#dc2626"><SummaryVal style={{color:"#dc2626"}}>{INR(data.summary?.advanceDeducted)}</SummaryVal><SummaryLbl>Advance Deducted</SummaryLbl></SummaryCard>
-      <SummaryCard $accent="#059669"><SummaryVal style={{color:"#059669"}}>{INR(data.summary?.netPayable)}</SummaryVal><SummaryLbl>Net Payable</SummaryLbl></SummaryCard>
-      <SummaryCard $accent="#2563eb"><SummaryVal style={{color:"#2563eb"}}>{INR(data.summary?.paidAmount)}</SummaryVal><SummaryLbl>Paid Amount</SummaryLbl></SummaryCard>
-      <SummaryCard $accent="#d97706"><SummaryVal style={{color:"#d97706"}}>{INR(data.summary?.pending)}</SummaryVal><SummaryLbl>Pending</SummaryLbl></SummaryCard>
+      <SummaryCard>
+        <SummaryVal>{INR(data.summary?.basicSalary)}</SummaryVal>
+        <SummaryLbl>Basic Salary</SummaryLbl>
+      </SummaryCard>
+      <SummaryCard $accent="#dc2626">
+        <SummaryVal style={{ color: "#dc2626" }}>
+          {INR(data.summary?.advanceDeducted)}
+        </SummaryVal>
+        <SummaryLbl>Advance Deducted</SummaryLbl>
+      </SummaryCard>
+      <SummaryCard $accent="#059669">
+        <SummaryVal style={{ color: "#059669" }}>
+          {INR(data.summary?.netPayable)}
+        </SummaryVal>
+        <SummaryLbl>Net Payable</SummaryLbl>
+      </SummaryCard>
+      <SummaryCard $accent="#2563eb">
+        <SummaryVal style={{ color: "#2563eb" }}>
+          {INR(data.summary?.paidAmount)}
+        </SummaryVal>
+        <SummaryLbl>Paid Amount</SummaryLbl>
+      </SummaryCard>
+      <SummaryCard $accent="#d97706">
+        <SummaryVal style={{ color: "#d97706" }}>
+          {INR(data.summary?.pending)}
+        </SummaryVal>
+        <SummaryLbl>Pending</SummaryLbl>
+      </SummaryCard>
     </SummaryGrid>
 
     <SectionTitle>Salary Ledger</SectionTitle>
     <TallyTable>
       <thead>
         <tr>
-          <Th>Staff</Th><Th>Month</Th><Th align="right">Basic</Th><Th align="right">Advance</Th><Th align="right">Net Payable</Th><Th align="right">Paid</Th><Th>Mode</Th><Th>Status</Th><Th>Paid Date</Th>
+          <Th>Staff</Th>
+          <Th>Month</Th>
+          <Th align="right">Basic</Th>
+          <Th align="right">Advance</Th>
+          <Th align="right">Net Payable</Th>
+          <Th align="right">Paid</Th>
+          <Th>Mode</Th>
+          <Th>Status</Th>
+          <Th>Paid Date</Th>
         </tr>
       </thead>
       <tbody>
-        {(data.data||[]).map((s,i)=>(
-          <tr key={i} style={{background:i%2===0?"#fff":"#f8fafc"}}>
-            <Td><strong>{s.staffName}</strong></Td>
-            <Td>{MONTHS[(s.month||1)-1]} {s.year}</Td>
+        {(data.data || []).map((s, i) => (
+          <tr key={i} style={{ background: i % 2 === 0 ? "#fff" : "#f8fafc" }}>
+            <Td>
+              <strong>{s.staffName}</strong>
+            </Td>
+            <Td>
+              {MONTHS[(s.month || 1) - 1]} {s.year}
+            </Td>
             <Td align="right">{INR(s.basicSalary)}</Td>
-            <Td align="right" style={{color:"#dc2626"}}>{INR(s.advanceDeducted)}</Td>
-            <Td align="right" style={{fontWeight:700}}>{INR(s.netSalaryPayable)}</Td>
-            <Td align="right" style={{color:"#059669",fontWeight:600}}>{INR(s.paidAmount)}</Td>
-            <Td>{s.paymentMode||"—"}</Td>
-            <Td><StatusBadge $status={s.paymentStatus}>{s.paymentStatus}</StatusBadge></Td>
-            <Td>{s.paidDate?fmt(s.paidDate):"—"}</Td>
+            <Td align="right" style={{ color: "#dc2626" }}>
+              {INR(s.advanceDeducted)}
+            </Td>
+            <Td align="right" style={{ fontWeight: 700 }}>
+              {INR(s.netSalaryPayable)}
+            </Td>
+            <Td align="right" style={{ color: "#059669", fontWeight: 600 }}>
+              {INR(s.paidAmount)}
+            </Td>
+            <Td>{s.paymentMode || "—"}</Td>
+            <Td>
+              <StatusBadge $status={s.paymentStatus}>
+                {s.paymentStatus}
+              </StatusBadge>
+            </Td>
+            <Td>{s.paidDate ? fmt(s.paidDate) : "—"}</Td>
           </tr>
         ))}
-        <tr style={{background:"#1e293b"}}>
-          <Td colSpan={2} style={{color:"#fff",fontWeight:700}}>TOTAL</Td>
-          <Td align="right" style={{color:"#e2e8f0",fontWeight:700}}>{INR(data.summary?.basicSalary)}</Td>
-          <Td align="right" style={{color:"#fca5a5",fontWeight:700}}>{INR(data.summary?.advanceDeducted)}</Td>
-          <Td align="right" style={{color:"#4ade80",fontWeight:700}}>{INR(data.summary?.netPayable)}</Td>
-          <Td align="right" style={{color:"#4ade80",fontWeight:700}}>{INR(data.summary?.paidAmount)}</Td>
-          <Td colSpan={3}/>
+        <tr style={{ background: "#1e293b" }}>
+          <Td colSpan={2} style={{ color: "#fff", fontWeight: 700 }}>
+            TOTAL
+          </Td>
+          <Td align="right" style={{ color: "#e2e8f0", fontWeight: 700 }}>
+            {INR(data.summary?.basicSalary)}
+          </Td>
+          <Td align="right" style={{ color: "#fca5a5", fontWeight: 700 }}>
+            {INR(data.summary?.advanceDeducted)}
+          </Td>
+          <Td align="right" style={{ color: "#4ade80", fontWeight: 700 }}>
+            {INR(data.summary?.netPayable)}
+          </Td>
+          <Td align="right" style={{ color: "#4ade80", fontWeight: 700 }}>
+            {INR(data.summary?.paidAmount)}
+          </Td>
+          <Td colSpan={3} />
         </tr>
       </tbody>
     </TallyTable>
 
-    {(data.advances||[]).length > 0 && (
+    {(data.advances || []).length > 0 && (
       <>
-        <SectionTitle style={{marginTop:28}}>Advance Register</SectionTitle>
+        <SectionTitle style={{ marginTop: 28 }}>Advance Register</SectionTitle>
         <TallyTable>
           <thead>
-            <tr><Th>Staff</Th><Th>Date</Th><Th align="right">Amount</Th><Th>Reason</Th><Th>Status</Th></tr>
+            <tr>
+              <Th>Staff</Th>
+              <Th>Date</Th>
+              <Th align="right">Amount</Th>
+              <Th>Reason</Th>
+              <Th>Status</Th>
+            </tr>
           </thead>
           <tbody>
-            {data.advances.map((a,i)=>(
-              <tr key={i} style={{background:i%2===0?"#fff":"#f8fafc"}}>
+            {data.advances.map((a, i) => (
+              <tr
+                key={i}
+                style={{ background: i % 2 === 0 ? "#fff" : "#f8fafc" }}
+              >
                 <Td>{a.staffName}</Td>
                 <Td>{fmt(a.date)}</Td>
-                <Td align="right" style={{color:"#dc2626",fontWeight:600}}>{INR(a.amount)}</Td>
-                <Td>{a.reason||"—"}</Td>
-                <Td><StatusBadge $status={a.status}>{a.status}</StatusBadge></Td>
+                <Td align="right" style={{ color: "#dc2626", fontWeight: 600 }}>
+                  {INR(a.amount)}
+                </Td>
+                <Td>{a.reason || "—"}</Td>
+                <Td>
+                  <StatusBadge $status={a.status}>{a.status}</StatusBadge>
+                </Td>
               </tr>
             ))}
           </tbody>
@@ -1050,34 +1321,75 @@ const LogisticsReport = ({ data }) => (
   <div>
     <TallyHeader>
       <CompanyName>LOGISTICS REPORT</CompanyName>
-      <PeriodLine>Period: {fmt(data.period?.start)} — {fmt(data.period?.end)}</PeriodLine>
+      <PeriodLine>
+        Period: {fmt(data.period?.start)} — {fmt(data.period?.end)}
+      </PeriodLine>
     </TallyHeader>
 
     <SummaryGrid>
-      <SummaryCard><SummaryVal>{data.summary?.total||0}</SummaryVal><SummaryLbl>Total Trips</SummaryLbl></SummaryCard>
-      <SummaryCard $accent="#059669"><SummaryVal style={{color:"#059669"}}>{data.summary?.delivered||0}</SummaryVal><SummaryLbl>Delivered</SummaryLbl></SummaryCard>
-      <SummaryCard $accent="#d97706"><SummaryVal style={{color:"#d97706"}}>{data.summary?.inTransit||0}</SummaryVal><SummaryLbl>In Transit</SummaryLbl></SummaryCard>
-      <SummaryCard $accent="#2563eb"><SummaryVal style={{color:"#2563eb"}}>{data.summary?.pending||0}</SummaryVal><SummaryLbl>Pending</SummaryLbl></SummaryCard>
-      <SummaryCard $accent="#dc2626"><SummaryVal style={{color:"#dc2626"}}>{data.summary?.cancelled||0}</SummaryVal><SummaryLbl>Cancelled</SummaryLbl></SummaryCard>
-      <SummaryCard $accent="#1e293b"><SummaryVal>{INR(data.summary?.totalOrderValue)}</SummaryVal><SummaryLbl>Total Order Value</SummaryLbl></SummaryCard>
+      <SummaryCard>
+        <SummaryVal>{data.summary?.total || 0}</SummaryVal>
+        <SummaryLbl>Total Trips</SummaryLbl>
+      </SummaryCard>
+      <SummaryCard $accent="#059669">
+        <SummaryVal style={{ color: "#059669" }}>
+          {data.summary?.delivered || 0}
+        </SummaryVal>
+        <SummaryLbl>Delivered</SummaryLbl>
+      </SummaryCard>
+      <SummaryCard $accent="#d97706">
+        <SummaryVal style={{ color: "#d97706" }}>
+          {data.summary?.inTransit || 0}
+        </SummaryVal>
+        <SummaryLbl>In Transit</SummaryLbl>
+      </SummaryCard>
+      <SummaryCard $accent="#2563eb">
+        <SummaryVal style={{ color: "#2563eb" }}>
+          {data.summary?.pending || 0}
+        </SummaryVal>
+        <SummaryLbl>Pending</SummaryLbl>
+      </SummaryCard>
+      <SummaryCard $accent="#dc2626">
+        <SummaryVal style={{ color: "#dc2626" }}>
+          {data.summary?.cancelled || 0}
+        </SummaryVal>
+        <SummaryLbl>Cancelled</SummaryLbl>
+      </SummaryCard>
+      <SummaryCard $accent="#1e293b">
+        <SummaryVal>{INR(data.summary?.totalOrderValue)}</SummaryVal>
+        <SummaryLbl>Total Order Value</SummaryLbl>
+      </SummaryCard>
     </SummaryGrid>
 
     {/* Driver Summary */}
-    {(data.driverSummary||[]).length > 0 && (
+    {(data.driverSummary || []).length > 0 && (
       <>
         <SectionTitle>Driver Summary</SectionTitle>
         <TallyTable>
           <thead>
-            <tr><Th>Driver</Th><Th>Mobile</Th><Th>Vehicles Used</Th><Th align="right">Trips</Th><Th align="right">Order Value</Th></tr>
+            <tr>
+              <Th>Driver</Th>
+              <Th>Mobile</Th>
+              <Th>Vehicles Used</Th>
+              <Th align="right">Trips</Th>
+              <Th align="right">Order Value</Th>
+            </tr>
           </thead>
           <tbody>
-            {data.driverSummary.map((d,i)=>(
-              <tr key={i} style={{background:i%2===0?"#fff":"#f8fafc"}}>
-                <Td><strong>{d.name}</strong></Td>
+            {data.driverSummary.map((d, i) => (
+              <tr
+                key={i}
+                style={{ background: i % 2 === 0 ? "#fff" : "#f8fafc" }}
+              >
+                <Td>
+                  <strong>{d.name}</strong>
+                </Td>
                 <Td>{d.mobile}</Td>
                 <Td>{d.vehicles}</Td>
                 <Td align="right">{d.trips}</Td>
-                <Td align="right" style={{fontWeight:600}}>{INR(d.value)}</Td>
+                <Td align="right" style={{ fontWeight: 600 }}>
+                  {INR(d.value)}
+                </Td>
               </tr>
             ))}
           </tbody>
@@ -1085,53 +1397,163 @@ const LogisticsReport = ({ data }) => (
       </>
     )}
 
-    <SectionTitle style={{marginTop:28}}>Trip-wise Register</SectionTitle>
+    <SectionTitle style={{ marginTop: 28 }}>Trip-wise Register</SectionTitle>
     <TallyTable>
       <thead>
         <tr>
-          <Th>Dispatch</Th><Th>Retailer</Th><Th>Driver</Th><Th>Vehicle</Th><Th>Type</Th><Th>Expected</Th><Th>Delivered</Th><Th align="right">Value</Th><Th>Status</Th>
+          <Th>Dispatch</Th>
+          <Th>Retailer</Th>
+          <Th>Driver</Th>
+          <Th>Vehicle</Th>
+          <Th>Type</Th>
+          <Th>Expected</Th>
+          <Th>Delivered</Th>
+          <Th align="right">Value</Th>
+          <Th>Status</Th>
         </tr>
       </thead>
       <tbody>
-        {(data.data||[]).map((d,i)=>(
+        {(data.data || []).map((d, i) => (
           <React.Fragment key={i}>
-            <tr style={{background:i%2===0?"#fff":"#f8fafc"}}>
+            <tr style={{ background: i % 2 === 0 ? "#fff" : "#f8fafc" }}>
               <Td>{fmt(d.dispatchDate)}</Td>
-              <Td><strong>{d.retailer}</strong><br/><small style={{color:"#94a3b8"}}>{d.retailerAddress}</small></Td>
-              <Td>{d.driverName}<br/><small style={{color:"#94a3b8"}}>{d.driverMobile}</small></Td>
+              <Td>
+                <strong>{d.retailer}</strong>
+                <br />
+                <small style={{ color: "#94a3b8" }}>{d.retailerAddress}</small>
+              </Td>
+              <Td>
+                {d.driverName}
+                <br />
+                <small style={{ color: "#94a3b8" }}>{d.driverMobile}</small>
+              </Td>
               <Td>{d.vehicleNumber}</Td>
               <Td>{d.vehicleType}</Td>
               <Td>{fmt(d.expectedDate)}</Td>
-              <Td style={{color:"#059669"}}>{d.actualDate?fmt(d.actualDate):"—"}</Td>
-              <Td align="right" style={{fontWeight:600}}>{INR(d.totalOrderAmount)}</Td>
-              <Td><DeliveryBadge $bg={(STATUS_COLOR[d.status]||{}).bg} $color={(STATUS_COLOR[d.status]||{}).color}>{d.status}</DeliveryBadge></Td>
+              <Td style={{ color: "#059669" }}>
+                {d.actualDate ? fmt(d.actualDate) : "—"}
+              </Td>
+              <Td align="right" style={{ fontWeight: 600 }}>
+                {INR(d.totalOrderAmount)}
+              </Td>
+              <Td>
+                <DeliveryBadge
+                  $bg={(STATUS_COLOR[d.status] || {}).bg}
+                  $color={(STATUS_COLOR[d.status] || {}).color}
+                >
+                  {d.status}
+                </DeliveryBadge>
+              </Td>
             </tr>
-            {(d.orders||[]).length>0&&(
-              <tr style={{background:"#f0f9ff"}}>
-                <Td colSpan={9} style={{paddingLeft:32,fontSize:"0.8rem",color:"#475569"}}>
-                  {d.orders.map((o,j)=>(
-                    <div key={j} style={{marginBottom:j<d.orders.length-1?8:0}}>
-                      <strong style={{color:"#1e40af"}}>Order #{o.orderNumber}</strong>{" — "}{INR(o.orderAmount||o.amount)}
-                      {(o.deliveredItems||[]).length>0&&(
-                        <table style={{marginTop:4,fontSize:"0.75rem",borderCollapse:"collapse",width:"100%"}}>
+            {(d.orders || []).length > 0 && (
+              <tr style={{ background: "#f0f9ff" }}>
+                <Td
+                  colSpan={9}
+                  style={{
+                    paddingLeft: 32,
+                    fontSize: "0.8rem",
+                    color: "#475569",
+                  }}
+                >
+                  {d.orders.map((o, j) => (
+                    <div
+                      key={j}
+                      style={{ marginBottom: j < d.orders.length - 1 ? 8 : 0 }}
+                    >
+                      <strong style={{ color: "#1e40af" }}>
+                        Order #{o.orderNumber}
+                      </strong>
+                      {" — "}
+                      {INR(o.orderAmount || o.amount)}
+                      {(o.deliveredItems || []).length > 0 && (
+                        <table
+                          style={{
+                            marginTop: 4,
+                            fontSize: "0.75rem",
+                            borderCollapse: "collapse",
+                            width: "100%",
+                          }}
+                        >
                           <thead>
-                            <tr style={{background:"#dbeafe"}}>
-                              <th style={{padding:"2px 8px",textAlign:"left"}}>Product</th>
-                              <th style={{padding:"2px 8px",textAlign:"center"}}>Ordered</th>
-                              <th style={{padding:"2px 8px",textAlign:"center"}}>Delivered</th>
-                              <th style={{padding:"2px 8px",textAlign:"right"}}>Value</th>
+                            <tr style={{ background: "#dbeafe" }}>
+                              <th
+                                style={{
+                                  padding: "2px 8px",
+                                  textAlign: "left",
+                                }}
+                              >
+                                Product
+                              </th>
+                              <th
+                                style={{
+                                  padding: "2px 8px",
+                                  textAlign: "center",
+                                }}
+                              >
+                                Ordered
+                              </th>
+                              <th
+                                style={{
+                                  padding: "2px 8px",
+                                  textAlign: "center",
+                                }}
+                              >
+                                Delivered
+                              </th>
+                              <th
+                                style={{
+                                  padding: "2px 8px",
+                                  textAlign: "right",
+                                }}
+                              >
+                                Value
+                              </th>
                             </tr>
                           </thead>
                           <tbody>
-                            {o.deliveredItems.map((item,k)=>(
-                              <tr key={k} style={{background:k%2===0?"#f0f9ff":"#e0f2fe"}}>
-                                <td style={{padding:"2px 8px"}}>{item.name}</td>
-                                <td style={{padding:"2px 8px",textAlign:"center",color:"#64748b"}}>{item.orderedQty}</td>
-                                <td style={{padding:"2px 8px",textAlign:"center",fontWeight:700,
-                                  color:item.deliverQty<item.orderedQty?"#d97706":"#059669"}}>
-                                  {item.deliverQty}{item.deliverQty<item.orderedQty&&" ⚠️"}
+                            {o.deliveredItems.map((item, k) => (
+                              <tr
+                                key={k}
+                                style={{
+                                  background:
+                                    k % 2 === 0 ? "#f0f9ff" : "#e0f2fe",
+                                }}
+                              >
+                                <td style={{ padding: "2px 8px" }}>
+                                  {item.name}
                                 </td>
-                                <td style={{padding:"2px 8px",textAlign:"right",fontWeight:600}}>{INR(item.totalSale)}</td>
+                                <td
+                                  style={{
+                                    padding: "2px 8px",
+                                    textAlign: "center",
+                                    color: "#64748b",
+                                  }}
+                                >
+                                  {item.orderedQty}
+                                </td>
+                                <td
+                                  style={{
+                                    padding: "2px 8px",
+                                    textAlign: "center",
+                                    fontWeight: 700,
+                                    color:
+                                      item.deliverQty < item.orderedQty
+                                        ? "#d97706"
+                                        : "#059669",
+                                  }}
+                                >
+                                  {item.deliverQty}
+                                  {item.deliverQty < item.orderedQty && " ⚠️"}
+                                </td>
+                                <td
+                                  style={{
+                                    padding: "2px 8px",
+                                    textAlign: "right",
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  {INR(item.totalSale)}
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -1139,16 +1561,30 @@ const LogisticsReport = ({ data }) => (
                       )}
                     </div>
                   ))}
-                  {d.remarks&&<em style={{color:"#7c3aed",display:"block",marginTop:4}}>Remarks: {d.remarks}</em>}
+                  {d.remarks && (
+                    <em
+                      style={{
+                        color: "#7c3aed",
+                        display: "block",
+                        marginTop: 4,
+                      }}
+                    >
+                      Remarks: {d.remarks}
+                    </em>
+                  )}
                 </Td>
               </tr>
             )}
           </React.Fragment>
         ))}
-        <tr style={{background:"#1e293b"}}>
-          <Td colSpan={7} style={{color:"#fff",fontWeight:700}}>GRAND TOTAL</Td>
-          <Td align="right" style={{color:"#4ade80",fontWeight:700}}>{INR(data.summary?.totalOrderValue)}</Td>
-          <Td/>
+        <tr style={{ background: "#1e293b" }}>
+          <Td colSpan={7} style={{ color: "#fff", fontWeight: 700 }}>
+            GRAND TOTAL
+          </Td>
+          <Td align="right" style={{ color: "#4ade80", fontWeight: 700 }}>
+            {INR(data.summary?.totalOrderValue)}
+          </Td>
+          <Td />
         </tr>
       </tbody>
     </TallyTable>
@@ -1244,8 +1680,12 @@ const DownloadBtn = styled.button`
     animation: spin 1s linear infinite;
   }
   @keyframes spin {
-    from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 `;
 
@@ -1259,8 +1699,7 @@ const TypeGrid = styled.div`
 const TypeCard = styled.div`
   padding: 20px;
   border-radius: 10px;
-  border: 1px solid
-    ${(p) => (p.$active ? p.$color : "var(--nb-border)")};
+  border: 1px solid ${(p) => (p.$active ? p.$color : "var(--nb-border)")};
   background: ${(p) => (p.$active ? p.$color + "12" : "#fff")};
   cursor: pointer;
   transition: all 0.2s;
@@ -1512,14 +1951,14 @@ const StatusBadge = styled.span`
     p.$status === "Paid"
       ? "#dcfce7"
       : p.$status === "Unpaid"
-      ? "#fee2e2"
-      : "#fef9c3"};
+        ? "#fee2e2"
+        : "#fef9c3"};
   color: ${(p) =>
     p.$status === "Paid"
       ? "#166534"
       : p.$status === "Unpaid"
-      ? "#991b1b"
-      : "#854d0e"};
+        ? "#991b1b"
+        : "#854d0e"};
 `;
 
 const DeliveryBadge = styled.span`

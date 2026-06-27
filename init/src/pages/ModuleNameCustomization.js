@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import styled from 'styled-components';
-import { useModules } from '../contexts/ModuleContext';
-import { FaSave, FaUndo, FaCheck, FaTimes } from 'react-icons/fa';
+import React, { useState } from "react";
+import styled from "styled-components";
+import { useModules } from "../contexts/ModuleContext";
+import { FaSave, FaUndo, FaCheck, FaTimes } from "react-icons/fa";
 
 const ModuleNameCustomization = () => {
   const {
@@ -9,7 +9,7 @@ const ModuleNameCustomization = () => {
     getDefaultModules,
     updateModule,
     resetModule,
-    resetAllModules
+    resetAllModules,
   } = useModules();
 
   const [editedModules, setEditedModules] = useState(getAllModules());
@@ -18,47 +18,47 @@ const ModuleNameCustomization = () => {
 
   const handleModuleChange = (moduleKey, field, value) => {
     // Validate input
-    if (field === 'singular' || field === 'plural') {
+    if (field === "singular" || field === "plural") {
       if (value.trim().length === 0) {
-        setErrors(prev => ({
+        setErrors((prev) => ({
           ...prev,
-          [moduleKey]: 'Name cannot be empty'
+          [moduleKey]: "Name cannot be empty",
         }));
         return;
       }
       if (value.length > 50) {
-        setErrors(prev => ({
+        setErrors((prev) => ({
           ...prev,
-          [moduleKey]: 'Name must be less than 50 characters'
+          [moduleKey]: "Name must be less than 50 characters",
         }));
         return;
       }
       // Remove error if validation passes
-      setErrors(prev => {
+      setErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors[moduleKey];
         return newErrors;
       });
     }
 
-    setEditedModules(prev => ({
+    setEditedModules((prev) => ({
       ...prev,
       [moduleKey]: {
         ...prev[moduleKey],
-        [field]: value
-      }
+        [field]: value,
+      },
     }));
   };
 
   const handleSaveAll = () => {
     // Check for errors
     if (Object.keys(errors).length > 0) {
-      alert('Please fix all errors before saving');
+      alert("Please fix all errors before saving");
       return;
     }
 
     // Save all modules
-    Object.keys(editedModules).forEach(key => {
+    Object.keys(editedModules).forEach((key) => {
       updateModule(key, editedModules[key]);
     });
 
@@ -68,14 +68,14 @@ const ModuleNameCustomization = () => {
 
   const handleResetModule = (moduleKey) => {
     const defaultModules = getDefaultModules();
-    setEditedModules(prev => ({
+    setEditedModules((prev) => ({
       ...prev,
-      [moduleKey]: defaultModules[moduleKey]
+      [moduleKey]: defaultModules[moduleKey],
     }));
     resetModule(moduleKey);
-    
+
     // Remove error if exists
-    setErrors(prev => {
+    setErrors((prev) => {
       const newErrors = { ...prev };
       delete newErrors[moduleKey];
       return newErrors;
@@ -83,7 +83,11 @@ const ModuleNameCustomization = () => {
   };
 
   const handleResetAll = () => {
-    if (window.confirm('Are you sure you want to reset all module names to defaults? This cannot be undone.')) {
+    if (
+      window.confirm(
+        "Are you sure you want to reset all module names to defaults? This cannot be undone.",
+      )
+    ) {
       resetAllModules();
       setEditedModules(getDefaultModules());
       setErrors({});
@@ -96,19 +100,22 @@ const ModuleNameCustomization = () => {
     const defaults = getDefaultModules();
     const current = editedModules[moduleKey];
     const original = defaults[moduleKey];
-    
-    return current.singular !== original.singular || 
-           current.plural !== original.plural;
+
+    return (
+      current.singular !== original.singular ||
+      current.plural !== original.plural
+    );
   };
 
   return (
     <>
       <PageHeader>Settings · Module Names</PageHeader>
-      
+
       <SettingsContainer>
         <Description>
-          Personalize your application by renaming modules to match your business terminology.
-          Changes will be reflected throughout the entire application.
+          Personalize your application by renaming modules to match your
+          business terminology. Changes will be reflected throughout the entire
+          application.
         </Description>
 
         {saveSuccess && (
@@ -118,68 +125,76 @@ const ModuleNameCustomization = () => {
         )}
 
         <ModuleList>
-        {Object.entries(editedModules).map(([key, module]) => (
-          <ModuleCard key={key} hasError={errors[key]}>
-            <ModuleHeader>
-              <ModuleName>
-                <strong>{getDefaultModules()[key].singular}</strong>
-                {isModified(key) && <ModifiedBadge>Modified</ModifiedBadge>}
-              </ModuleName>
-              <ResetButton 
-                onClick={() => handleResetModule(key)}
-                title="Reset to default"
-                disabled={!isModified(key)}
-              >
-                <FaUndo /> Reset
-              </ResetButton>
-            </ModuleHeader>
+          {Object.entries(editedModules).map(([key, module]) => (
+            <ModuleCard key={key} hasError={errors[key]}>
+              <ModuleHeader>
+                <ModuleName>
+                  <strong>{getDefaultModules()[key].singular}</strong>
+                  {isModified(key) && <ModifiedBadge>Modified</ModifiedBadge>}
+                </ModuleName>
+                <ResetButton
+                  onClick={() => handleResetModule(key)}
+                  title="Reset to default"
+                  disabled={!isModified(key)}
+                >
+                  <FaUndo /> Reset
+                </ResetButton>
+              </ModuleHeader>
 
-            <InputGroup>
-              <Label>Singular Form</Label>
-              <Input
-                type="text"
-                value={module.singular}
-                onChange={(e) => handleModuleChange(key, 'singular', e.target.value)}
-                placeholder="e.g., Bill, Customer, Product"
-                maxLength={50}
-              />
-            </InputGroup>
+              <InputGroup>
+                <Label>Singular Form</Label>
+                <Input
+                  type="text"
+                  value={module.singular}
+                  onChange={(e) =>
+                    handleModuleChange(key, "singular", e.target.value)
+                  }
+                  placeholder="e.g., Bill, Customer, Product"
+                  maxLength={50}
+                />
+              </InputGroup>
 
-            <InputGroup>
-              <Label>Plural Form</Label>
-              <Input
-                type="text"
-                value={module.plural}
-                onChange={(e) => handleModuleChange(key, 'plural', e.target.value)}
-                placeholder="e.g., Bills, Customers, Products"
-                maxLength={50}
-              />
-            </InputGroup>
+              <InputGroup>
+                <Label>Plural Form</Label>
+                <Input
+                  type="text"
+                  value={module.plural}
+                  onChange={(e) =>
+                    handleModuleChange(key, "plural", e.target.value)
+                  }
+                  placeholder="e.g., Bills, Customers, Products"
+                  maxLength={50}
+                />
+              </InputGroup>
 
-            {errors[key] && (
-              <ErrorText>
-                <FaTimes /> {errors[key]}
-              </ErrorText>
-            )}
+              {errors[key] && (
+                <ErrorText>
+                  <FaTimes /> {errors[key]}
+                </ErrorText>
+              )}
 
-            <PreviewSection>
-              <PreviewLabel>Preview:</PreviewLabel>
-              <PreviewText>
-                "Add {module.singular}" • "View {module.plural}" • "{module.plural} List"
-              </PreviewText>
-            </PreviewSection>
-          </ModuleCard>
-        ))}
-      </ModuleList>
+              <PreviewSection>
+                <PreviewLabel>Preview:</PreviewLabel>
+                <PreviewText>
+                  "Add {module.singular}" • "View {module.plural}" • "
+                  {module.plural} List"
+                </PreviewText>
+              </PreviewSection>
+            </ModuleCard>
+          ))}
+        </ModuleList>
 
-      <ActionButtons>
-        <SaveButton onClick={handleSaveAll} disabled={Object.keys(errors).length > 0}>
-          <FaSave /> Save All Changes
-        </SaveButton>
-        <ResetAllButton onClick={handleResetAll}>
-          <FaUndo /> Reset All to Defaults
-        </ResetAllButton>
-      </ActionButtons>
+        <ActionButtons>
+          <SaveButton
+            onClick={handleSaveAll}
+            disabled={Object.keys(errors).length > 0}
+          >
+            <FaSave /> Save All Changes
+          </SaveButton>
+          <ResetAllButton onClick={handleResetAll}>
+            <FaUndo /> Reset All to Defaults
+          </ResetAllButton>
+        </ActionButtons>
       </SettingsContainer>
     </>
   );
@@ -255,7 +270,8 @@ const ModuleList = styled.div`
 
 const ModuleCard = styled.div`
   background: var(--nb-muted);
-  border: 1px solid ${props => props.hasError ? 'var(--nb-orange)' : 'var(--nb-border)'};
+  border: 1px solid
+    ${(props) => (props.hasError ? "var(--nb-orange)" : "var(--nb-border)")};
   border-radius: 12px;
   padding: 1.5rem;
   transition: all 0.3s ease;

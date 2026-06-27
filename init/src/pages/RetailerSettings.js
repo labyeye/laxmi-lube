@@ -13,21 +13,34 @@ const RetailerSettings = () => {
     <RetailerLayout>
       <Container>
         <Header>
-          <HeaderIcon><FaCog size={28} /></HeaderIcon>
+          <HeaderIcon>
+            <FaCog size={28} />
+          </HeaderIcon>
           <HeaderText>
             <Title>Settings</Title>
-            <Description>Configure modules, field definitions, and permission templates</Description>
+            <Description>
+              Configure modules, field definitions, and permission templates
+            </Description>
           </HeaderText>
         </Header>
 
         <TabContainer>
-          <Tab active={activeTab === "fields"} onClick={() => setActiveTab("fields")}>
+          <Tab
+            active={activeTab === "fields"}
+            onClick={() => setActiveTab("fields")}
+          >
             <FaPuzzlePiece /> Module Fields
           </Tab>
-          <Tab active={activeTab === "names"} onClick={() => setActiveTab("names")}>
+          <Tab
+            active={activeTab === "names"}
+            onClick={() => setActiveTab("names")}
+          >
             <FaFont /> Module Names
           </Tab>
-          <Tab active={activeTab === "permissions"} onClick={() => setActiveTab("permissions")}>
+          <Tab
+            active={activeTab === "permissions"}
+            onClick={() => setActiveTab("permissions")}
+          >
             <FaShieldAlt /> Permissions
           </Tab>
         </TabContainer>
@@ -44,7 +57,11 @@ const RetailerSettings = () => {
 
 const Container = styled.div`
   padding: 0;
-  background: linear-gradient(135deg, #F1F3E0 0%, #D2DCB6 100%); /* lighter neubrutalism bg */
+  background: linear-gradient(
+    135deg,
+    #f1f3e0 0%,
+    #d2dcb6 100%
+  ); /* lighter neubrutalism bg */
 `;
 
 const Header = styled.div`
@@ -52,7 +69,7 @@ const Header = styled.div`
   align-items: center;
   gap: 1rem;
   padding: 1.75rem 2rem;
-  background: rgba(210,220,182,0.85); /* lighter muted */
+  background: rgba(210, 220, 182, 0.85); /* lighter muted */
   border-bottom: 1px solid var(--nb-border);
   box-shadow: 4px 4px 0 #778873;
 `;
@@ -61,7 +78,7 @@ const HeaderIcon = styled.div`
   color: #547792;
   display: flex;
   align-items: center;
-  background: #E8E2DB;
+  background: #e8e2db;
   border-radius: 12px;
   padding: 0.5rem;
   box-shadow: 2px 2px 0 #778873;
@@ -74,12 +91,12 @@ const HeaderText = styled.div`
 `;
 
 const Title = styled.h1`
-  color: #1A3263;
+  color: #1a3263;
   margin: 0 0 0.25rem 0;
   font-size: 2rem;
   font-weight: 800;
   letter-spacing: 1px;
-  text-shadow: 2px 2px 0 #D2DCB6;
+  text-shadow: 2px 2px 0 #d2dcb6;
 `;
 
 const Description = styled.p`
@@ -92,7 +109,7 @@ const Description = styled.p`
 
 const TabContainer = styled.div`
   display: flex;
-  background: #F1F3E0;
+  background: #f1f3e0;
   border-bottom: 1px solid var(--nb-border);
   padding: 0 2rem;
   gap: 0.5rem;
@@ -128,7 +145,7 @@ const Tab = styled.button`
 `;
 
 const ContentWrapper = styled.div`
-  background: #F1F3E0;
+  background: #f1f3e0;
   min-height: 300px;
   border-radius: 0 0 12px 12px;
   box-shadow: 4px 4px 0 #778873;

@@ -49,9 +49,12 @@ const RetailerOrders = () => {
   const fetchProducts = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("https://backend.laxmilube.in/api/products", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        "https://backend.laxmilube.in/api/products",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       setProducts(response.data);
     } catch (error) {
       console.error("Error fetching products:", error);

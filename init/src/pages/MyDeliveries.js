@@ -12,7 +12,7 @@ import {
   FaClock,
   FaShippingFast,
   FaStoreAlt,
-  FaExclamationTriangle
+  FaExclamationTriangle,
 } from "react-icons/fa";
 
 const MyDeliveries = () => {
@@ -145,7 +145,13 @@ const MyDeliveries = () => {
 
   const filteredDeliveries = deliveries.filter((d) => {
     if (activeTab === "today") {
-      return isToday(d.dispatchDateTime) || isToday(d.expectedDeliveryDate) || (d.deliveryStatus !== "Delivered" && d.deliveryStatus !== "Failed" && d.deliveryStatus !== "Cancelled");
+      return (
+        isToday(d.dispatchDateTime) ||
+        isToday(d.expectedDeliveryDate) ||
+        (d.deliveryStatus !== "Delivered" &&
+          d.deliveryStatus !== "Failed" &&
+          d.deliveryStatus !== "Cancelled")
+      );
     }
     return true; // "all" displays everything
   });
@@ -182,7 +188,10 @@ const MyDeliveries = () => {
         ) : filteredDeliveries.length === 0 ? (
           <EmptyMessage>
             <FaTruck size={50} />
-            <p>No deliveries found for "{activeTab === "today" ? "Today" : "All"}".</p>
+            <p>
+              No deliveries found for "{activeTab === "today" ? "Today" : "All"}
+              ".
+            </p>
           </EmptyMessage>
         ) : (
           <DeliveriesList>
@@ -240,17 +249,22 @@ const MyDeliveries = () => {
                   delivery.deliveryStatus !== "Failed" &&
                   delivery.deliveryStatus !== "Returned" && (
                     <DeliveryActions>
-                      {(delivery.deliveryStatus === "Pending" || delivery.deliveryStatus === "Assigned") && (
+                      {(delivery.deliveryStatus === "Pending" ||
+                        delivery.deliveryStatus === "Assigned") && (
                         <ActionButton
                           color="var(--nb-blue)"
                           onClick={() =>
-                            updateDeliveryStatus(delivery._id, "Out for Delivery")
+                            updateDeliveryStatus(
+                              delivery._id,
+                              "Out for Delivery",
+                            )
                           }
                         >
                           <FaShippingFast /> Start Trip (Out for Delivery)
                         </ActionButton>
                       )}
-                      {(delivery.deliveryStatus === "In Transit" || delivery.deliveryStatus === "Out for Delivery") && (
+                      {(delivery.deliveryStatus === "In Transit" ||
+                        delivery.deliveryStatus === "Out for Delivery") && (
                         <ActionButton
                           color="#8b5cf6"
                           onClick={() =>
@@ -272,7 +286,7 @@ const MyDeliveries = () => {
                           </ActionButton>
                           <ActionButton
                             color="var(--nb-orange)"
-                            style={{ marginLeft: '10px' }}
+                            style={{ marginLeft: "10px" }}
                             onClick={() =>
                               updateDeliveryStatus(delivery._id, "Failed")
                             }

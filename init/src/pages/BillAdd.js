@@ -101,14 +101,14 @@ const BillsAdd = () => {
               });
             } else if (data.type === "result") {
               setMessage(
-                `Successfully imported ${data.importedCount} bills. ${data.errorCount} records had errors.`
+                `Successfully imported ${data.importedCount} bills. ${data.errorCount} records had errors.`,
               );
               if (data.errorCount > 0) {
                 const exampleErrors = data.errors?.join(";\n") || "";
                 setError(
                   `Some rows had errors. Examples:\n${exampleErrors}${
                     data.errorCount > 10 ? "\n...and more" : ""
-                  }`
+                  }`,
                 );
               }
             } else if (data.type === "error") {
@@ -149,7 +149,7 @@ const BillsAdd = () => {
 
           const headers = jsonData[0] || [];
           const lowerHeaders = headers.map((h) =>
-            String(h).toLowerCase().trim()
+            String(h).toLowerCase().trim(),
           );
 
           const requiredColumns = [
@@ -161,7 +161,7 @@ const BillsAdd = () => {
           ];
 
           const missingColumns = requiredColumns.filter(
-            (col) => !lowerHeaders.includes(col.toLowerCase())
+            (col) => !lowerHeaders.includes(col.toLowerCase()),
           );
 
           if (missingColumns.length > 0) {
@@ -201,10 +201,10 @@ const BillsAdd = () => {
 
   return (
     <Layout>
-      <PageHeader>Add {getModuleName('bill', 'plural')}</PageHeader>
+      <PageHeader>Add {getModuleName("bill", "plural")}</PageHeader>
 
       <FormContainer>
-        <SectionHeader>Manual {getModuleName('bill')} Entry</SectionHeader>
+        <SectionHeader>Manual {getModuleName("bill")} Entry</SectionHeader>
         {moduleDefinition ? (
           <DynamicForm
             moduleDefinition={moduleDefinition}
@@ -214,7 +214,7 @@ const BillsAdd = () => {
             }
             onSubmit={handleManualSubmit}
             errors={fieldErrors}
-            submitLabel={`Add ${getModuleName('bill')}`}
+            submitLabel={`Add ${getModuleName("bill")}`}
           />
         ) : (
           <LoadingMessage>Loading fields...</LoadingMessage>
@@ -225,7 +225,9 @@ const BillsAdd = () => {
       </FormContainer>
 
       <UploadForm onSubmit={handleImport}>
-        <SectionHeader>Upload {getModuleName('bill', 'plural')} (Excel)</SectionHeader>
+        <SectionHeader>
+          Upload {getModuleName("bill", "plural")} (Excel)
+        </SectionHeader>
         <FileUploadContainer>
           <FileInputLabel>
             <FileInput
@@ -245,7 +247,7 @@ const BillsAdd = () => {
               ? importProgress.total > 0
                 ? `Importing ${importProgress.current} of ${importProgress.total} rows`
                 : "Processing..."
-              : `Upload ${getModuleName('bill', 'plural')}`}
+              : `Upload ${getModuleName("bill", "plural")}`}
           </Button>
           {loading && importProgress.total > 0 && (
             <ProgressBar>
@@ -259,8 +261,8 @@ const BillsAdd = () => {
         </ButtonContainer>
 
         <NoteText>
-          Note: Excel file should have columns for Bill Number, Retailer, Amount,
-          Due Amount, Bill Date, and Collection Day.
+          Note: Excel file should have columns for Bill Number, Retailer,
+          Amount, Due Amount, Bill Date, and Collection Day.
         </NoteText>
       </UploadForm>
 

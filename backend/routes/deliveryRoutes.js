@@ -334,7 +334,17 @@ router.put("/:id/status", protect, async (req, res) => {
       return res.status(400).json({ message: "Status is required" });
     }
 
-    const validStatuses = ["Pending", "Assigned", "Out for Delivery", "In Transit", "Reached Outlet", "Delivered", "Failed", "Returned", "Cancelled"];
+    const validStatuses = [
+      "Pending",
+      "Assigned",
+      "Out for Delivery",
+      "In Transit",
+      "Reached Outlet",
+      "Delivered",
+      "Failed",
+      "Returned",
+      "Cancelled",
+    ];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ message: "Invalid status" });
     }

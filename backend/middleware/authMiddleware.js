@@ -61,10 +61,16 @@ const checkPermission = (module, action) => {
       return next();
     }
 
-    res.status(403).json({ 
-      message: `Access denied. You don't have permission to ${action} ${module}` 
+    res.status(403).json({
+      message: `Access denied. You don't have permission to ${action} ${module}`,
     });
   };
 };
 
-module.exports = { protect, adminOnly, staffOnly, retailerOnly, checkPermission };
+module.exports = {
+  protect,
+  adminOnly,
+  staffOnly,
+  retailerOnly,
+  checkPermission,
+};

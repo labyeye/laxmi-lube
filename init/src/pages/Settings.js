@@ -1,46 +1,48 @@
-import React, { useState } from 'react';
-import styled from 'styled-components';
-import Layout from '../components/Layout';
-import ModuleSettings from './ModuleSettings';
-import ModuleNameCustomization from './ModuleNameCustomization';
-import PermissionTemplates from '../components/PermissionTemplates';
+import React, { useState } from "react";
+import styled from "styled-components";
+import Layout from "../components/Layout";
+import ModuleSettings from "./ModuleSettings";
+import ModuleNameCustomization from "./ModuleNameCustomization";
+import PermissionTemplates from "../components/PermissionTemplates";
 
 const Settings = () => {
-  const [activeTab, setActiveTab] = useState('fields');
+  const [activeTab, setActiveTab] = useState("fields");
 
   return (
     <Layout>
       <Container>
         <Header>
           <Title>Settings</Title>
-          <Description>Configure and customize your application modules</Description>
+          <Description>
+            Configure and customize your application modules
+          </Description>
         </Header>
 
         <TabContainer>
-          <Tab 
-            active={activeTab === 'fields'} 
-            onClick={() => setActiveTab('fields')}
+          <Tab
+            active={activeTab === "fields"}
+            onClick={() => setActiveTab("fields")}
           >
             Module Fields
           </Tab>
-          <Tab 
-            active={activeTab === 'names'} 
-            onClick={() => setActiveTab('names')}
+          <Tab
+            active={activeTab === "names"}
+            onClick={() => setActiveTab("names")}
           >
             Module Names
           </Tab>
-          <Tab 
-            active={activeTab === 'permissions'} 
-            onClick={() => setActiveTab('permissions')}
+          <Tab
+            active={activeTab === "permissions"}
+            onClick={() => setActiveTab("permissions")}
           >
             Permissions
           </Tab>
         </TabContainer>
 
         <ContentWrapper>
-          {activeTab === 'fields' && <ModuleSettings />}
-          {activeTab === 'names' && <ModuleNameCustomization />}
-          {activeTab === 'permissions' && <PermissionTemplates />}
+          {activeTab === "fields" && <ModuleSettings />}
+          {activeTab === "names" && <ModuleNameCustomization />}
+          {activeTab === "permissions" && <PermissionTemplates />}
         </ContentWrapper>
       </Container>
     </Layout>
@@ -81,10 +83,11 @@ const TabContainer = styled.div`
 
 const Tab = styled.button`
   padding: 1rem 2rem;
-  background: ${props => props.active ? 'var(--nb-orange)' : 'transparent'};
-  color: ${props => props.active ? 'white' : 'var(--nb-ink)'};
+  background: ${(props) => (props.active ? "var(--nb-orange)" : "transparent")};
+  color: ${(props) => (props.active ? "white" : "var(--nb-ink)")};
   border: none;
-  border-bottom: 3px solid ${props => props.active ? 'var(--nb-orange)' : 'transparent'};
+  border-bottom: 3px solid
+    ${(props) => (props.active ? "var(--nb-orange)" : "transparent")};
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -92,18 +95,18 @@ const Tab = styled.button`
   position: relative;
 
   &:hover {
-    background: ${props => props.active ? 'var(--nb-orange)' : 'var(--nb-muted)'};
+    background: ${(props) => (props.active ? "var(--nb-orange)" : "var(--nb-muted)")};
   }
 
   &::after {
-    content: '';
+    content: "";
     position: absolute;
     bottom: -2px;
     left: 0;
     right: 0;
     height: 3px;
     background: var(--nb-orange);
-    transform: scaleX(${props => props.active ? '1' : '0'});
+    transform: scaleX(${(props) => (props.active ? "1" : "0")});
     transition: transform 0.3s ease;
   }
 `;

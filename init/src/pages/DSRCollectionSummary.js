@@ -30,7 +30,7 @@ const DSRCollectionSummary = () => {
               endDate: endDate.toISOString(),
             },
             headers: { Authorization: `Bearer ${token}` },
-          }
+          },
         );
 
         if (response.data.success) {
@@ -41,7 +41,7 @@ const DSRCollectionSummary = () => {
       } catch (err) {
         console.error("Error:", err);
         setError(
-          err.response?.data?.message || err.message || "Failed to fetch data"
+          err.response?.data?.message || err.message || "Failed to fetch data",
         );
         setSummaryData([]);
       } finally {
@@ -80,7 +80,7 @@ const DSRCollectionSummary = () => {
         "Cheque TRC": item.chequeTrc,
         "Bank Transfer Amount": item.bankTransfer,
         "Bank Transfer TRC": item.bankTransferTrc,
-      }))
+      })),
     );
 
     const workbook = XLSX.utils.book_new();
@@ -249,7 +249,7 @@ const DateRangeContainer = styled.div`
   display: flex;
   gap: 10px;
   align-items: center;
-  
+
   @media (max-width: 768px) {
     flex-direction: column;
     align-items: flex-start;
@@ -336,12 +336,12 @@ const UPICell = styled.td`
 `;
 
 const ChequeHeader = styled.th`
-  background-color: var(--nb-white)3e0 !important;
+  background-color: var(--nb-white) 3 !important;
   color: var(--nb-orange);
 `;
 
 const ChequeCell = styled.td`
-  background-color: var(--nb-white)3e0;
+  background-color: var(--nb-white) 3;
 `;
 
 const BankHeader = styled.th`

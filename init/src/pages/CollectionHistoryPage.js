@@ -23,12 +23,12 @@ const CollectionsHistory = () => {
   const [collections, setCollections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [sidebarCollapsed, ] = useState(false);
+  const [sidebarCollapsed] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [dateFilter, ] = useState("");
+  const [dateFilter] = useState("");
   const [sendingWa, setSendingWa] = useState(null); // collectionId being sent
-  const [waToast, setWaToast] = useState(null);     // { type: 'success'|'error', msg }
+  const [waToast, setWaToast] = useState(null); // { type: 'success'|'error', msg }
   const navigate = useNavigate();
   const [staffInfo, setStaffInfo] = useState({
     name: "Loading...",
@@ -41,9 +41,12 @@ const CollectionsHistory = () => {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("Authentication token not found");
 
-      const response = await axios.get(`https://backend.laxmilube.in/api/users/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        `https://backend.laxmilube.in/api/users/me`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       setStaffInfo({
         name: response.data.name || "Staff Member",
@@ -87,6 +90,7 @@ const CollectionsHistory = () => {
 
   useEffect(() => {
     fetchCollections();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toggleSubmenu = (menu) => {
@@ -129,22 +133,27 @@ const CollectionsHistory = () => {
       const res = await axios.post(
         `https://backend.laxmilube.in/api/collections/${collectionId}/send-whatsapp`,
         {},
-        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        },
       );
       // Update local state so badge reflects new status
       setCollections((prev) =>
         prev.map((c) =>
           c._id === collectionId
             ? { ...c, whatsappStatus: res.data.whatsappStatus }
-            : c
-        )
+            : c,
+        ),
       );
       setWaToast({
         type: res.data.hasPhone ? "success" : "warn",
         msg: res.data.message,
       });
     } catch (err) {
-      setWaToast({ type: "error", msg: err.response?.data?.message || "Failed to send WhatsApp" });
+      setWaToast({
+        type: "error",
+        msg: err.response?.data?.message || "Failed to send WhatsApp",
+      });
     } finally {
       setSendingWa(null);
       setTimeout(() => setWaToast(null), 4000);
@@ -295,9 +304,7 @@ const CollectionsHistory = () => {
         </TopBar>
 
         <ContentArea>
-          {waToast && (
-            <WaToast type={waToast.type}>{waToast.msg}</WaToast>
-          )}
+          {waToast && <WaToast type={waToast.type}>{waToast.msg}</WaToast>}
           {error ? (
             <ErrorAlert>
               <ErrorMessage>{error}</ErrorMessage>
@@ -568,26 +575,26 @@ const PaymentMode = styled.span`
     props.mode === "Cash"
       ? "var(--nb-blue)20"
       : props.mode === "upi"
-      ? "var(--nb-blue)20"
-      : props.mode === "bank_transfer"
-      ? "var(--nb-blue)20"
-      : "var(--nb-orange)20"};
+        ? "var(--nb-blue)20"
+        : props.mode === "bank_transfer"
+          ? "var(--nb-blue)20"
+          : "var(--nb-orange)20"};
   color: ${(props) =>
     props.mode === "Cash"
       ? "var(--nb-blue)"
       : props.mode === "upi"
-      ? "var(--nb-blue)"
-      : props.mode === "bank_transfer"
-      ? "var(--nb-blue)"
-      : "var(--nb-orange)"};
+        ? "var(--nb-blue)"
+        : props.mode === "bank_transfer"
+          ? "var(--nb-blue)"
+          : "var(--nb-orange)"};
 `;
 
 const WA_COLORS = {
-  received:     { bg: "#e6f9ee", color: "#1a7d45" },
+  received: { bg: "#e6f9ee", color: "#1a7d45" },
   not_received: { bg: "#fde8e8", color: "#c0392b" },
-  sent:         { bg: "#e8f4fd", color: "#1565c0" },
-  no_phone:     { bg: "#f5f5f5", color: "#888" },
-  pending:      { bg: "#fff8e1", color: "#b8860b" },
+  sent: { bg: "#e8f4fd", color: "#1565c0" },
+  no_phone: { bg: "#f5f5f5", color: "#888" },
+  pending: { bg: "#fff8e1", color: "#b8860b" },
 };
 
 const WhatsAppBadge = styled.span`
@@ -601,11 +608,11 @@ const WhatsAppBadge = styled.span`
 `;
 
 const WA_LABELS = {
-  received:     "✓ Received",
+  received: "✓ Received",
   not_received: "✗ Not Received",
-  sent:         "Sent",
-  no_phone:     "No Phone",
-  pending:      "Pending",
+  sent: "Sent",
+  no_phone: "No Phone",
+  pending: "Pending",
 };
 
 const waLabel = (status) => WA_LABELS[status] || "Pending";
@@ -617,9 +624,17 @@ const WaToast = styled.div`
   font-size: 0.875rem;
   font-weight: 600;
   background: ${(p) =>
-    p.type === "success" ? "#dcfce7" : p.type === "warn" ? "#fef9c3" : "#fee2e2"};
+    p.type === "success"
+      ? "#dcfce7"
+      : p.type === "warn"
+        ? "#fef9c3"
+        : "#fee2e2"};
   color: ${(p) =>
-    p.type === "success" ? "#15803d" : p.type === "warn" ? "#92400e" : "#991b1b"};
+    p.type === "success"
+      ? "#15803d"
+      : p.type === "warn"
+        ? "#92400e"
+        : "#991b1b"};
 `;
 
 const WaCellWrap = styled.div`
@@ -638,8 +653,13 @@ const ResendWaBtn = styled.button`
   color: #1a73e8;
   line-height: 1.4;
   transition: background 0.15s;
-  &:hover:not(:disabled) { background: #eff6ff; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  &:hover:not(:disabled) {
+    background: #eff6ff;
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 `;
 
 const SearchIcon = styled.div`

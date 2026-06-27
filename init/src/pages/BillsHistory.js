@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 
 const BillsHistory = () => {
   const [bills, setBills] = useState([]);
@@ -7,12 +7,17 @@ const BillsHistory = () => {
   useEffect(() => {
     const fetchBills = async () => {
       try {
-        const response = await axios.get('https://backend.laxmilube.in/api/staff/bills-history', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        });
+        const response = await axios.get(
+          "https://backend.laxmilube.in/api/staff/bills-history",
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          },
+        );
         setBills(response.data);
       } catch (error) {
-        console.error('Error fetching bills history:', error);
+        console.error("Error fetching bills history:", error);
       }
     };
 
@@ -25,7 +30,8 @@ const BillsHistory = () => {
       <ul>
         {bills.map((bill) => (
           <li key={bill._id}>
-            Bill ID: {bill.billNumber}, Amount: ₹{bill.amount}, Status: {bill.status}
+            Bill ID: {bill.billNumber}, Amount: ₹{bill.amount}, Status:{" "}
+            {bill.status}
           </li>
         ))}
       </ul>

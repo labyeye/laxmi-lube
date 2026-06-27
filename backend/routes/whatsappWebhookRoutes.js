@@ -42,7 +42,9 @@ router.post("/", async (req, res) => {
                 whatsappConfirmedAt: new Date(),
                 whatsappConfirmedBy: senderPhone,
               });
-              console.log(`Collection ${collectionId} marked RECEIVED by ${senderPhone}`);
+              console.log(
+                `Collection ${collectionId} marked RECEIVED by ${senderPhone}`,
+              );
             } else if (payload.startsWith("NOT_RECEIVED:")) {
               const collectionId = payload.replace("NOT_RECEIVED:", "");
               await Collection.findByIdAndUpdate(collectionId, {
@@ -50,7 +52,9 @@ router.post("/", async (req, res) => {
                 whatsappConfirmedAt: new Date(),
                 whatsappConfirmedBy: senderPhone,
               });
-              console.log(`Collection ${collectionId} marked NOT_RECEIVED by ${senderPhone}`);
+              console.log(
+                `Collection ${collectionId} marked NOT_RECEIVED by ${senderPhone}`,
+              );
             }
           }
         }

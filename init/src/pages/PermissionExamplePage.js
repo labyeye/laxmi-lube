@@ -1,39 +1,44 @@
-import React from 'react';
-import styled from 'styled-components';
-import { usePermissions } from '../hooks/usePermissions';
-import ProtectedComponent, { AdminOnly, HasAnyPermission } from '../components/ProtectedComponent';
-import { FaPlus, FaEdit, FaTrash, FaFileExport, FaLock } from 'react-icons/fa';
+import React from "react";
+import styled from "styled-components";
+import { usePermissions } from "../hooks/usePermissions";
+import ProtectedComponent, {
+  AdminOnly,
+  HasAnyPermission,
+} from "../components/ProtectedComponent";
+import { FaPlus, FaEdit, FaTrash, FaFileExport, FaLock } from "react-icons/fa";
 
 /**
  * Example component demonstrating various ways to use the permission system
  * This is a reference implementation - copy patterns from here to other components
  */
 const PermissionExamplePage = () => {
-  const { 
-    user, 
-    hasPermission, 
-    canAccessModule, 
+  const {
+    user,
+    hasPermission,
+    canAccessModule,
     getModulePermissions,
-    isAdmin 
+    isAdmin,
   } = usePermissions();
 
   // Example 1: Direct permission check
-  const canCreateBills = hasPermission('bills', 'create');
-  const canEditBills = hasPermission('bills', 'edit');
-  const canDeleteBills = hasPermission('bills', 'delete');
+  const canCreateBills = hasPermission("bills", "create");
+  const canEditBills = hasPermission("bills", "edit");
+  const canDeleteBills = hasPermission("bills", "delete");
 
   // Example 2: Get all module permissions
-  const billPermissions = getModulePermissions('bills');
+  const billPermissions = getModulePermissions("bills");
 
   // Example 3: Check module access
-  const canAccessReports = canAccessModule('reports');
+  const canAccessReports = canAccessModule("reports");
 
   return (
     <Container>
       <Header>
         <h1>Permission System Examples</h1>
         <UserInfo>
-          <span>Logged in as: <strong>{user?.name}</strong></span>
+          <span>
+            Logged in as: <strong>{user?.name}</strong>
+          </span>
           <RoleBadge $role={user?.role}>{user?.role}</RoleBadge>
         </UserInfo>
       </Header>
@@ -69,10 +74,14 @@ const PermissionExamplePage = () => {
       <Section>
         <SectionTitle>Example 2: Protected Component Wrapper</SectionTitle>
         <ButtonGroup>
-          <ProtectedComponent 
-            module="products" 
+          <ProtectedComponent
+            module="products"
             action="create"
-            fallback={<LockedButton><FaLock /> Create Product (Locked)</LockedButton>}
+            fallback={
+              <LockedButton>
+                <FaLock /> Create Product (Locked)
+              </LockedButton>
+            }
           >
             <ActionButton $color="green">
               <FaPlus /> Create Product
@@ -96,7 +105,9 @@ const PermissionExamplePage = () => {
       {/* Example 3: Admin-only content */}
       <Section>
         <SectionTitle>Example 3: Admin-Only Content</SectionTitle>
-        <AdminOnly fallback={<InfoMessage>Admin-only features are hidden</InfoMessage>}>
+        <AdminOnly
+          fallback={<InfoMessage>Admin-only features are hidden</InfoMessage>}
+        >
           <AdminPanel>
             <h3>🔐 Admin Control Panel</h3>
             <p>This section is only visible to administrators</p>
@@ -112,20 +123,20 @@ const PermissionExamplePage = () => {
       {/* Example 4: Multiple permission checks */}
       <Section>
         <SectionTitle>Example 4: Multiple Permission Checks</SectionTitle>
-        <HasAnyPermission 
+        <HasAnyPermission
           permissions={[
-            { module: 'reports', action: 'view' },
-            { module: 'reports', action: 'export' }
+            { module: "reports", action: "view" },
+            { module: "reports", action: "export" },
           ]}
           fallback={<InfoMessage>You don't have access to reports</InfoMessage>}
         >
           <ReportSection>
             <h3>📊 Reports</h3>
             <ButtonGroup>
-              {hasPermission('reports', 'view') && (
+              {hasPermission("reports", "view") && (
                 <ActionButton $color="blue">View Reports</ActionButton>
               )}
-              {hasPermission('reports', 'export') && (
+              {hasPermission("reports", "export") && (
                 <ActionButton $color="green">
                   <FaFileExport /> Export Reports
                 </ActionButton>
@@ -137,7 +148,9 @@ const PermissionExamplePage = () => {
 
       {/* Example 5: Displaying current permissions */}
       <Section>
-        <SectionTitle>Example 5: Current User Permissions for Bills Module</SectionTitle>
+        <SectionTitle>
+          Example 5: Current User Permissions for Bills Module
+        </SectionTitle>
         <PermissionTable>
           <thead>
             <tr>
@@ -151,7 +164,7 @@ const PermissionExamplePage = () => {
                 <td>{action}</td>
                 <td>
                   <StatusBadge $allowed={allowed}>
-                    {allowed ? '✓ Allowed' : '✗ Denied'}
+                    {allowed ? "✓ Allowed" : "✗ Denied"}
                   </StatusBadge>
                 </td>
               </tr>
@@ -164,35 +177,35 @@ const PermissionExamplePage = () => {
       <Section>
         <SectionTitle>Example 6: Feature Availability</SectionTitle>
         <FeatureGrid>
-          <FeatureCard $available={canAccessModule('dashboard')}>
+          <FeatureCard $available={canAccessModule("dashboard")}>
             <FeatureIcon>📊</FeatureIcon>
             <FeatureName>Dashboard</FeatureName>
-            <FeatureStatus $available={canAccessModule('dashboard')}>
-              {canAccessModule('dashboard') ? 'Available' : 'Locked'}
+            <FeatureStatus $available={canAccessModule("dashboard")}>
+              {canAccessModule("dashboard") ? "Available" : "Locked"}
             </FeatureStatus>
           </FeatureCard>
 
-          <FeatureCard $available={canAccessModule('bills')}>
+          <FeatureCard $available={canAccessModule("bills")}>
             <FeatureIcon>📄</FeatureIcon>
             <FeatureName>Bills</FeatureName>
-            <FeatureStatus $available={canAccessModule('bills')}>
-              {canAccessModule('bills') ? 'Available' : 'Locked'}
+            <FeatureStatus $available={canAccessModule("bills")}>
+              {canAccessModule("bills") ? "Available" : "Locked"}
             </FeatureStatus>
           </FeatureCard>
 
-          <FeatureCard $available={canAccessModule('collections')}>
+          <FeatureCard $available={canAccessModule("collections")}>
             <FeatureIcon>💰</FeatureIcon>
             <FeatureName>Collections</FeatureName>
-            <FeatureStatus $available={canAccessModule('collections')}>
-              {canAccessModule('collections') ? 'Available' : 'Locked'}
+            <FeatureStatus $available={canAccessModule("collections")}>
+              {canAccessModule("collections") ? "Available" : "Locked"}
             </FeatureStatus>
           </FeatureCard>
 
-          <FeatureCard $available={canAccessModule('users')}>
+          <FeatureCard $available={canAccessModule("users")}>
             <FeatureIcon>👥</FeatureIcon>
             <FeatureName>User Management</FeatureName>
-            <FeatureStatus $available={canAccessModule('users')}>
-              {canAccessModule('users') ? 'Available' : 'Locked'}
+            <FeatureStatus $available={canAccessModule("users")}>
+              {canAccessModule("users") ? "Available" : "Locked"}
             </FeatureStatus>
           </FeatureCard>
         </FeatureGrid>
@@ -208,13 +221,16 @@ const PermissionExamplePage = () => {
               <p>You have full access to all features and settings.</p>
             </AdminInfo>
           )}
-          {user?.role === 'staff' && (
+          {user?.role === "staff" && (
             <StaffInfo>
               <h4>🚚 Staff Member</h4>
-              <p>Your permissions are configured by the administrator. Contact them to request access changes.</p>
+              <p>
+                Your permissions are configured by the administrator. Contact
+                them to request access changes.
+              </p>
             </StaffInfo>
           )}
-          {user?.role === 'retailer' && (
+          {user?.role === "retailer" && (
             <RetailerInfo>
               <h4>🏪 Retailer</h4>
               <p>You have access to your bills, orders, and payment history.</p>
@@ -260,11 +276,12 @@ const UserInfo = styled.div`
 `;
 
 const RoleBadge = styled.span`
-  background: ${props => 
-    props.$role === 'admin' ? 'var(--nb-blue)' :
-    props.$role === 'staff' ? 'var(--nb-orange)' :
-    'var(--nb-border)'
-  };
+  background: ${(props) =>
+    props.$role === "admin"
+      ? "var(--nb-blue)"
+      : props.$role === "staff"
+        ? "var(--nb-orange)"
+        : "var(--nb-border)"};
   color: white;
   padding: 0.5rem 1rem;
   border-radius: 20px;
@@ -304,13 +321,16 @@ const ActionButton = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  background: ${props => 
-    props.$color === 'green' ? 'var(--nb-blue)' :
-    props.$color === 'blue' ? 'var(--nb-blue)' :
-    props.$color === 'red' ? 'var(--nb-orange)' :
-    props.$color === 'purple' ? 'var(--nb-blue-medium)' :
-    'var(--nb-border)'
-  };
+  background: ${(props) =>
+    props.$color === "green"
+      ? "var(--nb-blue)"
+      : props.$color === "blue"
+        ? "var(--nb-blue)"
+        : props.$color === "red"
+          ? "var(--nb-orange)"
+          : props.$color === "purple"
+            ? "var(--nb-blue-medium)"
+            : "var(--nb-border)"};
   color: white;
 
   &:hover {
@@ -383,7 +403,8 @@ const PermissionTable = styled.table`
   width: 100%;
   border-collapse: collapse;
 
-  th, td {
+  th,
+  td {
     padding: 0.75rem;
     text-align: left;
     border-bottom: 1px solid var(--nb-border);
@@ -407,7 +428,7 @@ const StatusBadge = styled.span`
   border-radius: 12px;
   font-size: 0.875rem;
   font-weight: 600;
-  background: ${props => props.$allowed ? 'var(--nb-blue)' : 'var(--nb-orange)'};
+  background: ${(props) => (props.$allowed ? "var(--nb-blue)" : "var(--nb-orange)")};
   color: white;
 `;
 
@@ -419,11 +440,12 @@ const FeatureGrid = styled.div`
 
 const FeatureCard = styled.div`
   padding: 1.5rem;
-  background: ${props => props.$available ? 'var(--nb-muted)' : 'var(--nb-border)'};
-  border: 1px solid ${props => props.$available ? 'var(--nb-blue)' : 'var(--nb-border)'};
+  background: ${(props) => (props.$available ? "var(--nb-muted)" : "var(--nb-border)")};
+  border: 1px solid
+    ${(props) => (props.$available ? "var(--nb-blue)" : "var(--nb-border)")};
   border-radius: 0.75rem;
   text-align: center;
-  opacity: ${props => props.$available ? 1 : 0.5};
+  opacity: ${(props) => (props.$available ? 1 : 0.5)};
 `;
 
 const FeatureIcon = styled.div`
@@ -440,7 +462,7 @@ const FeatureName = styled.div`
 
 const FeatureStatus = styled.div`
   font-size: 0.875rem;
-  color: ${props => props.$available ? 'var(--nb-blue)' : 'var(--nb-orange)'};
+  color: ${(props) => (props.$available ? "var(--nb-blue)" : "var(--nb-orange)")};
   font-weight: 600;
 `;
 

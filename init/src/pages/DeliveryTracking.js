@@ -3,13 +3,10 @@ import styled from "styled-components";
 import Layout from "../components/Layout";
 import axios from "axios";
 import {
-  FaBeer,
-  FaBoxes,
   FaCheckCircle,
   FaExclamationTriangle,
   FaSearch,
   FaShippingFast,
-  FaTruck,
   FaClock,
 } from "react-icons/fa";
 
@@ -50,9 +47,12 @@ const DeliveryTracking = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const response = await axios.get("https://backend.laxmilube.in/api/deliveries", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        "https://backend.laxmilube.in/api/deliveries",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       setDeliveries(response.data.deliveries || []);
       setFilteredDeliveries(response.data.deliveries || []);
     } catch (err) {
@@ -74,21 +74,6 @@ const DeliveryTracking = () => {
       fetchDeliveries(); // Refresh list
     } catch (err) {
       alert("Failed to update status");
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "Pending":
-        return "var(--nb-orange)";
-      case "In Transit":
-        return "var(--nb-blue)";
-      case "Delivered":
-        return "var(--nb-blue)";
-      case "Cancelled":
-        return "var(--nb-orange)";
-      default:
-        return "var(--nb-ink)";
     }
   };
 

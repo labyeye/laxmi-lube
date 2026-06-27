@@ -1,137 +1,220 @@
-import React, { useState } from 'react';
-import styled from 'styled-components';
-import { FaShieldAlt, FaInfoCircle, FaCopy, FaCheckCircle } from 'react-icons/fa';
+import React, { useState } from "react";
+import styled from "styled-components";
+import {
+  FaShieldAlt,
+  FaInfoCircle,
+  FaCopy,
+  FaCheckCircle,
+} from "react-icons/fa";
 
 const PermissionTemplates = () => {
   const [copiedTemplate, setCopiedTemplate] = useState(null);
 
   const permissionTemplates = {
     fullAccess: {
-      name: 'Full Access',
-      description: 'Complete access to all features. Best for managers and supervisors.',
-      icon: '🔓',
-      color: 'var(--nb-blue)',
+      name: "Full Access",
+      description:
+        "Complete access to all features. Best for managers and supervisors.",
+      icon: "🔓",
+      color: "var(--nb-blue)",
       permissions: {
         dashboard: { view: true },
-        bills: { view: true, create: true, edit: true, delete: true, assign: true },
+        bills: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: true,
+          assign: true,
+        },
         collections: { view: true, create: true, edit: true, delete: true },
         products: { view: true, create: true, edit: true, delete: true },
         retailers: { view: true, create: true, edit: true, delete: true },
-        orders: { view: true, create: true, edit: true, delete: true, approve: true },
+        orders: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: true,
+          approve: true,
+        },
         deliveries: { view: true, create: true, edit: true, delete: true },
         users: { view: true, create: true, edit: true, delete: true },
         reports: { view: true, export: true },
         salary: { view: true, create: true, edit: true, delete: true },
         advances: { view: true, create: true, edit: true, delete: true },
         attendance: { view: true, create: true, edit: true, delete: true },
-        settings: { view: true, edit: true }
-      }
+        settings: { view: true, edit: true },
+      },
     },
     fieldStaff: {
-      name: 'Field Staff (DSR)',
-      description: 'Collection and order management for distribution sales representatives in the field.',
-      icon: '🚚',
-      color: 'var(--nb-blue-medium)',
+      name: "Field Staff (DSR)",
+      description:
+        "Collection and order management for distribution sales representatives in the field.",
+      icon: "🚚",
+      color: "var(--nb-blue-medium)",
       permissions: {
         dashboard: { view: true },
-        bills: { view: true, create: false, edit: false, delete: false, assign: false },
+        bills: {
+          view: true,
+          create: false,
+          edit: false,
+          delete: false,
+          assign: false,
+        },
         collections: { view: true, create: true, edit: false, delete: false },
         products: { view: true, create: false, edit: false, delete: false },
         retailers: { view: true, create: false, edit: false, delete: false },
-        orders: { view: true, create: true, edit: false, delete: false, approve: false },
+        orders: {
+          view: true,
+          create: true,
+          edit: false,
+          delete: false,
+          approve: false,
+        },
         deliveries: { view: true, create: false, edit: false, delete: false },
         users: { view: false, create: false, edit: false, delete: false },
         reports: { view: true, export: false },
         salary: { view: false, create: false, edit: false, delete: false },
         advances: { view: false, create: false, edit: false, delete: false },
         attendance: { view: true, create: false, edit: false, delete: false },
-        settings: { view: false, edit: false }
-      }
+        settings: { view: false, edit: false },
+      },
     },
     supervisor: {
-      name: 'Supervisor',
-      description: 'View and approve operations. Can manage most features except user administration.',
-      icon: '👨‍💼',
-      color: 'var(--nb-blue)',
+      name: "Supervisor",
+      description:
+        "View and approve operations. Can manage most features except user administration.",
+      icon: "👨‍💼",
+      color: "var(--nb-blue)",
       permissions: {
         dashboard: { view: true },
-        bills: { view: true, create: true, edit: true, delete: false, assign: true },
+        bills: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: false,
+          assign: true,
+        },
         collections: { view: true, create: true, edit: true, delete: false },
         products: { view: true, create: true, edit: true, delete: false },
         retailers: { view: true, create: true, edit: true, delete: false },
-        orders: { view: true, create: true, edit: true, delete: false, approve: true },
+        orders: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: false,
+          approve: true,
+        },
         deliveries: { view: true, create: true, edit: true, delete: false },
         users: { view: true, create: false, edit: false, delete: false },
         reports: { view: true, export: true },
         salary: { view: true, create: false, edit: false, delete: false },
         advances: { view: true, create: true, edit: false, delete: false },
         attendance: { view: true, create: true, edit: true, delete: false },
-        settings: { view: false, edit: false }
-      }
+        settings: { view: false, edit: false },
+      },
     },
     viewOnly: {
-      name: 'View Only',
-      description: 'Read-only access to all modules. Cannot create, edit, or delete anything.',
-      icon: '👁️',
-      color: 'var(--nb-border)',
+      name: "View Only",
+      description:
+        "Read-only access to all modules. Cannot create, edit, or delete anything.",
+      icon: "👁️",
+      color: "var(--nb-border)",
       permissions: {
         dashboard: { view: true },
-        bills: { view: true, create: false, edit: false, delete: false, assign: false },
+        bills: {
+          view: true,
+          create: false,
+          edit: false,
+          delete: false,
+          assign: false,
+        },
         collections: { view: true, create: false, edit: false, delete: false },
         products: { view: true, create: false, edit: false, delete: false },
         retailers: { view: true, create: false, edit: false, delete: false },
-        orders: { view: true, create: false, edit: false, delete: false, approve: false },
+        orders: {
+          view: true,
+          create: false,
+          edit: false,
+          delete: false,
+          approve: false,
+        },
         deliveries: { view: true, create: false, edit: false, delete: false },
         users: { view: false, create: false, edit: false, delete: false },
         reports: { view: true, export: false },
         salary: { view: false, create: false, edit: false, delete: false },
         advances: { view: false, create: false, edit: false, delete: false },
         attendance: { view: true, create: false, edit: false, delete: false },
-        settings: { view: false, edit: false }
-      }
+        settings: { view: false, edit: false },
+      },
     },
     accountant: {
-      name: 'Accountant',
-      description: 'Financial management access including bills, collections, salary, and advances.',
-      icon: '💰',
-      color: 'var(--nb-blue-medium)',
+      name: "Accountant",
+      description:
+        "Financial management access including bills, collections, salary, and advances.",
+      icon: "💰",
+      color: "var(--nb-blue-medium)",
       permissions: {
         dashboard: { view: true },
-        bills: { view: true, create: true, edit: true, delete: false, assign: false },
+        bills: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: false,
+          assign: false,
+        },
         collections: { view: true, create: true, edit: true, delete: false },
         products: { view: true, create: false, edit: false, delete: false },
         retailers: { view: true, create: false, edit: false, delete: false },
-        orders: { view: true, create: false, edit: false, delete: false, approve: false },
+        orders: {
+          view: true,
+          create: false,
+          edit: false,
+          delete: false,
+          approve: false,
+        },
         deliveries: { view: true, create: false, edit: false, delete: false },
         users: { view: false, create: false, edit: false, delete: false },
         reports: { view: true, export: true },
         salary: { view: true, create: true, edit: true, delete: false },
         advances: { view: true, create: true, edit: true, delete: false },
         attendance: { view: true, create: false, edit: false, delete: false },
-        settings: { view: false, edit: false }
-      }
+        settings: { view: false, edit: false },
+      },
     },
     warehouseManager: {
-      name: 'Warehouse Manager',
-      description: 'Product, delivery, and inventory management. Limited financial access.',
-      icon: '📦',
-      color: 'var(--nb-blue)',
+      name: "Warehouse Manager",
+      description:
+        "Product, delivery, and inventory management. Limited financial access.",
+      icon: "📦",
+      color: "var(--nb-blue)",
       permissions: {
         dashboard: { view: true },
-        bills: { view: true, create: false, edit: false, delete: false, assign: false },
+        bills: {
+          view: true,
+          create: false,
+          edit: false,
+          delete: false,
+          assign: false,
+        },
         collections: { view: false, create: false, edit: false, delete: false },
         products: { view: true, create: true, edit: true, delete: true },
         retailers: { view: true, create: false, edit: false, delete: false },
-        orders: { view: true, create: false, edit: true, delete: false, approve: true },
+        orders: {
+          view: true,
+          create: false,
+          edit: true,
+          delete: false,
+          approve: true,
+        },
         deliveries: { view: true, create: true, edit: true, delete: false },
         users: { view: false, create: false, edit: false, delete: false },
         reports: { view: true, export: true },
         salary: { view: false, create: false, edit: false, delete: false },
         advances: { view: false, create: false, edit: false, delete: false },
         attendance: { view: true, create: false, edit: false, delete: false },
-        settings: { view: false, edit: false }
-      }
-    }
+        settings: { view: false, edit: false },
+      },
+    },
   };
 
   const copyToClipboard = (templateKey) => {
@@ -145,8 +228,8 @@ const PermissionTemplates = () => {
   const countPermissions = (permissions) => {
     let enabled = 0;
     let total = 0;
-    Object.values(permissions).forEach(module => {
-      Object.values(module).forEach(value => {
+    Object.values(permissions).forEach((module) => {
+      Object.values(module).forEach((value) => {
         total++;
         if (value) enabled++;
       });
@@ -163,7 +246,9 @@ const PermissionTemplates = () => {
           </IconWrapper>
           <div>
             <Title>Permission Templates</Title>
-            <Subtitle>Pre-configured permission sets for common user roles</Subtitle>
+            <Subtitle>
+              Pre-configured permission sets for common user roles
+            </Subtitle>
           </div>
         </HeaderContent>
       </Header>
@@ -171,9 +256,10 @@ const PermissionTemplates = () => {
       <InfoBox>
         <FaInfoCircle />
         <InfoText>
-          These templates can be applied when managing user permissions. Each template is designed for 
-          specific job roles and provides appropriate access levels. You can customize permissions after 
-          applying a template.
+          These templates can be applied when managing user permissions. Each
+          template is designed for specific job roles and provides appropriate
+          access levels. You can customize permissions after applying a
+          template.
         </InfoText>
       </InfoBox>
 
@@ -186,45 +272,55 @@ const PermissionTemplates = () => {
             <TemplateCard key={key} $color={template.color}>
               <CardHeader $color={template.color}>
                 <TemplateIcon>{template.icon}</TemplateIcon>
-                <CopyButton 
+                <CopyButton
                   onClick={() => copyToClipboard(key)}
                   title="Copy permissions JSON"
                 >
                   {copiedTemplate === key ? <FaCheckCircle /> : <FaCopy />}
                 </CopyButton>
               </CardHeader>
-              
+
               <CardBody>
                 <TemplateName>{template.name}</TemplateName>
-                <TemplateDescription>{template.description}</TemplateDescription>
-                
+                <TemplateDescription>
+                  {template.description}
+                </TemplateDescription>
+
                 <PermissionStats>
                   <StatLabel>Permissions Enabled:</StatLabel>
-                  <StatValue>{enabled} / {total}</StatValue>
+                  <StatValue>
+                    {enabled} / {total}
+                  </StatValue>
                   <ProgressBar>
-                    <ProgressFill $percentage={percentage} $color={template.color} />
+                    <ProgressFill
+                      $percentage={percentage}
+                      $color={template.color}
+                    />
                   </ProgressBar>
                   <PercentageLabel>{percentage}%</PercentageLabel>
                 </PermissionStats>
 
                 <PermissionBreakdown>
                   <BreakdownTitle>Access Levels:</BreakdownTitle>
-                  {Object.entries(template.permissions).map(([module, actions]) => {
-                    const moduleEnabled = Object.values(actions).filter(Boolean).length;
-                    const moduleTotal = Object.values(actions).length;
-                    if (moduleEnabled === 0) return null;
-                    
-                    return (
-                      <ModuleItem key={module}>
-                        <ModuleName>
-                          {module.charAt(0).toUpperCase() + module.slice(1)}
-                        </ModuleName>
-                        <ModuleBadge>
-                          {moduleEnabled}/{moduleTotal}
-                        </ModuleBadge>
-                      </ModuleItem>
-                    );
-                  })}
+                  {Object.entries(template.permissions).map(
+                    ([module, actions]) => {
+                      const moduleEnabled =
+                        Object.values(actions).filter(Boolean).length;
+                      const moduleTotal = Object.values(actions).length;
+                      if (moduleEnabled === 0) return null;
+
+                      return (
+                        <ModuleItem key={module}>
+                          <ModuleName>
+                            {module.charAt(0).toUpperCase() + module.slice(1)}
+                          </ModuleName>
+                          <ModuleBadge>
+                            {moduleEnabled}/{moduleTotal}
+                          </ModuleBadge>
+                        </ModuleItem>
+                      );
+                    },
+                  )}
                 </PermissionBreakdown>
               </CardBody>
             </TemplateCard>
@@ -245,7 +341,9 @@ const PermissionTemplates = () => {
           </Step>
           <Step>
             <StepNumber>3</StepNumber>
-            <StepText>Select a template from the Quick Templates section</StepText>
+            <StepText>
+              Select a template from the Quick Templates section
+            </StepText>
           </Step>
           <Step>
             <StepNumber>4</StepNumber>
@@ -333,7 +431,7 @@ const TemplateCard = styled.div`
   box-shadow: var(--nb-shadow-md);
   overflow: hidden;
   transition: all 0.3s ease;
-  border: 1px solid ${props => props.$color};
+  border: 1px solid ${(props) => props.$color};
 
   &:hover {
     transform: translateY(-5px);
@@ -342,7 +440,7 @@ const TemplateCard = styled.div`
 `;
 
 const CardHeader = styled.div`
-  background: ${props => props.$color};
+  background: ${(props) => props.$color};
   padding: 1.5rem;
   display: flex;
   justify-content: space-between;
@@ -422,9 +520,9 @@ const ProgressBar = styled.div`
 `;
 
 const ProgressFill = styled.div`
-  width: ${props => props.$percentage}%;
+  width: ${(props) => props.$percentage}%;
   height: 100%;
-  background: ${props => props.$color};
+  background: ${(props) => props.$color};
   transition: width 0.3s ease;
 `;
 

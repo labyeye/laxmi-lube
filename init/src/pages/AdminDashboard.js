@@ -256,13 +256,11 @@ const AdminDashboard = () => {
     },
   };
 
-  
   return (
     <Layout>
       <MainContent>
         <Header>
           <div className="title-wrapper">
-            
             <h1>Welcome</h1>
             <p className="subtitle">
               Here's a quick overview of your business performance
@@ -580,10 +578,15 @@ const AdminDashboard = () => {
                           {collection.bill?.retailer || "N/A"}
                         </td>
                         <td data-label="Amount">
-                          ₹{collection.amountCollected ? collection.amountCollected.toLocaleString() : "0"}
+                          ₹
+                          {collection.amountCollected
+                            ? collection.amountCollected.toLocaleString()
+                            : "0"}
                         </td>
                         <td data-label="Collected By">
-                          {collection.collectedBy?.name || collection.collectedBy?.email || "N/A"}
+                          {collection.collectedBy?.name ||
+                            collection.collectedBy?.email ||
+                            "N/A"}
                         </td>
                         <td data-label="Payment">
                           <PaymentBadge mode={collection.paymentMode}>
@@ -955,7 +958,7 @@ const MetricCard = styled.div`
       font-size: 1.25rem;
     }
   }
-  .red{
+  .red {
     background: #ed1c24;
   }
   &:hover .icon-container {
@@ -1220,11 +1223,11 @@ const PaymentBadge = styled.span`
 `;
 
 const WA_STATUS_STYLE = {
-  received:     { bg: "rgba(22,163,74,0.12)", color: "#15803d" },
+  received: { bg: "rgba(22,163,74,0.12)", color: "#15803d" },
   not_received: { bg: "rgba(220,38,38,0.12)", color: "#b91c1c" },
-  sent:         { bg: "rgba(37,99,235,0.12)", color: "#1d4ed8" },
-  no_phone:     { bg: "rgba(150,150,150,0.12)", color: "#6b7280" },
-  pending:      { bg: "rgba(234,179,8,0.12)", color: "#92400e" },
+  sent: { bg: "rgba(37,99,235,0.12)", color: "#1d4ed8" },
+  no_phone: { bg: "rgba(150,150,150,0.12)", color: "#6b7280" },
+  pending: { bg: "rgba(234,179,8,0.12)", color: "#92400e" },
 };
 
 const WaBadge = styled.span`

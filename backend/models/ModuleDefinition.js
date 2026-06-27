@@ -16,7 +16,7 @@ const FieldSchema = new mongoose.Schema(
     ref: { type: String },
     multi: { type: Boolean, default: false },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const ModuleDefinitionSchema = new mongoose.Schema(
@@ -33,7 +33,7 @@ const ModuleDefinitionSchema = new mongoose.Schema(
     },
     fields: { type: [FieldSchema], default: [] },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 module.exports = mongoose.model("ModuleDefinition", ModuleDefinitionSchema);

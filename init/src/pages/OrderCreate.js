@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import styled, {  } from "styled-components";
+import styled from "styled-components";
 import { Link, useNavigate } from "react-router-dom";
 import { useModules } from "../contexts/ModuleContext";
 import {
@@ -24,7 +24,7 @@ const OrderCreate = () => {
   const [selectedRetailer, setSelectedRetailer] = useState("");
   const [orderItems, setOrderItems] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [sidebarCollapsed, ] = useState(false);
+  const [sidebarCollapsed] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -82,7 +82,7 @@ const OrderCreate = () => {
           userRes.data.assignedRetailers.length > 0
         ) {
           const assignedRetailers = retailersRes.data.filter((retailer) =>
-            userRes.data.assignedRetailers.includes(retailer._id)
+            userRes.data.assignedRetailers.includes(retailer._id),
           );
           setUserAssignedRetailers(assignedRetailers);
         } else {
@@ -153,7 +153,7 @@ const OrderCreate = () => {
       (item.productDetails.scheme || 0) + (item.otherScheme || 0);
     const netPrice = Math.max(
       0,
-      item.quantity * item.productDetails.price - item.quantity * totalScheme
+      item.quantity * item.productDetails.price - item.quantity * totalScheme,
     );
     const totalLitres = item.quantity * (item.productDetails.weight || 0);
     const totalSale = netPrice;
@@ -169,14 +169,14 @@ const OrderCreate = () => {
   };
 
   const filteredRetailers = userAssignedRetailers.filter(
-    (retailer) => !dayFilter || retailer.dayAssigned === dayFilter
+    (retailer) => !dayFilter || retailer.dayAssigned === dayFilter,
   );
   const filteredProducts = products.filter(
     (product) =>
       (!companyFilter || product.company === companyFilter) &&
       (!productSearch ||
         product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-        product.code.toLowerCase().includes(productSearch.toLowerCase()))
+        product.code.toLowerCase().includes(productSearch.toLowerCase())),
   );
 
   const handleSubmit = async (e) => {
@@ -207,7 +207,7 @@ const OrderCreate = () => {
 
       if (item.productDetails && item.quantity > item.productDetails.stock) {
         setError(
-          `Insufficient stock for ${item.productDetails.name}. Available: ${item.productDetails.stock}`
+          `Insufficient stock for ${item.productDetails.name}. Available: ${item.productDetails.stock}`,
         );
         return;
       }
@@ -231,7 +231,7 @@ const OrderCreate = () => {
         },
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       setMessage("Order created successfully!");
@@ -276,7 +276,9 @@ const OrderCreate = () => {
             <NavIcon>
               <FaMoneyBillWave />
             </NavIcon>
-            {!sidebarCollapsed && <NavText>{getModuleName('order')} Create</NavText>}
+            {!sidebarCollapsed && (
+              <NavText>{getModuleName("order")} Create</NavText>
+            )}
             <NavCheckmark>☑</NavCheckmark>
           </NavItem>
 
@@ -331,7 +333,7 @@ const OrderCreate = () => {
 
       <MainContent>
         <ContentContainer>
-          <PageHeader>Create New {getModuleName('order')}</PageHeader>
+          <PageHeader>Create New {getModuleName("order")}</PageHeader>
 
           <FiltersContainer>
             <FilterGroup>
@@ -389,7 +391,7 @@ const OrderCreate = () => {
                           .includes(retailerSearch.toLowerCase()) ||
                         retailer.address1
                           .toLowerCase()
-                          .includes(retailerSearch.toLowerCase())
+                          .includes(retailerSearch.toLowerCase()),
                     )
                     .map((retailer) => (
                       <ProductResultItem
@@ -482,7 +484,7 @@ const OrderCreate = () => {
                                     handleItemChange(
                                       index,
                                       "productId",
-                                      product._id
+                                      product._id,
                                     );
                                     setProductSearch("");
                                   }}
@@ -520,7 +522,7 @@ const OrderCreate = () => {
                                         handleItemChange(
                                           index,
                                           "quantity",
-                                          currentValue - 1
+                                          currentValue - 1,
                                         );
                                       }
                                     }}
@@ -536,7 +538,7 @@ const OrderCreate = () => {
                                       handleItemChange(
                                         index,
                                         "quantity",
-                                        e.target.value
+                                        e.target.value,
                                       )
                                     }
                                   />
@@ -550,7 +552,7 @@ const OrderCreate = () => {
                                         handleItemChange(
                                           index,
                                           "quantity",
-                                          currentValue + 1
+                                          currentValue + 1,
                                         );
                                       }
                                     }}
@@ -583,7 +585,7 @@ const OrderCreate = () => {
                                       handleItemChange(
                                         index,
                                         "otherScheme",
-                                        currentValue - 1
+                                        currentValue - 1,
                                       );
                                     }}
                                   >
@@ -597,7 +599,7 @@ const OrderCreate = () => {
                                       handleItemChange(
                                         index,
                                         "otherScheme",
-                                        e.target.value
+                                        e.target.value,
                                       )
                                     }
                                   />
@@ -609,7 +611,7 @@ const OrderCreate = () => {
                                       handleItemChange(
                                         index,
                                         "otherScheme",
-                                        currentValue + 1
+                                        currentValue + 1,
                                       );
                                     }}
                                   >
@@ -625,7 +627,7 @@ const OrderCreate = () => {
                                 <NInput
                                   type="text"
                                   value={calculatedValues.totalScheme.toFixed(
-                                    2
+                                    2,
                                   )}
                                   readOnly
                                 />
@@ -636,7 +638,7 @@ const OrderCreate = () => {
                                 <NInput
                                   type="text"
                                   value={calculatedValues.totalLitres.toFixed(
-                                    2
+                                    2,
                                   )}
                                   readOnly
                                 />
@@ -680,7 +682,7 @@ const OrderCreate = () => {
                                   handleItemChange(
                                     index,
                                     "remarks",
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                               />
@@ -1162,21 +1164,21 @@ const Input = styled.input`
 const StockInput = styled(Input)`
   text-align: center;
   width: 40%;
-  background-color: var(--nb-white)8e1;
+  background-color: var(--nb-white) 8e1;
 `;
 const NInput = styled(Input)`
   text-align: center;
   width: 45%;
-  background-color: var(--nb-white)8e1;
+  background-color: var(--nb-white) 8e1;
 `;
 const QuantityInput = styled(Input)`
   width: 40%;
   text-align: center;
-  background-color: var(--nb-white)8e1;
+  background-color: var(--nb-white) 8e1;
 `;
 const SearchInput = styled(Input)`
   text-align: center;
-  background-color: var(--nb-white)8e1;
+  background-color: var(--nb-white) 8e1;
 `;
 
 const RInput = styled.input`
@@ -1185,7 +1187,7 @@ const RInput = styled.input`
   border: 1px solid var(--nb-border);
   border-radius: 0.375rem;
   font-size: 0.875rem;
-  background-color: var(--nb-white)8e1;
+  background-color: var(--nb-white) 8e1;
   transition: border-color 0.3s;
 
   &:focus {
@@ -1200,22 +1202,7 @@ const RInput = styled.input`
 `;
 const SchemeInput = styled(Input)`
   text-align: center;
-  background-color: var(--nb-white)8e1;
-`;
-
-const Select = styled.select`
-  width: 100%;
-  padding: 0.625rem 0.75rem;
-  border: 1px solid var(--nb-border);
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  background-color: var(--nb-white);
-  transition: border-color 0.3s;
-
-  &:focus {
-    outline: none;
-    border-color: var(--nb-blue);
-  }
+  background-color: var(--nb-white) 8e1;
 `;
 
 const NumberInputContainer = styled.div`

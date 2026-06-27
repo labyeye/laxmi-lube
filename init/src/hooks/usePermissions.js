@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
-import { 
-  hasPermission, 
-  getModulePermissions, 
+import { useEffect, useState } from "react";
+import axios from "axios";
+import {
+  hasPermission,
+  getModulePermissions,
   canAccessModule,
   getAccessibleModules,
-  isAdmin
-} from '../utils/permissions';
+  isAdmin,
+} from "../utils/permissions";
 
 /**
  * Custom hook for managing user permissions
@@ -19,18 +19,21 @@ export const usePermissions = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem("token");
         if (!token) {
           setLoading(false);
           return;
         }
 
-        const response = await axios.get('https://backend.laxmilube.in/api/users/me', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await axios.get(
+          "https://backend.laxmilube.in/api/users/me",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
         setUser(response.data);
       } catch (error) {
-        console.error('Error fetching user:', error);
+        console.error("Error fetching user:", error);
       } finally {
         setLoading(false);
       }
@@ -58,7 +61,7 @@ export const usePermissions = () => {
  */
 export const useHasPermission = (module, action) => {
   const { user, loading } = usePermissions();
-  
+
   if (loading) return false;
   return hasPermission(user, module, action);
 };
@@ -70,7 +73,7 @@ export const useHasPermission = (module, action) => {
  */
 export const useModulePermissions = (module) => {
   const { user, loading } = usePermissions();
-  
+
   if (loading) return {};
   return getModulePermissions(user, module);
 };

@@ -1,97 +1,97 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from "react";
 
 // Default module configurations
 const DEFAULT_MODULES = {
   dashboard: {
-    singular: 'Dashboard',
-    plural: 'Dashboards',
-    icon: 'FaTachometerAlt',
-    key: 'dashboard'
+    singular: "Dashboard",
+    plural: "Dashboards",
+    icon: "FaTachometerAlt",
+    key: "dashboard",
   },
   retailer: {
-    singular: 'Retailer',
-    plural: 'Retailers',
-    icon: 'FaStore',
-    key: 'retailer'
+    singular: "Retailer",
+    plural: "Retailers",
+    icon: "FaStore",
+    key: "retailer",
   },
   customer: {
-    singular: 'Customer',
-    plural: 'Customers',
-    icon: 'FaUsers',
-    key: 'customer'
+    singular: "Customer",
+    plural: "Customers",
+    icon: "FaUsers",
+    key: "customer",
   },
   product: {
-    singular: 'Product',
-    plural: 'Products',
-    icon: 'FaBoxes',
-    key: 'product'
+    singular: "Product",
+    plural: "Products",
+    icon: "FaBoxes",
+    key: "product",
   },
   order: {
-    singular: 'Order',
-    plural: 'Orders',
-    icon: 'FaShoppingCart',
-    key: 'order'
+    singular: "Order",
+    plural: "Orders",
+    icon: "FaShoppingCart",
+    key: "order",
   },
   bill: {
-    singular: 'Bill',
-    plural: 'Bills',
-    icon: 'FaFileInvoiceDollar',
-    key: 'bill'
+    singular: "Bill",
+    plural: "Bills",
+    icon: "FaFileInvoiceDollar",
+    key: "bill",
   },
   collection: {
-    singular: 'Collection',
-    plural: 'Collections',
-    icon: 'FaMoneyBillWave',
-    key: 'collection'
+    singular: "Collection",
+    plural: "Collections",
+    icon: "FaMoneyBillWave",
+    key: "collection",
   },
   attendance: {
-    singular: 'Attendance',
-    plural: 'Attendance',
-    icon: 'FaCalendarCheck',
-    key: 'attendance'
+    singular: "Attendance",
+    plural: "Attendance",
+    icon: "FaCalendarCheck",
+    key: "attendance",
   },
   salary: {
-    singular: 'Salary',
-    plural: 'Salaries',
-    icon: 'FaMoneyBillWave',
-    key: 'salary'
+    singular: "Salary",
+    plural: "Salaries",
+    icon: "FaMoneyBillWave",
+    key: "salary",
   },
   advance: {
-    singular: 'Advance',
-    plural: 'Advances',
-    icon: 'FaMoneyBillWave',
-    key: 'advance'
+    singular: "Advance",
+    plural: "Advances",
+    icon: "FaMoneyBillWave",
+    key: "advance",
   },
   delivery: {
-    singular: 'Delivery',
-    plural: 'Deliveries',
-    icon: 'FaTruck',
-    key: 'delivery'
+    singular: "Delivery",
+    plural: "Deliveries",
+    icon: "FaTruck",
+    key: "delivery",
   },
   logistics: {
-    singular: 'Logistics',
-    plural: 'Logistics',
-    icon: 'FaTruck',
-    key: 'logistics'
+    singular: "Logistics",
+    plural: "Logistics",
+    icon: "FaTruck",
+    key: "logistics",
   },
   report: {
-    singular: 'Report',
-    plural: 'Reports',
-    icon: 'FaChartBar',
-    key: 'report'
+    singular: "Report",
+    plural: "Reports",
+    icon: "FaChartBar",
+    key: "report",
   },
   staff: {
-    singular: 'Staff',
-    plural: 'Staff',
-    icon: 'FaUsers',
-    key: 'staff'
+    singular: "Staff",
+    plural: "Staff",
+    icon: "FaUsers",
+    key: "staff",
   },
   user: {
-    singular: 'User',
-    plural: 'Users',
-    icon: 'FaUsers',
-    key: 'user'
-  }
+    singular: "User",
+    plural: "Users",
+    icon: "FaUsers",
+    key: "user",
+  },
 };
 
 const ModuleContext = createContext();
@@ -99,7 +99,7 @@ const ModuleContext = createContext();
 export const useModules = () => {
   const context = useContext(ModuleContext);
   if (!context) {
-    throw new Error('useModules must be used within a ModuleProvider');
+    throw new Error("useModules must be used within a ModuleProvider");
   }
   return context;
 };
@@ -107,12 +107,12 @@ export const useModules = () => {
 export const ModuleProvider = ({ children }) => {
   const [modules, setModules] = useState(() => {
     // Load from localStorage or use defaults
-    const stored = localStorage.getItem('customModules');
+    const stored = localStorage.getItem("customModules");
     if (stored) {
       try {
         return JSON.parse(stored);
       } catch (error) {
-        console.error('Error parsing stored modules:', error);
+        console.error("Error parsing stored modules:", error);
         return DEFAULT_MODULES;
       }
     }
@@ -121,11 +121,11 @@ export const ModuleProvider = ({ children }) => {
 
   // Save to localStorage whenever modules change
   useEffect(() => {
-    localStorage.setItem('customModules', JSON.stringify(modules));
+    localStorage.setItem("customModules", JSON.stringify(modules));
   }, [modules]);
 
   // Get module name (singular or plural)
-  const getModuleName = (moduleKey, form = 'singular') => {
+  const getModuleName = (moduleKey, form = "singular") => {
     const module = modules[moduleKey];
     if (!module) {
       console.warn(`Module "${moduleKey}" not found`);
@@ -137,40 +137,40 @@ export const ModuleProvider = ({ children }) => {
   // Get module icon
   const getModuleIcon = (moduleKey) => {
     const module = modules[moduleKey];
-    return module?.icon || 'FaCogs';
+    return module?.icon || "FaCogs";
   };
 
   // Update a single module
   const updateModule = (moduleKey, updates) => {
-    setModules(prev => ({
+    setModules((prev) => ({
       ...prev,
       [moduleKey]: {
         ...prev[moduleKey],
-        ...updates
-      }
+        ...updates,
+      },
     }));
   };
 
   // Update multiple modules at once
   const updateModules = (updates) => {
-    setModules(prev => ({
+    setModules((prev) => ({
       ...prev,
-      ...updates
+      ...updates,
     }));
   };
 
   // Reset a single module to default
   const resetModule = (moduleKey) => {
-    setModules(prev => ({
+    setModules((prev) => ({
       ...prev,
-      [moduleKey]: DEFAULT_MODULES[moduleKey]
+      [moduleKey]: DEFAULT_MODULES[moduleKey],
     }));
   };
 
   // Reset all modules to defaults
   const resetAllModules = () => {
     setModules(DEFAULT_MODULES);
-    localStorage.setItem('customModules', JSON.stringify(DEFAULT_MODULES));
+    localStorage.setItem("customModules", JSON.stringify(DEFAULT_MODULES));
   };
 
   // Get all modules
@@ -188,13 +188,11 @@ export const ModuleProvider = ({ children }) => {
     resetModule,
     resetAllModules,
     getAllModules,
-    getDefaultModules
+    getDefaultModules,
   };
 
   return (
-    <ModuleContext.Provider value={value}>
-      {children}
-    </ModuleContext.Provider>
+    <ModuleContext.Provider value={value}>{children}</ModuleContext.Provider>
   );
 };
 

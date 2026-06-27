@@ -23,21 +23,23 @@ const ModuleSettings = () => {
       field.showInForm !== undefined
         ? field.showInForm
         : field.visible
-        ? field.visible.includes("form")
-        : true;
+          ? field.visible.includes("form")
+          : true;
     const showInList =
       field.showInList !== undefined
         ? field.showInList
         : field.visible
-        ? field.visible.includes("list")
-        : true;
+          ? field.visible.includes("list")
+          : true;
 
     return {
       ...field,
       options: Array.isArray(field.options)
         ? field.options.join(", ")
         : field.options || "",
-      roles: Array.isArray(field.roles) ? field.roles.join(", ") : field.roles || "",
+      roles: Array.isArray(field.roles)
+        ? field.roles.join(", ")
+        : field.roles || "",
       showInForm,
       showInList,
     };
@@ -60,9 +62,12 @@ const ModuleSettings = () => {
     const loadModules = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch("https://backend.laxmilube.in/api/modules", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await fetch(
+          "https://backend.laxmilube.in/api/modules",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
         if (!response.ok) throw new Error("Failed to load modules");
         const data = await response.json();
         setModules(Array.isArray(data) ? data : []);
@@ -78,12 +83,12 @@ const ModuleSettings = () => {
 
   useEffect(() => {
     const module = modules.find(
-      (m) => m._id === activeModuleId || m.key === activeModuleId
+      (m) => m._id === activeModuleId || m.key === activeModuleId,
     );
     setActiveModule(
       module
         ? { ...module, fields: (module.fields || []).map(normalizeField) }
-        : null
+        : null,
     );
     setFieldDraft(emptyField);
     setIsEditingField(false);
@@ -125,10 +130,7 @@ const ModuleSettings = () => {
 
     const nextFields = isEditingField
       ? activeFields.map((f) => (f.key === fieldDraft.key ? fieldDraft : f))
-      : [
-          ...activeFields,
-          { ...fieldDraft, order: activeFields.length + 1 },
-        ];
+      : [...activeFields, { ...fieldDraft, order: activeFields.length + 1 }];
 
     updateModuleFields(nextFields);
     setFieldDraft(emptyField);
@@ -143,7 +145,7 @@ const ModuleSettings = () => {
 
   const handleDisableField = (fieldKey) => {
     const nextFields = activeFields.map((f) =>
-      f.key === fieldKey ? { ...f, status: "disabled" } : f
+      f.key === fieldKey ? { ...f, status: "disabled" } : f,
     );
     updateModuleFields(nextFields);
   };
@@ -204,12 +206,12 @@ const ModuleSettings = () => {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ fields: normalizedFields }),
-        }
+        },
       );
       if (!response.ok) throw new Error("Failed to update module");
       const updated = await response.json();
       setModules((prev) =>
-        prev.map((m) => (m._id === updated._id ? updated : m))
+        prev.map((m) => (m._id === updated._id ? updated : m)),
       );
       setSuccess("Module updated");
     } catch (err) {
@@ -285,7 +287,7 @@ const ModuleSettings = () => {
         },
       ],
     }),
-    []
+    [],
   );
 
   return (

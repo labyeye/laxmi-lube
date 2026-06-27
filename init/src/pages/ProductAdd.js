@@ -5,10 +5,7 @@ import styled from "styled-components";
 import Layout from "../components/Layout";
 import { useModules } from "../contexts/ModuleContext";
 import DynamicForm from "../components/DynamicForm";
-import {
-  createRecord,
-  hydrateModuleDefinition,
-} from "../utils/dynamicApi";
+import { createRecord, hydrateModuleDefinition } from "../utils/dynamicApi";
 
 const ProductAdd = () => {
   const { getModuleName } = useModules();
@@ -68,12 +65,12 @@ const ProductAdd = () => {
 
           const headers = jsonData[0] || [];
           const lowerHeaders = headers.map((h) =>
-            String(h).toLowerCase().trim()
+            String(h).toLowerCase().trim(),
           );
 
           const hasCode = lowerHeaders.some((h) => h.includes("code"));
           const hasName = lowerHeaders.some(
-            (h) => h.includes("product name") || h.includes("name")
+            (h) => h.includes("product name") || h.includes("name"),
           );
           const hasPrice = lowerHeaders.some((h) => h.includes("price"));
           const hasWeight = lowerHeaders.some((h) => h.includes("weight"));
@@ -126,7 +123,7 @@ const ProductAdd = () => {
             Authorization: `Bearer ${token}`,
           },
           body: formData,
-        }
+        },
       );
 
       if (!response.ok) {
@@ -156,14 +153,14 @@ const ProductAdd = () => {
             const data = JSON.parse(line);
             if (data.type === "result") {
               setMessage(
-                `Successfully imported ${data.importedCount} products. ${data.errorCount} records had errors.`
+                `Successfully imported ${data.importedCount} products. ${data.errorCount} records had errors.`,
               );
               if (data.errorCount > 0) {
                 const exampleErrors = data.errors?.join(";\n") || "";
                 setError(
                   `Some rows had errors. Examples:\n${exampleErrors}${
                     data.errorCount > 10 ? "\n...and more" : ""
-                  }`
+                  }`,
                 );
               }
             } else if (data.type === "error") {
@@ -187,10 +184,10 @@ const ProductAdd = () => {
 
   return (
     <Layout>
-      <PageHeader>Add {getModuleName('product', 'plural')}</PageHeader>
+      <PageHeader>Add {getModuleName("product", "plural")}</PageHeader>
 
       <FormContainer>
-        <SectionHeader>Manual {getModuleName('product')} Entry</SectionHeader>
+        <SectionHeader>Manual {getModuleName("product")} Entry</SectionHeader>
         {moduleDefinition ? (
           <DynamicForm
             moduleDefinition={moduleDefinition}
@@ -200,7 +197,7 @@ const ProductAdd = () => {
             }
             onSubmit={handleManualSubmit}
             errors={fieldErrors}
-            submitLabel={`Add ${getModuleName('product')}`}
+            submitLabel={`Add ${getModuleName("product")}`}
           />
         ) : (
           <LoadingMessage>Loading fields...</LoadingMessage>
@@ -208,7 +205,9 @@ const ProductAdd = () => {
       </FormContainer>
 
       <UploadForm onSubmit={handleImport}>
-        <SectionHeader>Upload {getModuleName('product', 'plural')} (Excel)</SectionHeader>
+        <SectionHeader>
+          Upload {getModuleName("product", "plural")} (Excel)
+        </SectionHeader>
         <FileUploadContainer>
           <FileInputLabel>
             <FileInput
@@ -224,7 +223,9 @@ const ProductAdd = () => {
 
         <ButtonContainer>
           <Button type="submit" disabled={loading || !file}>
-            {loading ? "Processing..." : `Upload ${getModuleName('product', 'plural')}`}
+            {loading
+              ? "Processing..."
+              : `Upload ${getModuleName("product", "plural")}`}
           </Button>
         </ButtonContainer>
 

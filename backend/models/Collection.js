@@ -50,7 +50,7 @@ const collectionSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 module.exports = mongoose.model("Collection", collectionSchema);

@@ -169,7 +169,9 @@ const NavItem = styled.li`
   align-items: center;
   color: ${(props) => (props.active ? "var(--nb-white)" : "var(--nb-ink)")};
   cursor: pointer;
-  transition: background-color var(--nb-transition), color var(--nb-transition);
+  transition:
+    background-color var(--nb-transition),
+    color var(--nb-transition);
   border-left: 4px solid
     ${(props) => (props.active ? "var(--nb-orange)" : "transparent")};
   background-color: ${(props) =>

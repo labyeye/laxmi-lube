@@ -75,7 +75,16 @@ const legacyFieldMap = {
     "dayAssigned",
     "collectionDays",
   ],
-  product: ["code", "name", "mrp", "price", "weight", "scheme", "stock", "company"],
+  product: [
+    "code",
+    "name",
+    "mrp",
+    "price",
+    "weight",
+    "scheme",
+    "stock",
+    "company",
+  ],
   bill: [
     "billNumber",
     "retailer",
@@ -123,12 +132,14 @@ router.get("/:moduleKey", protect, async (req, res) => {
     }).sort({ createdAt: -1 });
 
     const filtered = records.map((record) =>
-      filterRecordDataForRole(moduleDef, record.toObject(), req.user.role)
+      filterRecordDataForRole(moduleDef, record.toObject(), req.user.role),
     );
 
     res.json(filtered);
   } catch (err) {
-    res.status(500).json({ message: "Failed to load records", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to load records", error: err.message });
   }
 });
 
@@ -167,7 +178,7 @@ router.post("/:moduleKey", protect, async (req, res) => {
       const legacyPayload = buildLegacyPayload(
         moduleKey,
         normalizedData,
-        req.user._id
+        req.user._id,
       );
       const legacyDoc = await LegacyModel.create(legacyPayload);
       record.legacyId = legacyDoc._id;
@@ -176,7 +187,9 @@ router.post("/:moduleKey", protect, async (req, res) => {
 
     res.status(201).json(record);
   } catch (err) {
-    res.status(500).json({ message: "Failed to create record", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to create record", error: err.message });
   }
 });
 
@@ -205,12 +218,14 @@ router.get("/:moduleKey/:id", protect, async (req, res) => {
     const filtered = filterRecordDataForRole(
       moduleDef,
       record.toObject(),
-      req.user.role
+      req.user.role,
     );
 
     res.json(filtered);
   } catch (err) {
-    res.status(500).json({ message: "Failed to load record", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to load record", error: err.message });
   }
 });
 
@@ -256,7 +271,7 @@ router.put("/:moduleKey/:id", protect, async (req, res) => {
       const legacyPayload = buildLegacyPayload(
         moduleKey,
         normalizedData,
-        req.user._id
+        req.user._id,
       );
       if (Object.keys(legacyPayload).length > 0) {
         await LegacyModel.findByIdAndUpdate(record.legacyId, legacyPayload);
@@ -265,7 +280,9 @@ router.put("/:moduleKey/:id", protect, async (req, res) => {
 
     res.json(record);
   } catch (err) {
-    res.status(500).json({ message: "Failed to update record", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to update record", error: err.message });
   }
 });
 
@@ -296,7 +313,9 @@ router.delete("/:moduleKey/:id", protect, async (req, res) => {
     }
     res.json({ message: "Record deleted" });
   } catch (err) {
-    res.status(500).json({ message: "Failed to delete record", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to delete record", error: err.message });
   }
 });
 
