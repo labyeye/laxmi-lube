@@ -9,7 +9,69 @@ const exceljs = require("exceljs");
 const { generateReceiptPDF } = require("../services/pdfService");
 const { sendRetailerReceipt, sendAdminNotification } = require("../services/whatsappService");
 
-// Helper function to filter payment details by payment mode
+// ── Shared WhatsApp trigger (used by auto-send and manual endpoint) ───────────
+const PAYMENT_MODE_LABELS = {
+  Cash: "Cash", cheque: "Cheque", bank_transfer: "Bank Transfer", upi: "UPI",
+};
+
+async function triggerWhatsApp(collectionId) {
+  const collection = await Collection.findById(collectionId)
+    .populate("bill", "billNumber retailer amount dueAmount billDate")
+    .populate("collectedBy", "name");
+
+  if (!collection) throw new Error("Collection not found");
+
+  const bill = collection.bill;
+  const retailer = await Retailer.findOne({ name: bill?.retailer });
+  const staffName = collection.collectedBy?.name || "Staff";
+  const billNumber = bill?.billNumber || "N/A";
+  const collectionDate = format(new Date(collection.collectedOn), "dd MMM yyyy");
+  const amountFormatted = parseFloat(collection.amountCollected).toFixed(2);
+  const paymentModeLabel = PAYMENT_MODE_LABELS[collection.paymentMode] || collection.paymentMode;
+
+  const pdfBuffer = await generateReceiptPDF(
+    collection,
+    bill,
+    retailer,
+    collection.collectedBy,
+    process.env.COMPANY_NAME || "Distribution Co."
+  );
+  const pdfFilename = `receipt_${billNumber}_${Date.now()}.pdf`;
+
+  let waStatus = "no_phone";
+
+  if (retailer?.phone) {
+    await sendRetailerReceipt(
+      retailer.phone,
+      pdfBuffer,
+      pdfFilename,
+      { retailerName: retailer.name, amount: amountFormatted, billNumber, date: collectionDate, staffName },
+      collectionId.toString()
+    );
+    waStatus = "sent";
+  }
+
+  await Collection.findByIdAndUpdate(collectionId, {
+    whatsappStatus: waStatus,
+    whatsappSentAt: waStatus === "sent" ? new Date() : undefined,
+  });
+
+  const adminPhone = process.env.ADMIN_WHATSAPP_PHONE;
+  if (adminPhone) {
+    await sendAdminNotification(adminPhone, {
+      retailerName: bill?.retailer || "N/A",
+      amount: amountFormatted,
+      billNumber,
+      paymentMode: paymentModeLabel,
+      staffName,
+      date: collectionDate,
+    });
+  }
+
+  return { whatsappStatus: waStatus, retailerPhone: retailer?.phone || null };
+}
+
+// ── Helper function to filter payment details by payment mode ─────────────────
 const getFilteredPaymentDetails = (paymentMode, paymentDetails) => {
   if (!paymentDetails) {
     return paymentMode === "Cash" 
@@ -267,73 +329,8 @@ router.post("/", protect, async (req, res) => {
 
     res.status(201).json(result);
 
-    // ── Fire WhatsApp in background (non-blocking) ────────────────────────────
-    setImmediate(async () => {
-      try {
-        const staffName = result.collectedBy?.name || "Staff";
-        const billNumber = result.bill?.billNumber || "N/A";
-        const collectionDate = format(new Date(collection.collectedOn), "dd MMM yyyy");
-        const amountFormatted = parseFloat(collection.amountCollected).toFixed(2);
-        const paymentModeLabel = {
-          Cash: "Cash", cheque: "Cheque", bank_transfer: "Bank Transfer", upi: "UPI",
-        }[collection.paymentMode] || collection.paymentMode;
-
-        // Find retailer by name from bill (Bill stores retailer as string name)
-        const retailer = await Retailer.findOne({ name: existingBill.retailer });
-
-        // ── PDF ─────────────────────────────────────────────────────────────
-        const pdfBuffer = await generateReceiptPDF(
-          collection,
-          existingBill,
-          retailer,
-          result.collectedBy,
-          process.env.COMPANY_NAME || "Distribution Co."
-        );
-        const pdfFilename = `receipt_${billNumber}_${Date.now()}.pdf`;
-
-        let waStatus = "no_phone";
-
-        // ── Retailer WhatsApp ────────────────────────────────────────────────
-        if (retailer?.phone) {
-          await sendRetailerReceipt(
-            retailer.phone,
-            pdfBuffer,
-            pdfFilename,
-            {
-              retailerName: retailer.name,
-              amount: amountFormatted,
-              billNumber,
-              date: collectionDate,
-              staffName,
-            },
-            collection._id.toString()
-          );
-          waStatus = "sent";
-        }
-
-        await Collection.findByIdAndUpdate(collection._id, {
-          whatsappStatus: waStatus,
-          whatsappSentAt: waStatus === "sent" ? new Date() : undefined,
-        });
-
-        // ── Admin WhatsApp ───────────────────────────────────────────────────
-        const adminPhone = process.env.ADMIN_WHATSAPP_PHONE;
-        if (adminPhone) {
-          await sendAdminNotification(adminPhone, {
-            retailerName: existingBill.retailer,
-            amount: amountFormatted,
-            billNumber,
-            paymentMode: paymentModeLabel,
-            staffName,
-            date: collectionDate,
-          });
-        }
-      } catch (waErr) {
-        console.error("WhatsApp notification error:", waErr.message);
-        // Update status to reflect send failure but don't crash the request
-        await Collection.findByIdAndUpdate(collection._id, { whatsappStatus: "pending" }).catch(() => {});
-      }
-    });
+    // Auto-trigger WhatsApp in background (non-blocking)
+    setImmediate(() => triggerWhatsApp(collection._id).catch(() => {}));
   } catch (err) {
     console.error("Collection error:", err);
     res.status(500).json({
@@ -391,6 +388,34 @@ router.get("/bill/:billId", protect, async (req, res) => {
     res.status(500).json({
       message: "Failed to fetch bill collections",
       error: err.message,
+    });
+  }
+});
+
+// ── Manual WhatsApp send / resend ─────────────────────────────────────────────
+router.post("/:id/send-whatsapp", protect, async (req, res) => {
+  try {
+    const collection = await Collection.findById(req.params.id);
+    if (!collection) {
+      return res.status(404).json({ message: "Collection not found" });
+    }
+
+    const result = await triggerWhatsApp(req.params.id);
+
+    res.json({
+      success: true,
+      whatsappStatus: result.whatsappStatus,
+      hasPhone: !!result.retailerPhone,
+      message: result.retailerPhone
+        ? "WhatsApp receipt sent successfully"
+        : "No phone number found for this retailer — please add one first",
+    });
+  } catch (err) {
+    console.error("Manual WhatsApp send error:", err.message);
+    await Collection.findByIdAndUpdate(req.params.id, { whatsappStatus: "pending" }).catch(() => {});
+    res.status(500).json({
+      success: false,
+      message: err.message || "Failed to send WhatsApp message",
     });
   }
 });

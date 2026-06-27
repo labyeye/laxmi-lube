@@ -859,36 +859,6 @@ const DSRItem = styled.div`
   }
 `;
 
-const UserProfile = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: transparent;
-  padding: 0;
-  border-radius: 0;
-  border: none;
-  cursor: pointer;
-
-  img {
-    width: 2rem;
-    height: 2rem;
-    border-radius: 50%;
-    border: none;
-    box-shadow: none;
-  }
-
-  span {
-    color: var(--nb-text-secondary);
-    font-weight: 500;
-    font-size: 0.9rem;
-    transition: color var(--nb-transition);
-  }
-
-  &:hover span {
-    color: var(--nb-blue);
-  }
-`;
-
 const MetricsGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr;

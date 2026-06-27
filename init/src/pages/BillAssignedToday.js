@@ -61,6 +61,7 @@ const BillAssignedToday = () => {
   const [allAssignedCustomers, setAllAssignedCustomers] = useState([]);
   const [lastCollection, setLastCollection] = useState(null);
   const [collectionSuccess, setCollectionSuccess] = useState(false);
+  const [waProgress, setWaProgress] = useState(null); // { step1, step2, result, collectionId }
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [standalonePreviewUrl, setStandalonePreviewUrl] = useState(null);
   const [pdfError, setPdfError] = useState("");
@@ -203,59 +204,51 @@ const BillAssignedToday = () => {
   }, [selectedDay]);
   const imageWidth = window.innerWidth < 768 ? "80%" : "50%";
 
-  // In BillAssignedToday.js, update the handleCollectionSubmit function:
   const handleCollectionSubmit = async () => {
+    const paidAmount = parseFloat(paymentAmount);
+    if (isNaN(paidAmount)) { setSubmitError("Please enter a valid amount"); return; }
+
+    const roundedAmount = Math.round(paidAmount * 100) / 100;
+    const dueAmount = parseFloat(selectedBill.dueAmount);
+    if (roundedAmount <= 0 || roundedAmount > dueAmount) {
+      setSubmitError(`Amount must be between ₹0.01 and ₹${dueAmount.toFixed(2)}`);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError("");
+
+    // Open progress modal — step 1 in progress
+    setWaProgress({ step1: "loading", step2: "waiting", result: null, collectionId: null });
+
     try {
-      setIsSubmitting(true);
-      setSubmitError("");
-
-      const paidAmount = parseFloat(paymentAmount);
-      if (isNaN(paidAmount)) {
-        setSubmitError("Please enter a valid amount");
-        return;
-      }
-
-      const roundedAmount = Math.round(paidAmount * 100) / 100;
-      const dueAmount = parseFloat(selectedBill.dueAmount);
-
-      if (roundedAmount <= 0 || roundedAmount > dueAmount) {
-        setSubmitError(
-          `Amount must be between ₹0.01 and ₹${dueAmount.toFixed(2)}`
-        );
-        return;
-      }
-
-      // Prepare payload for collection
       const collectionPayload = {
         bill: selectedBill._id,
         amountCollected: roundedAmount,
         paymentMode,
         remarks: paymentRemarks,
-        collectedOn: collectionDate, // Add this line
-        paymentDetails:
-          paymentMode === "Cash"
-            ? {
-                receiptNumber: paymentDetails.receiptNumber || "Money Received",
-              }
-            : paymentDetails,
+        collectedOn: collectionDate,
+        paymentDetails: paymentMode === "Cash"
+          ? { receiptNumber: paymentDetails.receiptNumber || "Money Received" }
+          : paymentDetails,
       };
 
-      // Create the collection record — the backend automatically updates the bill's
-      // dueAmount and status, so no separate PUT to /api/bills is needed.
-      await axios.post(
+      const saveRes = await axios.post(
         "http://localhost:2500/api/collections",
         collectionPayload,
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
+      const savedId = saveRes.data._id;
 
-      // Build collection data and auto-generate preview PDF
+      // Step 1 done — step 2 starts
+      setWaProgress({ step1: "done", step2: "loading", result: null, collectionId: savedId });
+
+      // Build local collection data for receipt preview
       const d = new Date(collectionDate);
       const dd = String(d.getDate()).padStart(2, "0");
       const mm = String(d.getMonth() + 1).padStart(2, "0");
       const yyyy = String(d.getFullYear());
-      const collectionData = {
+      setLastCollection({
         rawDate: `${dd}/${mm}/${yyyy}`,
         retailerName: selectedBill.retailer,
         billNumber: selectedBill.billNumber,
@@ -269,15 +262,38 @@ const BillAssignedToday = () => {
         chequeNumber: paymentDetails.chequeNumber,
         chequeDate: paymentDetails.chequeNumber ? `${dd}/${mm}/${yyyy}` : undefined,
         bankName: paymentDetails.bankName,
-      };
-      setLastCollection(collectionData);
+      });
+
+      // Step 2: send WhatsApp
+      try {
+        const waRes = await axios.post(
+          `http://localhost:2500/api/collections/${savedId}/send-whatsapp`,
+          {},
+          { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+        );
+        setWaProgress({
+          step1: "done",
+          step2: "done",
+          result: waRes.data.hasPhone ? "success" : "no_phone",
+          message: waRes.data.message,
+          collectionId: savedId,
+        });
+      } catch {
+        setWaProgress({
+          step1: "done",
+          step2: "error",
+          result: "error",
+          message: "WhatsApp send failed. You can retry from Collection History.",
+          collectionId: savedId,
+        });
+      }
+
       setCollectionSuccess(true);
       await fetchBillsAssignedToday();
     } catch (err) {
-      console.error("Collection error:", err);
-      setSubmitError(
-        err.response?.data?.message || "Failed to record collection"
-      );
+      console.error("Collection save error:", err);
+      setWaProgress(null);
+      setSubmitError(err.response?.data?.message || "Failed to record collection");
     } finally {
       setIsSubmitting(false);
     }
@@ -993,6 +1009,52 @@ const BillAssignedToday = () => {
               </ModalBody>
             </PreviewModal>
           </ModalOverlay>
+        )}
+
+        {/* ── WhatsApp Progress Modal ── */}
+        {waProgress && (
+          <WaProgressOverlay>
+            <WaProgressCard>
+              <WaProgressTitle>Recording Collection</WaProgressTitle>
+
+              <WaStep status={waProgress.step1}>
+                <WaStepIcon status={waProgress.step1}>
+                  {waProgress.step1 === "done" ? "✓" : waProgress.step1 === "loading" ? <WaSpinner /> : "○"}
+                </WaStepIcon>
+                <WaStepText>
+                  <strong>Saving collection data</strong>
+                  <span>{waProgress.step1 === "loading" ? "Please wait…" : waProgress.step1 === "done" ? "Saved successfully" : ""}</span>
+                </WaStepText>
+              </WaStep>
+
+              <WaStep status={waProgress.step2}>
+                <WaStepIcon status={waProgress.step2}>
+                  {waProgress.step2 === "done" ? "✓" : waProgress.step2 === "error" ? "✗" : waProgress.step2 === "loading" ? <WaSpinner /> : "○"}
+                </WaStepIcon>
+                <WaStepText>
+                  <strong>Sending WhatsApp receipt</strong>
+                  <span>
+                    {waProgress.step2 === "loading" ? "Sending to retailer…"
+                      : waProgress.step2 === "done" ? "Message dispatched"
+                      : waProgress.step2 === "error" ? "Send failed"
+                      : "Waiting…"}
+                  </span>
+                </WaStepText>
+              </WaStep>
+
+              {waProgress.result && (
+                <WaResultBanner result={waProgress.result}>
+                  {waProgress.result === "success" && "✅ WhatsApp receipt sent successfully!"}
+                  {waProgress.result === "no_phone" && "⚠️ Saved! No phone number for this retailer — please add one."}
+                  {waProgress.result === "error" && "⚠️ Saved! WhatsApp failed — retry from Collection History."}
+                </WaResultBanner>
+              )}
+
+              {waProgress.result && (
+                <WaCloseBtn onClick={() => setWaProgress(null)}>Close</WaCloseBtn>
+              )}
+            </WaProgressCard>
+          </WaProgressOverlay>
         )}
       </MainContent>
     </DashboardLayout>
@@ -2037,6 +2099,123 @@ const PreviewReceiptButton = styled.button`
   &:hover {
     background: var(--nb-muted);
   }
+`;
+
+// ── WhatsApp Progress Modal Styles ───────────────────────────────────────────
+const waSpin = keyframes`
+  to { transform: rotate(360deg); }
+`;
+
+const WaProgressOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+`;
+
+const WaProgressCard = styled.div`
+  background: #fff;
+  border-radius: 16px;
+  padding: 2rem 2.4rem;
+  width: 360px;
+  max-width: 92vw;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+`;
+
+const WaProgressTitle = styled.h3`
+  margin: 0;
+  font-size: 1.1rem;
+  color: #111;
+  font-weight: 700;
+  text-align: center;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid #f0f0f0;
+`;
+
+const WaStep = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  opacity: ${(p) => (p.status === "waiting" ? 0.4 : 1)};
+  transition: opacity 0.3s;
+`;
+
+const WaStepIcon = styled.div`
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  background: ${(p) =>
+    p.status === "done" ? "#dcfce7" :
+    p.status === "error" ? "#fee2e2" :
+    p.status === "loading" ? "#eff6ff" : "#f3f4f6"};
+  color: ${(p) =>
+    p.status === "done" ? "#16a34a" :
+    p.status === "error" ? "#dc2626" :
+    p.status === "loading" ? "#2563eb" : "#9ca3af"};
+`;
+
+const WaSpinner = styled.div`
+  width: 14px;
+  height: 14px;
+  border: 2px solid #bfdbfe;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: ${waSpin} 0.7s linear infinite;
+`;
+
+const WaStepText = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 4px;
+
+  strong {
+    font-size: 0.9rem;
+    color: #111;
+  }
+  span {
+    font-size: 0.78rem;
+    color: #666;
+  }
+`;
+
+const WaResultBanner = styled.div`
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  background: ${(p) =>
+    p.result === "success" ? "#dcfce7" :
+    p.result === "no_phone" ? "#fef9c3" : "#fee2e2"};
+  color: ${(p) =>
+    p.result === "success" ? "#15803d" :
+    p.result === "no_phone" ? "#92400e" : "#991b1b"};
+`;
+
+const WaCloseBtn = styled.button`
+  align-self: center;
+  padding: 0.5rem 2rem;
+  background: #1a73e8;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  &:hover { background: #1558b0; }
 `;
 
 export default BillAssignedToday;

@@ -27,6 +27,8 @@ const CollectionsHistory = () => {
   const [activeSubmenu, setActiveSubmenu] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, ] = useState("");
+  const [sendingWa, setSendingWa] = useState(null); // collectionId being sent
+  const [waToast, setWaToast] = useState(null);     // { type: 'success'|'error', msg }
   const navigate = useNavigate();
   const [staffInfo, setStaffInfo] = useState({
     name: "Loading...",
@@ -118,6 +120,35 @@ const CollectionsHistory = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     navigate("/login");
+  };
+
+  const handleResendWhatsApp = async (collectionId) => {
+    setSendingWa(collectionId);
+    setWaToast(null);
+    try {
+      const res = await axios.post(
+        `http://localhost:2500/api/collections/${collectionId}/send-whatsapp`,
+        {},
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+      );
+      // Update local state so badge reflects new status
+      setCollections((prev) =>
+        prev.map((c) =>
+          c._id === collectionId
+            ? { ...c, whatsappStatus: res.data.whatsappStatus }
+            : c
+        )
+      );
+      setWaToast({
+        type: res.data.hasPhone ? "success" : "warn",
+        msg: res.data.message,
+      });
+    } catch (err) {
+      setWaToast({ type: "error", msg: err.response?.data?.message || "Failed to send WhatsApp" });
+    } finally {
+      setSendingWa(null);
+      setTimeout(() => setWaToast(null), 4000);
+    }
   };
 
   const filteredCollections = collections.filter((collection) => {
@@ -264,6 +295,9 @@ const CollectionsHistory = () => {
         </TopBar>
 
         <ContentArea>
+          {waToast && (
+            <WaToast type={waToast.type}>{waToast.msg}</WaToast>
+          )}
           {error ? (
             <ErrorAlert>
               <ErrorMessage>{error}</ErrorMessage>
@@ -297,9 +331,18 @@ const CollectionsHistory = () => {
                     <TableCell>{formatDate(collection.collectedOn)}</TableCell>
                     <TableCell>{collection.remarks || "-"}</TableCell>
                     <TableCell>
-                      <WhatsAppBadge status={collection.whatsappStatus}>
-                        {waLabel(collection.whatsappStatus)}
-                      </WhatsAppBadge>
+                      <WaCellWrap>
+                        <WhatsAppBadge status={collection.whatsappStatus}>
+                          {waLabel(collection.whatsappStatus)}
+                        </WhatsAppBadge>
+                        <ResendWaBtn
+                          title="Resend WhatsApp receipt"
+                          disabled={sendingWa === collection._id}
+                          onClick={() => handleResendWhatsApp(collection._id)}
+                        >
+                          {sendingWa === collection._id ? "..." : "↺"}
+                        </ResendWaBtn>
+                      </WaCellWrap>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -566,6 +609,38 @@ const WA_LABELS = {
 };
 
 const waLabel = (status) => WA_LABELS[status] || "Pending";
+
+const WaToast = styled.div`
+  padding: 0.75rem 1.2rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: ${(p) =>
+    p.type === "success" ? "#dcfce7" : p.type === "warn" ? "#fef9c3" : "#fee2e2"};
+  color: ${(p) =>
+    p.type === "success" ? "#15803d" : p.type === "warn" ? "#92400e" : "#991b1b"};
+`;
+
+const WaCellWrap = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const ResendWaBtn = styled.button`
+  background: none;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: #1a73e8;
+  line-height: 1.4;
+  transition: background 0.15s;
+  &:hover:not(:disabled) { background: #eff6ff; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+`;
 
 const SearchIcon = styled.div`
   color: var(--nb-ink);
