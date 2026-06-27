@@ -60,7 +60,7 @@ app.use("/api/retailer", retailerDashboardRoutes);
 app.use("/api/modules", moduleRoutes);
 app.use("/api/records", recordRoutes);
 app.use("/api/whatsapp/webhook", whatsappWebhookRoutes);
-const PORT = 2500;
+const PORT = 1200;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 // Set the timezone for the entire application
 process.env.TZ = "Asia/Kolkata";
