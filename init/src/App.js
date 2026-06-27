@@ -35,6 +35,7 @@ import RetailerOrders from "./pages/RetailerOrders";
 import RetailerSettings from "./pages/RetailerSettings";
 import Settings from "./pages/Settings";
 import TallyReportPage from "./pages/TallyReportPage";
+import WhatsAppLogsPage from "./pages/WhatsAppLogsPage";
 
 // Helper: parse user/token from localStorage safely
 const getStoredAuth = () => {
@@ -400,6 +401,18 @@ const App = () => {
           />
 
           {/* Logout Route */}
+          {/* WhatsApp Logs (Admin) */}
+          <Route
+            path="/admin/whatsapp-logs"
+            element={
+              user?.role === "admin" ? (
+                <WhatsAppLogsPage />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+
           <Route path="/logout" element={<Logout />} />
 
           {/* Admin Settings - Combined */}

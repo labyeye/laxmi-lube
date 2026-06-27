@@ -26,6 +26,7 @@ import {
   FaChartLine,
   FaIdBadge,
   FaHome,
+  FaWhatsapp,
 } from "react-icons/fa";
 import logo from "../image/logo.png";
 const Layout = ({ children }) => {
@@ -172,6 +173,20 @@ const Layout = ({ children }) => {
             </CategoryIcon>
             <span>Billing &amp; Collections</span>
             <Link to="/admin/bills" />
+          </NavItem>
+
+          {/* ── COMMUNICATIONS ───────────────────────────── */}
+          <SectionLabel>Communications</SectionLabel>
+
+          <NavItem
+            active={location.pathname === "/admin/whatsapp-logs"}
+            onClick={closeSidebar}
+          >
+            <CategoryIcon>
+              <FaWhatsapp />
+            </CategoryIcon>
+            <span>WhatsApp Logs</span>
+            <Link to="/admin/whatsapp-logs" />
           </NavItem>
 
           {/* ── INVENTORY ─────────────────────────────────── */}

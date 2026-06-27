@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import logo from "../image/logo.png";
 const LoginContainer = styled.div`
@@ -192,8 +191,6 @@ const Login = () => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const navigate = useNavigate();
-
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
@@ -211,15 +208,12 @@ const Login = () => {
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
 
-      // Dispatch custom event to notify App component
-      window.dispatchEvent(new Event("userLogin"));
-
       if (res.data.user.role === "admin") {
-        navigate("/admin");
+        window.location.href = "/admin";
       } else if (res.data.user.role === "retailer") {
-        navigate("/retailer");
+        window.location.href = "/retailer";
       } else {
-        navigate("/staff");
+        window.location.href = "/staff";
       }
     } catch (err) {
       setError(

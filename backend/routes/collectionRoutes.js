@@ -3,7 +3,7 @@ const router = express.Router();
 const Collection = require("../models/Collection");
 const Bill = require("../models/Bill");
 const Retailer = require("../models/Retailer");
-const { protect } = require("../middleware/authMiddleware");
+const { protect, adminOnly } = require("../middleware/authMiddleware");
 const { format } = require("date-fns");
 const exceljs = require("exceljs");
 const { generateReceiptPDF } = require("../services/pdfService");
@@ -422,6 +422,54 @@ router.get("/bill/:billId", protect, async (req, res) => {
       message: "Failed to fetch bill collections",
       error: err.message,
     });
+  }
+});
+
+// ── WhatsApp logs (admin) ─────────────────────────────────────────────────────
+router.get("/whatsapp-logs", protect, adminOnly, async (req, res) => {
+  try {
+    const { status, search, page = 1, limit = 200 } = req.query;
+    const filter = {};
+    if (status && status !== "all") filter.whatsappStatus = status;
+
+    if (search) {
+      const matchingBills = await Bill.find({
+        retailer: { $regex: search, $options: "i" },
+      }).select("_id");
+      filter.bill = { $in: matchingBills.map((b) => b._id) };
+    }
+
+    const collections = await Collection.find(filter)
+      .populate("bill", "billNumber retailer amount dueAmount billDate")
+      .populate("collectedBy", "name")
+      .sort({ collectedOn: -1 })
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+
+    // Attach retailer phone from Retailer collection
+    const retailerNames = [...new Set(collections.map((c) => c.bill?.retailer).filter(Boolean))];
+    const retailers = await Retailer.find({ name: { $in: retailerNames } }).select("name phone");
+    const phoneMap = {};
+    retailers.forEach((r) => { phoneMap[r.name] = r.phone || null; });
+
+    const enriched = collections.map((c) => ({
+      _id: c._id,
+      billNumber: c.bill?.billNumber || "N/A",
+      retailerName: c.bill?.retailer || "Unknown",
+      retailerPhone: phoneMap[c.bill?.retailer] || null,
+      amount: c.amountCollected,
+      paymentMode: c.paymentMode,
+      collectedBy: c.collectedBy?.name || "Staff",
+      collectedOn: c.collectedOn,
+      whatsappStatus: c.whatsappStatus || "pending",
+      whatsappSentAt: c.whatsappSentAt || null,
+      whatsappConfirmedAt: c.whatsappConfirmedAt || null,
+      whatsappConfirmedBy: c.whatsappConfirmedBy || null,
+    }));
+
+    res.json(enriched);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch WhatsApp logs", error: err.message });
   }
 });
 
