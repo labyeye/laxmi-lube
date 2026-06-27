@@ -23,7 +23,7 @@ const ReportPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [, setShowDatePicker] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate] = useState(new Date());
   const [dateRange, setDateRange] = useState({
     startDate: subDays(new Date(), 7),
     endDate: new Date(),
@@ -125,6 +125,7 @@ const ReportPage = () => {
 
   useEffect(() => {
     fetchReports();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showHistory, selectedDate, pagination.page]);
 
   const toggleHistoryView = () => {

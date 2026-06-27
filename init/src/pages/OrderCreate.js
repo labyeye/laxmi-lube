@@ -216,7 +216,7 @@ const OrderCreate = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.post(
+      await axios.post(
         "https://backend.laxmilube.in/api/orders",
         {
           retailerId: selectedRetailer,
