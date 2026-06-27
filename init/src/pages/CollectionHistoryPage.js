@@ -41,7 +41,7 @@ const CollectionsHistory = () => {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("Authentication token not found");
 
-      const response = await axios.get(`http://localhost:2500/api/users/me`, {
+      const response = await axios.get(`https://backend.laxmilube.in/api/users/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -61,7 +61,7 @@ const CollectionsHistory = () => {
       setLoading(true);
       setError("");
 
-      let url = "http://localhost:2500/api/collections";
+      let url = "https://backend.laxmilube.in/api/collections";
       const params = new URLSearchParams();
 
       if (searchTerm) params.append("search", searchTerm);
@@ -127,7 +127,7 @@ const CollectionsHistory = () => {
     setWaToast(null);
     try {
       const res = await axios.post(
-        `http://localhost:2500/api/collections/${collectionId}/send-whatsapp`,
+        `https://backend.laxmilube.in/api/collections/${collectionId}/send-whatsapp`,
         {},
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );

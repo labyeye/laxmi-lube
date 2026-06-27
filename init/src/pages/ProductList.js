@@ -238,7 +238,7 @@ const ProductList = () => {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:2500/api/products/import", {
+      const response = await fetch("https://backend.laxmilube.in/api/products/import", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,

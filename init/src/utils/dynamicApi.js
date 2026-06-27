@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE = "http://localhost:2500/api";
+const API_BASE = "https://backend.laxmilube.in/api";
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");

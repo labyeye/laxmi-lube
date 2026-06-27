@@ -47,7 +47,7 @@ const DeliveryCreate = () => {
   const fetchRetailers = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:2500/api/retailers", {
+      const response = await axios.get("https://backend.laxmilube.in/api/retailers", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setRetailers(response.data.data || response.data || []);
@@ -59,7 +59,7 @@ const DeliveryCreate = () => {
   const fetchStaff = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:2500/api/users", {
+      const response = await axios.get("https://backend.laxmilube.in/api/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const staff = response.data.filter((u) => u.role === "staff");
@@ -73,7 +73,7 @@ const DeliveryCreate = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        `http://localhost:2500/api/orders?retailerId=${retailerId}&status=Approved`,
+        `https://backend.laxmilube.in/api/orders?retailerId=${retailerId}&status=Approved`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -151,7 +151,7 @@ const DeliveryCreate = () => {
         orders: selectedOrders,
       };
 
-      await axios.post("http://localhost:2500/api/deliveries", payload, {
+      await axios.post("https://backend.laxmilube.in/api/deliveries", payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

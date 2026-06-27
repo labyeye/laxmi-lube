@@ -49,7 +49,7 @@ const DeliveryHistory = () => {
       if (filters.endDate) query += `&endDate=${filters.endDate}`;
 
       const response = await axios.get(
-        `http://localhost:2500/api/deliveries?${query}`,
+        `https://backend.laxmilube.in/api/deliveries?${query}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },

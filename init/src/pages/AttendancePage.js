@@ -52,7 +52,7 @@ const AttendancePage = () => {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:2500/api/users", {
+      const response = await axios.get("https://backend.laxmilube.in/api/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const staffUsers = response.data.filter((user) => user.role === "staff");
@@ -70,7 +70,7 @@ const AttendancePage = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        `http://localhost:2500/api/attendance/staff/${selectedStaff}/range/${selectedDate}/${selectedDate}`,
+        `https://backend.laxmilube.in/api/attendance/staff/${selectedStaff}/range/${selectedDate}/${selectedDate}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -104,7 +104,7 @@ const AttendancePage = () => {
       setLoading(true);
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        `http://localhost:2500/api/attendance/summary/${selectedStaff}/${selectedMonth}/${selectedYear}`,
+        `https://backend.laxmilube.in/api/attendance/summary/${selectedStaff}/${selectedMonth}/${selectedYear}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -134,7 +134,7 @@ const AttendancePage = () => {
       if (editingId) {
         // Update existing
         await axios.put(
-          `http://localhost:2500/api/attendance/${editingId}`,
+          `https://backend.laxmilube.in/api/attendance/${editingId}`,
           formData,
           {
             headers: { Authorization: `Bearer ${token}` },
@@ -143,7 +143,7 @@ const AttendancePage = () => {
         alert("Attendance updated successfully!");
       } else {
         // Create new
-        await axios.post("http://localhost:2500/api/attendance", payload, {
+        await axios.post("https://backend.laxmilube.in/api/attendance", payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
         alert("Attendance saved successfully!");
@@ -165,7 +165,7 @@ const AttendancePage = () => {
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:2500/api/attendance/${id}`, {
+      await axios.delete(`https://backend.laxmilube.in/api/attendance/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       alert("Attendance deleted successfully!");

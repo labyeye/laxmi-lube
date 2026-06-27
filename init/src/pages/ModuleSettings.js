@@ -60,7 +60,7 @@ const ModuleSettings = () => {
     const loadModules = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch("http://localhost:2500/api/modules", {
+        const response = await fetch("https://backend.laxmilube.in/api/modules", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!response.ok) throw new Error("Failed to load modules");
@@ -196,7 +196,7 @@ const ModuleSettings = () => {
         };
       });
       const response = await fetch(
-        `http://localhost:2500/api/modules/${activeModule._id}`,
+        `https://backend.laxmilube.in/api/modules/${activeModule._id}`,
         {
           method: "PUT",
           headers: {

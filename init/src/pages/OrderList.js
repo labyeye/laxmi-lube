@@ -31,13 +31,13 @@ const OrderList = () => {
       setLoading(true);
       const token = localStorage.getItem("token");
       const [ordersRes, retailersRes, productsRes] = await Promise.all([
-        axios.get("http://localhost:2500/api/orders", {
+        axios.get("https://backend.laxmilube.in/api/orders", {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        axios.get("http://localhost:2500/api/retailers", {
+        axios.get("https://backend.laxmilube.in/api/retailers", {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        axios.get("http://localhost:2500/api/products", {
+        axios.get("https://backend.laxmilube.in/api/products", {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -104,7 +104,7 @@ const OrderList = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        "http://localhost:2500/api/orders/export/excel",
+        "https://backend.laxmilube.in/api/orders/export/excel",
         {
           headers: { Authorization: `Bearer ${token}` },
           responseType: "blob",
@@ -137,7 +137,7 @@ const OrderList = () => {
       setLoading(true);
       const token = localStorage.getItem("token");
       await axios.patch(
-        `http://localhost:2500/api/orders/${orderId}/status`,
+        `https://backend.laxmilube.in/api/orders/${orderId}/status`,
         { status },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -164,7 +164,7 @@ const OrderList = () => {
       setLoading(true);
       const token = localStorage.getItem("token");
       const response = await axios.put(
-        `http://localhost:2500/api/orders/${orderId}/approve`,
+        `https://backend.laxmilube.in/api/orders/${orderId}/approve`,
         {},
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -172,7 +172,7 @@ const OrderList = () => {
       if (response.data.success) {
         alert("Order approved successfully!");
         // Refresh orders
-        const ordersRes = await axios.get("http://localhost:2500/api/orders", {
+        const ordersRes = await axios.get("https://backend.laxmilube.in/api/orders", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setOrders(ordersRes.data);
@@ -192,7 +192,7 @@ const OrderList = () => {
       setLoading(true);
       const token = localStorage.getItem("token");
       const response = await axios.put(
-        `http://localhost:2500/api/orders/${orderId}/reject`,
+        `https://backend.laxmilube.in/api/orders/${orderId}/reject`,
         { reason },
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -200,7 +200,7 @@ const OrderList = () => {
       if (response.data.success) {
         alert("Order rejected successfully!");
         // Refresh orders
-        const ordersRes = await axios.get("http://localhost:2500/api/orders", {
+        const ordersRes = await axios.get("https://backend.laxmilube.in/api/orders", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setOrders(ordersRes.data);
@@ -219,7 +219,7 @@ const OrderList = () => {
       setLoading(true);
       const token = localStorage.getItem("token");
       const response = await axios.post(
-        `http://localhost:2500/api/orders/${orderId}/generate-bill`,
+        `https://backend.laxmilube.in/api/orders/${orderId}/generate-bill`,
         {},
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -229,7 +229,7 @@ const OrderList = () => {
           `Bill generated successfully! Bill Number: ${response.data.bill.billNumber}`,
         );
         // Refresh orders
-        const ordersRes = await axios.get("http://localhost:2500/api/orders", {
+        const ordersRes = await axios.get("https://backend.laxmilube.in/api/orders", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setOrders(ordersRes.data);
@@ -320,7 +320,7 @@ const OrderList = () => {
       });
 
       await axios.post(
-        "http://localhost:2500/api/orders",
+        "https://backend.laxmilube.in/api/orders",
         { retailerId: newOrder.retailerId, items: payloadItems },
         { headers: { Authorization: `Bearer ${token}` } },
       );

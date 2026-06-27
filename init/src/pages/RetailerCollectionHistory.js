@@ -28,7 +28,7 @@ const RetailerCollectionHistory = () => {
       }
 
       const response = await axios.get(
-        "http://localhost:2500/api/retailer/collections",
+        "https://backend.laxmilube.in/api/retailer/collections",
         {
           headers: {
             Authorization: `Bearer ${token}`,

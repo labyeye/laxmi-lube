@@ -30,7 +30,7 @@ const SalaryPage = () => {
   const fetchSalaries = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:2500/api/salaries", {
+      const response = await axios.get("https://backend.laxmilube.in/api/salaries", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSalaries(response.data);
@@ -43,7 +43,7 @@ const SalaryPage = () => {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:2500/api/users", {
+      const response = await axios.get("https://backend.laxmilube.in/api/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
       // Filter to show only staff members, not admin
@@ -60,7 +60,7 @@ const SalaryPage = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        `http://localhost:2500/api/advances/open/${staffId}`,
+        `https://backend.laxmilube.in/api/advances/open/${staffId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -122,14 +122,14 @@ const SalaryPage = () => {
 
       if (editingId) {
         await axios.put(
-          `http://localhost:2500/api/salaries/${editingId}`,
+          `https://backend.laxmilube.in/api/salaries/${editingId}`,
           formData,
           config,
         );
         alert("Salary updated successfully");
       } else {
         await axios.post(
-          "http://localhost:2500/api/salaries",
+          "https://backend.laxmilube.in/api/salaries",
           formData,
           config,
         );
@@ -169,7 +169,7 @@ const SalaryPage = () => {
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:2500/api/salaries/${id}`, {
+      await axios.delete(`https://backend.laxmilube.in/api/salaries/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       alert("Salary deleted successfully");

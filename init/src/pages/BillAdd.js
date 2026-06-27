@@ -18,7 +18,7 @@ const BillsAdd = () => {
     current: 0,
     total: 0,
   });
-  const API_URL = "http://localhost:2500/api";
+  const API_URL = "https://backend.laxmilube.in/api";
   const { getModuleName } = useModules();
 
   useEffect(() => {

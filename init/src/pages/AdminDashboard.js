@@ -60,7 +60,7 @@ const AdminDashboard = () => {
         }
 
         const response = await axios.get(
-          "http://localhost:2500/api/admin/dashboard",
+          "https://backend.laxmilube.in/api/admin/dashboard",
           {
             headers: {
               Authorization: `Bearer ${token}`,

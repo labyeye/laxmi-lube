@@ -20,7 +20,7 @@ import {
 } from "react-icons/fa";
 import Layout from "../components/Layout";
 
-const API_BASE = "http://localhost:2500/api/reports";
+const API_BASE = "https://backend.laxmilube.in/api/reports";
 
 const token = () => localStorage.getItem("token");
 const auth = () => ({ headers: { Authorization: `Bearer ${token()}` } });

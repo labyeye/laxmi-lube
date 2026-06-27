@@ -32,7 +32,7 @@ const MyDeliveries = () => {
       setLoading(true);
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        "http://localhost:2500/api/deliveries/my-deliveries",
+        "https://backend.laxmilube.in/api/deliveries/my-deliveries",
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -51,7 +51,7 @@ const MyDeliveries = () => {
       setUpdatingOrder(orderId);
       const token = localStorage.getItem("token");
       await axios.put(
-        `http://localhost:2500/api/deliveries/${deliveryId}/order/${orderId}/status`,
+        `https://backend.laxmilube.in/api/deliveries/${deliveryId}/order/${orderId}/status`,
         { status: newStatus },
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -71,7 +71,7 @@ const MyDeliveries = () => {
     try {
       const token = localStorage.getItem("token");
       await axios.put(
-        `http://localhost:2500/api/deliveries/${deliveryId}/status`,
+        `https://backend.laxmilube.in/api/deliveries/${deliveryId}/status`,
         { status: newStatus },
         { headers: { Authorization: `Bearer ${token}` } },
       );

@@ -26,7 +26,7 @@ const AdvancePage = () => {
   const fetchAdvances = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:2500/api/advances", {
+      const response = await axios.get("https://backend.laxmilube.in/api/advances", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setAdvances(response.data);
@@ -39,7 +39,7 @@ const AdvancePage = () => {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:2500/api/users", {
+      const response = await axios.get("https://backend.laxmilube.in/api/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
       // Filter to show only staff members, not admin
@@ -87,14 +87,14 @@ const AdvancePage = () => {
 
       if (editingId) {
         await axios.put(
-          `http://localhost:2500/api/advances/${editingId}`,
+          `https://backend.laxmilube.in/api/advances/${editingId}`,
           formData,
           config,
         );
         alert("Advance updated successfully");
       } else {
         await axios.post(
-          "http://localhost:2500/api/advances",
+          "https://backend.laxmilube.in/api/advances",
           formData,
           config,
         );
@@ -141,7 +141,7 @@ const AdvancePage = () => {
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:2500/api/advances/${id}`, {
+      await axios.delete(`https://backend.laxmilube.in/api/advances/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       alert("Advance deleted successfully");

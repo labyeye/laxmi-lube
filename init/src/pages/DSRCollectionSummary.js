@@ -23,7 +23,7 @@ const DSRCollectionSummary = () => {
         if (!token) throw new Error("Authentication token not found");
 
         const response = await axios.get(
-          "http://localhost:2500/api/reports/dsr-summary",
+          "https://backend.laxmilube.in/api/reports/dsr-summary",
           {
             params: {
               startDate: startDate.toISOString(),

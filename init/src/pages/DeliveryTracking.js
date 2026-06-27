@@ -50,7 +50,7 @@ const DeliveryTracking = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:2500/api/deliveries", {
+      const response = await axios.get("https://backend.laxmilube.in/api/deliveries", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setDeliveries(response.data.deliveries || []);
@@ -67,7 +67,7 @@ const DeliveryTracking = () => {
     try {
       const token = localStorage.getItem("token");
       await axios.put(
-        `http://localhost:2500/api/deliveries/${id}/status`,
+        `https://backend.laxmilube.in/api/deliveries/${id}/status`,
         { status: newStatus },
         { headers: { Authorization: `Bearer ${token}` } },
       );

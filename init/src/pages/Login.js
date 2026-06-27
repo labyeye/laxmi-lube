@@ -305,7 +305,7 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const res = await axios.post("http://localhost:2500/api/auth/login", {
+      const res = await axios.post("https://backend.laxmilube.in/api/auth/login", {
         email,
         password,
       });

@@ -105,7 +105,7 @@ const BillAssignedToday = () => {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("Authentication token not found");
 
-      const response = await axios.get(`http://localhost:2500/api/users/me`, {
+      const response = await axios.get(`https://backend.laxmilube.in/api/users/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -121,7 +121,7 @@ const BillAssignedToday = () => {
   const fetchNextReceiptNumber = async () => {
     try {
       const res = await axios.get(
-        "http://localhost:2500/api/collections/next-receipt-number",
+        "https://backend.laxmilube.in/api/collections/next-receipt-number",
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
       setPaymentDetails((prev) => ({ ...prev, receiptNumber: res.data.receiptNumber }));
@@ -133,7 +133,7 @@ const BillAssignedToday = () => {
   const fetchAllAssignedCustomers = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:2500/api/bills/assigned-customers",
+        "https://backend.laxmilube.in/api/bills/assigned-customers",
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
@@ -165,7 +165,7 @@ const BillAssignedToday = () => {
       setError("");
 
       const response = await axios.get(
-        "http://localhost:2500/api/bills/bills-assigned-today",
+        "https://backend.laxmilube.in/api/bills/bills-assigned-today",
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
           params: {
@@ -234,7 +234,7 @@ const BillAssignedToday = () => {
       };
 
       const saveRes = await axios.post(
-        "http://localhost:2500/api/collections",
+        "https://backend.laxmilube.in/api/collections",
         collectionPayload,
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
@@ -267,7 +267,7 @@ const BillAssignedToday = () => {
       // Step 2: send WhatsApp
       try {
         const waRes = await axios.post(
-          `http://localhost:2500/api/collections/${savedId}/send-whatsapp`,
+          `https://backend.laxmilube.in/api/collections/${savedId}/send-whatsapp`,
           {},
           { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
         );

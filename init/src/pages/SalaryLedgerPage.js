@@ -17,7 +17,7 @@ const SalaryLedgerPage = () => {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:2500/api/users", {
+      const response = await axios.get("https://backend.laxmilube.in/api/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
       // Filter to show only staff members, not admin
@@ -40,7 +40,7 @@ const SalaryLedgerPage = () => {
 
       // Fetch salaries for the year
       const salariesResponse = await axios.get(
-        `http://localhost:2500/api/salaries/staff/${selectedStaff}`,
+        `https://backend.laxmilube.in/api/salaries/staff/${selectedStaff}`,
         config,
       );
       const salaries = salariesResponse.data.filter(
@@ -49,7 +49,7 @@ const SalaryLedgerPage = () => {
 
       // Fetch advances for the year
       const advancesResponse = await axios.get(
-        `http://localhost:2500/api/advances/staff/${selectedStaff}`,
+        `https://backend.laxmilube.in/api/advances/staff/${selectedStaff}`,
         config,
       );
       const advances = advancesResponse.data.filter((adv) => {

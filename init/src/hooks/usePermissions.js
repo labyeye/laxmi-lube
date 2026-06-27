@@ -25,7 +25,7 @@ export const usePermissions = () => {
           return;
         }
 
-        const response = await axios.get('http://localhost:2500/api/users/me', {
+        const response = await axios.get('https://backend.laxmilube.in/api/users/me', {
           headers: { Authorization: `Bearer ${token}` }
         });
         setUser(response.data);

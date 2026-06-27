@@ -54,13 +54,13 @@ const BillsPage = () => {
       }
 
       const [billsResponse, staffResponse] = await Promise.all([
-        axios.get("http://localhost:2500/api/bills", {
+        axios.get("https://backend.laxmilube.in/api/bills", {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         }),
-        axios.get("http://localhost:2500/api/users/staff", {
+        axios.get("https://backend.laxmilube.in/api/users/staff", {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -196,7 +196,7 @@ const BillsPage = () => {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:2500/api/bills/import", {
+      const response = await fetch("https://backend.laxmilube.in/api/bills/import", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -308,7 +308,7 @@ const BillsPage = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
-        `http://localhost:2500/api/bills/${selectedBill._id}`,
+        `https://backend.laxmilube.in/api/bills/${selectedBill._id}`,
         editFormData,
         {
           headers: {
@@ -350,7 +350,7 @@ const BillsPage = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
-        `http://localhost:2500/api/bills/${selectedBill._id}/assign`,
+        `https://backend.laxmilube.in/api/bills/${selectedBill._id}/assign`,
         { staffId },
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -377,7 +377,7 @@ const BillsPage = () => {
 
     const token = localStorage.getItem("token");
     try {
-      await axios.delete(`http://localhost:2500/api/bills/${billId}`, {
+      await axios.delete(`https://backend.laxmilube.in/api/bills/${billId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
