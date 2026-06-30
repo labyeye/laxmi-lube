@@ -123,7 +123,9 @@ const AdminCollectionHistory = () => {
       );
       setViewGroup((prev) =>
         prev
-          ? prev.map((c) => (c._id === collectionId ? { ...c, ...res.data } : c))
+          ? prev.map((c) =>
+              c._id === collectionId ? { ...c, ...res.data } : c,
+            )
           : prev,
       );
     } catch (err) {
@@ -237,10 +239,14 @@ const AdminCollectionHistory = () => {
                         <td>{first.collectedBy?.name || "-"}</td>
                         <td>
                           {row.isGroup ? (
-                            <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>
-                              {row.members.filter(
-                                (m) => m.verificationStatus === "verified",
-                              ).length}
+                            <span
+                              style={{ fontSize: "0.75rem", color: "#6b7280" }}
+                            >
+                              {
+                                row.members.filter(
+                                  (m) => m.verificationStatus === "verified",
+                                ).length
+                              }
                               /{row.members.length} verified
                             </span>
                           ) : (
@@ -262,7 +268,9 @@ const AdminCollectionHistory = () => {
                           <SubRow key={m._id}>
                             <td></td>
                             <td>#{m.bill?.billNumber}</td>
-                            <td colSpan={2}>{formatCurrency(m.amountCollected)}</td>
+                            <td colSpan={2}>
+                              {formatCurrency(m.amountCollected)}
+                            </td>
                             <td colSpan={2}></td>
                             <td>{verificationBadge(m.verificationStatus)}</td>
                             <td>
@@ -315,7 +323,9 @@ const AdminCollectionHistory = () => {
                 </DetailRow>
                 <DetailRow>
                   <DetailLabel>Collected On</DetailLabel>
-                  <DetailValue>{formatDate(viewGroup[0].collectedOn)}</DetailValue>
+                  <DetailValue>
+                    {formatDate(viewGroup[0].collectedOn)}
+                  </DetailValue>
                 </DetailRow>
                 <DetailRow>
                   <DetailLabel>Collected By</DetailLabel>
@@ -601,7 +611,9 @@ const PaymentMode = styled.span`
   font-weight: 600;
   background-color: var(--nb-muted);
   color: ${(props) =>
-    props.mode === "Cash" || props.mode === "upi" || props.mode === "bank_transfer"
+    props.mode === "Cash" ||
+    props.mode === "upi" ||
+    props.mode === "bank_transfer"
       ? "var(--nb-blue)"
       : "var(--nb-orange)"};
   text-transform: capitalize;

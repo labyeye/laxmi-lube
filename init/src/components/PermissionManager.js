@@ -94,12 +94,12 @@ const PermissionManager = ({ userId, currentPermissions, onUpdate }) => {
           assign: false,
         },
         collections: {
-      view: true,
-      create: true,
-      edit: false,
-      delete: false,
-      verify: false,
-    },
+          view: true,
+          create: true,
+          edit: false,
+          delete: false,
+          verify: false,
+        },
         products: { view: true, create: false, edit: false, delete: false },
         retailers: { view: true, create: false, edit: false, delete: false },
         orders: {

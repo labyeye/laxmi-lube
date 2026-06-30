@@ -382,7 +382,9 @@ router.post(
         if (!custName && !billAmt) continue;
 
         if (!custName || !billAmt || !billDateValue) {
-          errors.push(`Row ${index + 2}: Missing required fields (retailer, amount, date)`);
+          errors.push(
+            `Row ${index + 2}: Missing required fields (retailer, amount, date)`,
+          );
           continue;
         }
 
@@ -401,7 +403,15 @@ router.post(
           if (dayAbbreviations[upper]) {
             collectionDay = dayAbbreviations[upper];
           } else if (
-            ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].includes(collectionDayInput)
+            [
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday",
+              "Saturday",
+              "Sunday",
+            ].includes(collectionDayInput)
           ) {
             collectionDay = collectionDayInput;
           } else {
@@ -426,12 +436,15 @@ router.post(
         }
 
         if (isNaN(billDate.getTime())) {
-          errors.push(`Row ${index + 2}: Invalid date format for ${billDateValue}`);
+          errors.push(
+            `Row ${index + 2}: Invalid date format for ${billDateValue}`,
+          );
           continue;
         }
 
         const amount = parseFloat(String(billAmt).replace(/,/g, "")) || 0;
-        const received = parseFloat(String(billRec || "0").replace(/,/g, "")) || 0;
+        const received =
+          parseFloat(String(billRec || "0").replace(/,/g, "")) || 0;
         const balance =
           parseFloat(String(billBalance || "0").replace(/,/g, "")) ||
           amount - received;
@@ -468,17 +481,20 @@ router.post(
 
       const existingKeys = new Set(
         existingBills.map((b) =>
-          `${b.retailer}_${new Date(b.billDate).toISOString().slice(0,10)}_${b.amount}`.toUpperCase()
+          `${b.retailer}_${new Date(b.billDate).toISOString().slice(0, 10)}_${b.amount}`.toUpperCase(),
         ),
       );
 
       const toInsert = [];
       let alreadyExistsCount = 0;
       for (const bill of validBills) {
-        const key = `${bill.retailer}_${new Date(bill.billDate).toISOString().slice(0,10)}_${bill.amount}`.toUpperCase();
+        const key =
+          `${bill.retailer}_${new Date(bill.billDate).toISOString().slice(0, 10)}_${bill.amount}`.toUpperCase();
         if (existingKeys.has(key)) {
           alreadyExistsCount++;
-          errors.push(`Row ${bill.rowIndex}: ${bill.retailer} on ${new Date(bill.billDate).toLocaleDateString("en-IN")} for ₹${bill.amount} already exists in DB`);
+          errors.push(
+            `Row ${bill.rowIndex}: ${bill.retailer} on ${new Date(bill.billDate).toLocaleDateString("en-IN")} for ₹${bill.amount} already exists in DB`,
+          );
         } else {
           const { rowIndex, ...billData } = bill;
           toInsert.push(billData);

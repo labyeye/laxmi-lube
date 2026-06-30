@@ -1,6 +1,11 @@
 import React, { useState } from "react";
 import styled from "styled-components";
-import { FaFileExcel, FaSearch, FaCheckCircle, FaTimesCircle } from "react-icons/fa";
+import {
+  FaFileExcel,
+  FaSearch,
+  FaCheckCircle,
+  FaTimesCircle,
+} from "react-icons/fa";
 import Layout from "../components/Layout";
 
 const API_URL = "https://backend.laxmilube.in/api/reconciliation/check";
@@ -94,9 +99,9 @@ const ReconciliationPage = () => {
         <Description>
           Upload the staff's local Excel sheet (same format as bill imports —
           BillNo, CustName, BillRec). It will be compared against the
-          collections actually recorded in the app, for Cash and UPI
-          payments only. Bills with any cheque or bank transfer collection
-          are skipped since the local sheet isn't comparable for those.
+          collections actually recorded in the app, for Cash and UPI payments
+          only. Bills with any cheque or bank transfer collection are skipped
+          since the local sheet isn't comparable for those.
         </Description>
 
         <UploadForm onSubmit={handleUpload}>
@@ -195,7 +200,10 @@ const ReconciliationPage = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="7" style={{ textAlign: "center", padding: 20 }}>
+                      <td
+                        colSpan="7"
+                        style={{ textAlign: "center", padding: 20 }}
+                      >
                         No rows match the current filter
                       </td>
                     </tr>

@@ -144,7 +144,9 @@ router.post(
 
       if (nameCol === -1) {
         cleanup();
-        return res.status(400).json({ message: "Retailer Name column not found" });
+        return res
+          .status(400)
+          .json({ message: "Retailer Name column not found" });
       }
 
       // ── Load all staff once for assignedTo lookup ──────────────────────────
@@ -173,7 +175,9 @@ router.post(
 
         const nameKey = name.toUpperCase();
         if (seenNames.has(nameKey)) {
-          errors.push(`Row ${index + 1}: Duplicate retailer "${name}" in this file`);
+          errors.push(
+            `Row ${index + 1}: Duplicate retailer "${name}" in this file`,
+          );
           continue;
         }
         seenNames.add(nameKey);
@@ -185,7 +189,15 @@ router.post(
         if (dayAbbreviations[dayAssigned?.toUpperCase()]) {
           processedDayAssigned = dayAbbreviations[dayAssigned.toUpperCase()];
         } else if (
-          !["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].includes(dayAssigned)
+          ![
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday",
+          ].includes(dayAssigned)
         ) {
           processedDayAssigned = "";
         }
@@ -245,7 +257,9 @@ router.post(
       // ── Pass 3: bulk insert all new retailers in one shot ──────────────────
       let insertedCount = 0;
       if (toInsert.length > 0) {
-        const inserted = await Retailer.insertMany(toInsert, { ordered: false });
+        const inserted = await Retailer.insertMany(toInsert, {
+          ordered: false,
+        });
         insertedCount = inserted.length;
       }
 

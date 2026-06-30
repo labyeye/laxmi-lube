@@ -31,8 +31,9 @@ const CollectionsHistory = () => {
   const [dateFilter] = useState("");
   const [sendingWa, setSendingWa] = useState(null);
   const [waToast, setWaToast] = useState(null);
-  const [viewCollection, setViewCollection] = useState(null);
+  const [viewCollection, setViewCollection] = useState(null); // array of collections shown in modal
   const [zoomImage, setZoomImage] = useState(null);
+  const [expandedGroups, setExpandedGroups] = useState({});
   const navigate = useNavigate();
   const [staffInfo, setStaffInfo] = useState({
     name: "Loading...",
@@ -164,6 +165,39 @@ const CollectionsHistory = () => {
     }
   };
 
+  const handleResendGroupWhatsApp = async (paymentGroupId, memberIds) => {
+    setSendingWa(paymentGroupId);
+    setWaToast(null);
+    try {
+      const res = await axios.post(
+        `https://backend.laxmilube.in/api/collections/group/${paymentGroupId}/send-whatsapp`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        },
+      );
+      setCollections((prev) =>
+        prev.map((c) =>
+          memberIds.includes(c._id)
+            ? { ...c, whatsappStatus: res.data.whatsappStatus }
+            : c,
+        ),
+      );
+      setWaToast({
+        type: res.data.hasPhone ? "success" : "warn",
+        msg: res.data.message,
+      });
+    } catch (err) {
+      setWaToast({
+        type: "error",
+        msg: err.response?.data?.message || "Failed to send WhatsApp",
+      });
+    } finally {
+      setSendingWa(null);
+      setTimeout(() => setWaToast(null), 4000);
+    }
+  };
+
   const filteredCollections = collections.filter((collection) => {
     const matchesSearch =
       collection.bill?.billNumber?.toString().includes(searchTerm) ||
@@ -178,6 +212,30 @@ const CollectionsHistory = () => {
 
     return matchesSearch && matchesDate;
   });
+
+  // Group collections that share a paymentGroupId (split payments) into one row
+  const groupedRows = [];
+  const seenGroups = new Set();
+  filteredCollections.forEach((c) => {
+    if (c.paymentGroupId) {
+      if (seenGroups.has(c.paymentGroupId)) return;
+      seenGroups.add(c.paymentGroupId);
+      const members = filteredCollections.filter(
+        (x) => x.paymentGroupId === c.paymentGroupId,
+      );
+      groupedRows.push({ isGroup: true, key: c.paymentGroupId, members });
+    } else {
+      groupedRows.push({ isGroup: false, key: c._id, members: [c] });
+    }
+  });
+  groupedRows.sort(
+    (a, b) =>
+      new Date(b.members[0].collectedOn) - new Date(a.members[0].collectedOn),
+  );
+
+  const toggleExpand = (key) => {
+    setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   if (loading) {
     return (
@@ -313,10 +371,11 @@ const CollectionsHistory = () => {
             <ErrorAlert>
               <ErrorMessage>{error}</ErrorMessage>
             </ErrorAlert>
-          ) : filteredCollections.length > 0 ? (
+          ) : groupedRows.length > 0 ? (
             <CollectionsTable>
               <TableHeader>
                 <TableRow>
+                  <TableHeaderCell></TableHeaderCell>
                   <TableHeaderCell>Bill #</TableHeaderCell>
                   <TableHeaderCell>Retailer</TableHeaderCell>
                   <TableHeaderCell>Amount</TableHeaderCell>
@@ -328,41 +387,108 @@ const CollectionsHistory = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCollections.map((collection) => (
-                  <TableRow key={collection._id}>
-                    <TableCell>#{collection.bill?.billNumber}</TableCell>
-                    <TableCell>{collection.bill?.retailer}</TableCell>
-                    <TableCell>
-                      {formatCurrency(collection.amountCollected)}
-                    </TableCell>
-                    <TableCell>
-                      <PaymentMode mode={collection.paymentMode}>
-                        {collection.paymentMode}
-                      </PaymentMode>
-                    </TableCell>
-                    <TableCell>{formatDate(collection.collectedOn)}</TableCell>
-                    <TableCell>{collection.remarks || "-"}</TableCell>
-                    <TableCell>
-                      <WaCellWrap>
-                        <WhatsAppBadge status={collection.whatsappStatus}>
-                          {waLabel(collection.whatsappStatus)}
-                        </WhatsAppBadge>
-                        <ResendWaBtn
-                          title="Resend WhatsApp receipt"
-                          disabled={sendingWa === collection._id}
-                          onClick={() => handleResendWhatsApp(collection._id)}
-                        >
-                          {sendingWa === collection._id ? "..." : "↺"}
-                        </ResendWaBtn>
-                      </WaCellWrap>
-                    </TableCell>
-                    <TableCell>
-                      <EyeBtn title="View details" onClick={() => setViewCollection(collection)}>
-                        <FaEye />
-                      </EyeBtn>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {groupedRows.map((row) => {
+                  const first = row.members[0];
+                  const totalAmount = row.members.reduce(
+                    (sum, m) => sum + m.amountCollected,
+                    0,
+                  );
+                  const billLabel = row.isGroup
+                    ? `${row.members.length} bills`
+                    : `#${first.bill?.billNumber}`;
+                  const isExpanded = expandedGroups[row.key];
+                  const memberIds = row.members.map((m) => m._id);
+                  const isSendingThis = row.isGroup
+                    ? sendingWa === row.key
+                    : sendingWa === first._id;
+
+                  return (
+                    <React.Fragment key={row.key}>
+                      <TableRow>
+                        <TableCell>
+                          {row.isGroup && (
+                            <ExpandBtn onClick={() => toggleExpand(row.key)}>
+                              {isExpanded ? (
+                                <FaChevronDown />
+                              ) : (
+                                <FaChevronRight />
+                              )}
+                            </ExpandBtn>
+                          )}
+                        </TableCell>
+                        <TableCell>{billLabel}</TableCell>
+                        <TableCell>{first.bill?.retailer}</TableCell>
+                        <TableCell>{formatCurrency(totalAmount)}</TableCell>
+                        <TableCell>
+                          <PaymentMode mode={first.paymentMode}>
+                            {first.paymentMode}
+                          </PaymentMode>
+                        </TableCell>
+                        <TableCell>{formatDate(first.collectedOn)}</TableCell>
+                        <TableCell>{first.remarks || "-"}</TableCell>
+                        <TableCell>
+                          <WaCellWrap>
+                            <WhatsAppBadge status={first.whatsappStatus}>
+                              {waLabel(first.whatsappStatus)}
+                            </WhatsAppBadge>
+                            <ResendWaBtn
+                              title={
+                                row.isGroup
+                                  ? "Resend WhatsApp for all bills (1 admin message only)"
+                                  : "Resend WhatsApp receipt"
+                              }
+                              disabled={isSendingThis}
+                              onClick={() =>
+                                row.isGroup
+                                  ? handleResendGroupWhatsApp(
+                                      row.key,
+                                      memberIds,
+                                    )
+                                  : handleResendWhatsApp(first._id)
+                              }
+                            >
+                              {isSendingThis ? "..." : "↺"}
+                            </ResendWaBtn>
+                          </WaCellWrap>
+                        </TableCell>
+                        <TableCell>
+                          <EyeBtn
+                            title="View details"
+                            onClick={() => setViewCollection(row.members)}
+                          >
+                            <FaEye />
+                          </EyeBtn>
+                        </TableCell>
+                      </TableRow>
+                      {row.isGroup &&
+                        isExpanded &&
+                        row.members.map((m) => (
+                          <SubTableRow key={m._id}>
+                            <TableCell></TableCell>
+                            <TableCell>#{m.bill?.billNumber}</TableCell>
+                            <TableCell colSpan={2}>
+                              {formatCurrency(m.amountCollected)}
+                            </TableCell>
+                            <TableCell colSpan={2}></TableCell>
+                            <TableCell>{m.remarks || "-"}</TableCell>
+                            <TableCell>
+                              <WhatsAppBadge status={m.whatsappStatus}>
+                                {waLabel(m.whatsappStatus)}
+                              </WhatsAppBadge>
+                            </TableCell>
+                            <TableCell>
+                              <EyeBtn
+                                title="View bill"
+                                onClick={() => setViewCollection([m])}
+                              >
+                                <FaEye />
+                              </EyeBtn>
+                            </TableCell>
+                          </SubTableRow>
+                        ))}
+                    </React.Fragment>
+                  );
+                })}
               </TableBody>
             </CollectionsTable>
           ) : (
@@ -378,75 +504,87 @@ const CollectionsHistory = () => {
         <ModalOverlay onClick={() => setViewCollection(null)}>
           <DetailModal onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
-              <h3>Collection Details</h3>
+              <h3>
+                Collection Details
+                {viewCollection.length > 1
+                  ? ` (${viewCollection.length} bills)`
+                  : ""}
+              </h3>
               <CloseBtn onClick={() => setViewCollection(null)}>×</CloseBtn>
             </ModalHeader>
             <ModalBody>
               <DetailGrid>
                 <DetailRow>
-                  <DetailLabel>Bill #</DetailLabel>
-                  <DetailValue>#{viewCollection.bill?.billNumber}</DetailValue>
-                </DetailRow>
-                <DetailRow>
                   <DetailLabel>Retailer</DetailLabel>
-                  <DetailValue>{viewCollection.bill?.retailer}</DetailValue>
-                </DetailRow>
-                <DetailRow>
-                  <DetailLabel>Amount</DetailLabel>
-                  <DetailValue>{formatCurrency(viewCollection.amountCollected)}</DetailValue>
+                  <DetailValue>{viewCollection[0].bill?.retailer}</DetailValue>
                 </DetailRow>
                 <DetailRow>
                   <DetailLabel>Payment Mode</DetailLabel>
                   <DetailValue>
-                    <PaymentMode mode={viewCollection.paymentMode}>
-                      {viewCollection.paymentMode}
+                    <PaymentMode mode={viewCollection[0].paymentMode}>
+                      {viewCollection[0].paymentMode}
                     </PaymentMode>
                   </DetailValue>
                 </DetailRow>
                 <DetailRow>
                   <DetailLabel>Collected On</DetailLabel>
-                  <DetailValue>{formatDate(viewCollection.collectedOn)}</DetailValue>
+                  <DetailValue>
+                    {formatDate(viewCollection[0].collectedOn)}
+                  </DetailValue>
                 </DetailRow>
                 <DetailRow>
                   <DetailLabel>Collected By</DetailLabel>
-                  <DetailValue>{viewCollection.collectedBy?.name || "-"}</DetailValue>
-                </DetailRow>
-                {viewCollection.remarks && (
-                  <DetailRow>
-                    <DetailLabel>Remarks</DetailLabel>
-                    <DetailValue>{viewCollection.remarks}</DetailValue>
-                  </DetailRow>
-                )}
-                {viewCollection.paymentDetails && Object.entries(viewCollection.paymentDetails).map(([k, v]) =>
-                  v ? (
-                    <DetailRow key={k}>
-                      <DetailLabel>{k}</DetailLabel>
-                      <DetailValue>{v}</DetailValue>
-                    </DetailRow>
-                  ) : null
-                )}
-                <DetailRow>
-                  <DetailLabel>WhatsApp</DetailLabel>
                   <DetailValue>
-                    <WhatsAppBadge status={viewCollection.whatsappStatus}>
-                      {waLabel(viewCollection.whatsappStatus)}
-                    </WhatsAppBadge>
+                    {viewCollection[0].collectedBy?.name || "-"}
                   </DetailValue>
                 </DetailRow>
+                {viewCollection[0].remarks && (
+                  <DetailRow>
+                    <DetailLabel>Remarks</DetailLabel>
+                    <DetailValue>{viewCollection[0].remarks}</DetailValue>
+                  </DetailRow>
+                )}
+                {viewCollection[0].paymentDetails &&
+                  Object.entries(viewCollection[0].paymentDetails).map(
+                    ([k, v]) =>
+                      v ? (
+                        <DetailRow key={k}>
+                          <DetailLabel>{k}</DetailLabel>
+                          <DetailValue>{v}</DetailValue>
+                        </DetailRow>
+                      ) : null,
+                  )}
               </DetailGrid>
 
-              {viewCollection.screenshotPath ? (
+              <BillsSection>
+                <DetailLabel>
+                  {viewCollection.length > 1 ? "Bills Adjusted" : "Bill"}
+                </DetailLabel>
+                {viewCollection.map((c) => (
+                  <BillRow key={c._id}>
+                    <div>
+                      <strong>#{c.bill?.billNumber}</strong>{" "}
+                      <span>{formatCurrency(c.amountCollected)}</span>
+                    </div>
+                    <WhatsAppBadge status={c.whatsappStatus}>
+                      {waLabel(c.whatsappStatus)}
+                    </WhatsAppBadge>
+                  </BillRow>
+                ))}
+              </BillsSection>
+
+              {viewCollection[0].screenshotPath ? (
                 <SSSection>
                   <DetailLabel>Payment Screenshot</DetailLabel>
                   <SSImageWrap
                     onClick={() =>
                       setZoomImage(
-                        `https://backend.laxmilube.in/${viewCollection.screenshotPath.replace(/\\/g, "/")}`,
+                        `https://backend.laxmilube.in/${viewCollection[0].screenshotPath.replace(/\\/g, "/")}`,
                       )
                     }
                   >
                     <SSImage
-                      src={`https://backend.laxmilube.in/${viewCollection.screenshotPath.replace(/\\/g, "/")}`}
+                      src={`https://backend.laxmilube.in/${viewCollection[0].screenshotPath.replace(/\\/g, "/")}`}
                       alt="Payment screenshot"
                     />
                     <ZoomHint>
@@ -672,6 +810,26 @@ const TableRow = styled.tr`
   &:hover {
     background-color: var(--nb-muted);
   }
+`;
+
+const SubTableRow = styled.tr`
+  background-color: #f9fafb;
+  font-size: 0.8rem;
+
+  td {
+    padding: 0.5rem 1rem;
+  }
+`;
+
+const ExpandBtn = styled.button`
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--nb-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
 `;
 
 const PaymentMode = styled.span`
@@ -979,13 +1137,15 @@ const EyeBtn = styled.button`
   color: var(--nb-blue);
   font-size: 0.85rem;
   transition: background 0.15s;
-  &:hover { background: var(--nb-muted); }
+  &:hover {
+    background: var(--nb-muted);
+  }
 `;
 
 const ModalOverlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -1000,7 +1160,7 @@ const DetailModal = styled.div`
   max-width: 520px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 `;
 
 const ModalHeader = styled.div`
@@ -1009,7 +1169,11 @@ const ModalHeader = styled.div`
   align-items: center;
   padding: 1rem 1.25rem;
   border-bottom: 1px solid var(--nb-border);
-  h3 { margin: 0; font-size: 1rem; color: var(--nb-ink); }
+  h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--nb-ink);
+  }
 `;
 
 const CloseBtn = styled.button`
@@ -1051,6 +1215,31 @@ const DetailValue = styled.span`
   font-size: 0.875rem;
   color: var(--nb-ink);
   flex: 1;
+`;
+
+const BillsSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  border-top: 1px solid var(--nb-border);
+  padding-top: 1rem;
+  margin-bottom: 1rem;
+`;
+
+const BillRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--nb-border);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--nb-ink);
+
+  span {
+    color: #6b7280;
+  }
 `;
 
 const SSSection = styled.div`

@@ -66,7 +66,9 @@ const RetailerBilling = () => {
     acc[bill.billNumber] = (acc[bill.billNumber] || 0) + 1;
     return acc;
   }, {});
-  const duplicateCount = Object.values(billNumberCounts).filter((c) => c > 1).reduce((sum, c) => sum + (c - 1), 0);
+  const duplicateCount = Object.values(billNumberCounts)
+    .filter((c) => c > 1)
+    .reduce((sum, c) => sum + (c - 1), 0);
 
   return (
     <RetailerLayout>
@@ -121,7 +123,9 @@ const RetailerBilling = () => {
 
         {/* Duplicate Warning */}
         {bills.length > 0 && duplicateCount > 0 && (
-          <DuplicateBanner>{duplicateCount} duplicate {duplicateCount === 1 ? "bill" : "bills"}</DuplicateBanner>
+          <DuplicateBanner>
+            {duplicateCount} duplicate {duplicateCount === 1 ? "bill" : "bills"}
+          </DuplicateBanner>
         )}
 
         {/* Bills Table */}

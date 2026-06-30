@@ -15,7 +15,7 @@ import {
   FaHistory,
   FaCheckDouble,
 } from "react-icons/fa";
-import {useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const API_BASE_URL = "https://backend.laxmilube.in/api";
@@ -460,7 +460,6 @@ const NavCheckmark = styled.span`
   font-size: 0.9rem;
   color: ${(props) => (props.active ? "var(--nb-blue)" : "var(--nb-ink)")};
 `;
-
 
 const HistoryIcon = styled.div`
   width: 40px;

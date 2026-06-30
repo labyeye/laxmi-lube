@@ -154,7 +154,53 @@ async function triggerWhatsApp(collectionId) {
     date: r.collectionDate,
   });
 
-  return { whatsappStatus: r.waStatus, retailerPhone: r.retailer?.phone || null };
+  return {
+    whatsappStatus: r.waStatus,
+    retailerPhone: r.retailer?.phone || null,
+  };
+}
+
+// Resends WhatsApp for every collection in a split-payment group: one retailer
+// receipt per bill, but only ONE admin notification for the whole group —
+// avoids spamming the admin with a duplicate message per bill on retry.
+async function triggerGroupWhatsApp(paymentGroupId) {
+  const members = await Collection.find({ paymentGroupId });
+  if (members.length === 0) throw new Error("Payment group not found");
+
+  const receiptResults = await Promise.all(
+    members.map((c) => sendRetailerReceiptOnly(c._id).catch(() => null)),
+  );
+  const first = receiptResults.find(Boolean);
+  if (!first) {
+    return { whatsappStatus: "no_phone", retailerPhone: null };
+  }
+
+  const totalAmount = members
+    .reduce((sum, c) => sum + c.amountCollected, 0)
+    .toFixed(2);
+  const combinedBillNumbers = receiptResults
+    .filter(Boolean)
+    .map((r) => r.billNumber)
+    .join(", ");
+
+  await sendAdminNotifyOnce({
+    retailerName: first.bill?.retailer || "N/A",
+    retailerPhone: first.retailer?.phone || "N/A",
+    retailerAddress:
+      [first.retailer?.address1, first.retailer?.address2]
+        .filter(Boolean)
+        .join(", ") || "N/A",
+    amount: totalAmount,
+    billNumber: combinedBillNumbers,
+    paymentMode: first.paymentModeLabel,
+    staffName: first.staffName,
+    date: first.collectionDate,
+  });
+
+  return {
+    whatsappStatus: first.waStatus,
+    retailerPhone: first.retailer?.phone || null,
+  };
 }
 
 // ── Helper function to filter payment details by payment mode ─────────────────
@@ -327,123 +373,139 @@ router.get("/next-receipt-number", protect, async (req, res) => {
 });
 
 // Create a new collection
-router.post("/", protect, uploadScreenshot.single("screenshot"), async (req, res) => {
-  try {
-    const {
-      bill,
-      amountCollected,
-      paymentMode,
-      remarks,
-      paymentDetails,
-      collectedOn,
-    } = req.body;
+router.post(
+  "/",
+  protect,
+  uploadScreenshot.single("screenshot"),
+  async (req, res) => {
+    try {
+      const {
+        bill,
+        amountCollected,
+        paymentMode,
+        remarks,
+        paymentDetails,
+        collectedOn,
+      } = req.body;
 
-    const parsedPaymentDetails =
-      typeof paymentDetails === "string" ? JSON.parse(paymentDetails) : paymentDetails;
+      const parsedPaymentDetails =
+        typeof paymentDetails === "string"
+          ? JSON.parse(paymentDetails)
+          : paymentDetails;
 
-    // Validate required fields
-    if (!bill || !amountCollected || !paymentMode || !collectedOn) {
-      return res.status(400).json({
-        message:
-          "Bill ID, amount collected, payment mode and collection date are required",
+      // Validate required fields
+      if (!bill || !amountCollected || !paymentMode || !collectedOn) {
+        return res.status(400).json({
+          message:
+            "Bill ID, amount collected, payment mode and collection date are required",
+        });
+      }
+
+      // Validate amount
+      const amount = parseFloat(amountCollected);
+      if (isNaN(amount) || amount <= 0 || amount > 1000000) {
+        return res.status(400).json({
+          message: "Amount must be a positive number less than 1,000,000",
+        });
+      }
+
+      // Validate decimal places
+      if (!/^\d+(\.\d{1,2})?$/.test(amountCollected)) {
+        return res.status(400).json({
+          message: "Amount must have up to 2 decimal places",
+        });
+      }
+
+      // Check if bill exists
+      const existingBill = await Bill.findById(bill);
+      if (!existingBill) {
+        return res.status(404).json({ message: "Bill not found" });
+      }
+
+      // Validate amount against due amount
+      if (amount > existingBill.dueAmount) {
+        return res.status(400).json({
+          message: `Amount cannot exceed due amount of ${existingBill.dueAmount.toFixed(2)}`,
+        });
+      }
+
+      // Validate payment details based on payment mode
+      let validationError;
+      switch (paymentMode) {
+        case "upi":
+          if (!parsedPaymentDetails?.upiId) {
+            validationError = "UPI ID is required for UPI payments";
+          }
+          break;
+        case "cheque":
+          if (
+            !parsedPaymentDetails?.chequeNumber ||
+            !parsedPaymentDetails?.bankName
+          ) {
+            validationError =
+              "Cheque number and bank name are required for cheque payments";
+          }
+          break;
+        case "bank_transfer":
+          if (
+            !parsedPaymentDetails?.transactionId ||
+            !parsedPaymentDetails?.bankName
+          ) {
+            validationError =
+              "Transaction ID and bank name are required for bank transfers";
+          }
+          break;
+      }
+
+      if (validationError) {
+        return res.status(400).json({ message: validationError });
+      }
+
+      // Create collection with properly structured paymentDetails
+      const collection = new Collection({
+        bill,
+        amountCollected: amount,
+        paymentMode,
+        paymentDetails:
+          paymentMode === "Cash"
+            ? {
+                receiptNumber:
+                  parsedPaymentDetails?.receiptNumber || "Money Received",
+              }
+            : parsedPaymentDetails,
+        collectedBy: req.user._id,
+        remarks,
+        collectedOn: new Date(collectedOn),
+        screenshotPath: req.file ? req.file.path : null,
+      });
+
+      await collection.save();
+
+      // Update bill status
+      const newDueAmount = existingBill.dueAmount - amount;
+      await Bill.findByIdAndUpdate(bill, {
+        dueAmount: newDueAmount,
+        status: newDueAmount <= 0 ? "Paid" : "Partially Paid",
+      });
+
+      // Respond with populated data
+      const result = await Collection.findById(collection._id)
+        .populate("bill", "billNumber retailer amount dueAmount billDate")
+        .populate("collectedBy", "name");
+
+      res.status(201).json(result);
+
+      // Auto-trigger WhatsApp in background (non-blocking)
+      setImmediate(() => triggerWhatsApp(collection._id).catch(() => {}));
+    } catch (err) {
+      console.error("Collection error:", err);
+      res.status(500).json({
+        message: "Failed to record collection",
+        error: process.env.NODE_ENV === "development" ? err.message : undefined,
       });
     }
-
-    // Validate amount
-    const amount = parseFloat(amountCollected);
-    if (isNaN(amount) || amount <= 0 || amount > 1000000) {
-      return res.status(400).json({
-        message: "Amount must be a positive number less than 1,000,000",
-      });
-    }
-
-    // Validate decimal places
-    if (!/^\d+(\.\d{1,2})?$/.test(amountCollected)) {
-      return res.status(400).json({
-        message: "Amount must have up to 2 decimal places",
-      });
-    }
-
-    // Check if bill exists
-    const existingBill = await Bill.findById(bill);
-    if (!existingBill) {
-      return res.status(404).json({ message: "Bill not found" });
-    }
-
-    // Validate amount against due amount
-    if (amount > existingBill.dueAmount) {
-      return res.status(400).json({
-        message: `Amount cannot exceed due amount of ${existingBill.dueAmount.toFixed(2)}`,
-      });
-    }
-
-    // Validate payment details based on payment mode
-    let validationError;
-    switch (paymentMode) {
-      case "upi":
-        if (!parsedPaymentDetails?.upiId) {
-          validationError = "UPI ID is required for UPI payments";
-        }
-        break;
-      case "cheque":
-        if (!parsedPaymentDetails?.chequeNumber || !parsedPaymentDetails?.bankName) {
-          validationError =
-            "Cheque number and bank name are required for cheque payments";
-        }
-        break;
-      case "bank_transfer":
-        if (!parsedPaymentDetails?.transactionId || !parsedPaymentDetails?.bankName) {
-          validationError =
-            "Transaction ID and bank name are required for bank transfers";
-        }
-        break;
-    }
-
-    if (validationError) {
-      return res.status(400).json({ message: validationError });
-    }
-
-    // Create collection with properly structured paymentDetails
-    const collection = new Collection({
-      bill,
-      amountCollected: amount,
-      paymentMode,
-      paymentDetails:
-        paymentMode === "Cash"
-          ? { receiptNumber: parsedPaymentDetails?.receiptNumber || "Money Received" }
-          : parsedPaymentDetails,
-      collectedBy: req.user._id,
-      remarks,
-      collectedOn: new Date(collectedOn),
-      screenshotPath: req.file ? req.file.path : null,
-    });
-
-    await collection.save();
-
-    // Update bill status
-    const newDueAmount = existingBill.dueAmount - amount;
-    await Bill.findByIdAndUpdate(bill, {
-      dueAmount: newDueAmount,
-      status: newDueAmount <= 0 ? "Paid" : "Partially Paid",
-    });
-
-    // Respond with populated data
-    const result = await Collection.findById(collection._id)
-      .populate("bill", "billNumber retailer amount dueAmount billDate")
-      .populate("collectedBy", "name");
-
-    res.status(201).json(result);
-
-    // Auto-trigger WhatsApp in background (non-blocking)
-    setImmediate(() => triggerWhatsApp(collection._id).catch(() => {}));
-  } catch (err) {
-    console.error("Collection error:", err);
-    res.status(500).json({
-      message: "Failed to record collection",
-      error: process.env.NODE_ENV === "development" ? err.message : undefined,
-    });
-  }
-});
+  },
+);
 
 // Create a collection split across multiple bills of the same retailer
 router.post(
@@ -469,8 +531,7 @@ router.post(
         !collectedOn
       ) {
         return res.status(400).json({
-          message:
-            "Allocations, payment mode and collection date are required",
+          message: "Allocations, payment mode and collection date are required",
         });
       }
 
@@ -538,7 +599,10 @@ router.post(
       const paymentGroupId = new mongoose.Types.ObjectId().toString();
       const finalPaymentDetails =
         paymentMode === "Cash"
-          ? { receiptNumber: parsedPaymentDetails?.receiptNumber || "Money Received" }
+          ? {
+              receiptNumber:
+                parsedPaymentDetails?.receiptNumber || "Money Received",
+            }
           : parsedPaymentDetails;
 
       const createdCollections = [];
@@ -574,38 +638,8 @@ router.post(
 
       // Auto-trigger WhatsApp in background: one receipt per bill to the
       // retailer, but only ONE admin notification for the whole group.
-      setImmediate(async () => {
-        try {
-          const receiptResults = await Promise.all(
-            createdCollections.map((c) =>
-              sendRetailerReceiptOnly(c._id).catch(() => null),
-            ),
-          );
-          const first = receiptResults.find(Boolean);
-          if (first) {
-            const totalAmount = validatedAllocations
-              .reduce((sum, a) => sum + a.amount, 0)
-              .toFixed(2);
-            const combinedBillNumbers = validatedAllocations
-              .map((a) => a.bill.billNumber)
-              .join(", ");
-            await sendAdminNotifyOnce({
-              retailerName: first.bill?.retailer || "N/A",
-              retailerPhone: first.retailer?.phone || "N/A",
-              retailerAddress:
-                [first.retailer?.address1, first.retailer?.address2]
-                  .filter(Boolean)
-                  .join(", ") || "N/A",
-              amount: totalAmount,
-              billNumber: combinedBillNumbers,
-              paymentMode: first.paymentModeLabel,
-              staffName: first.staffName,
-              date: first.collectionDate,
-            });
-          }
-        } catch {
-          // best-effort background notification, ignore failures
-        }
+      setImmediate(() => {
+        triggerGroupWhatsApp(paymentGroupId).catch(() => {});
       });
     } catch (err) {
       console.error("Split collection error:", err);
@@ -759,6 +793,34 @@ router.post("/:id/send-whatsapp", protect, async (req, res) => {
     });
   }
 });
+
+// Resend WhatsApp for an entire split-payment group in one go — sends each
+// bill's receipt to the retailer but only ONE admin notification, so retrying
+// a 3-bill split sends 1 admin message instead of 3.
+router.post(
+  "/group/:paymentGroupId/send-whatsapp",
+  protect,
+  async (req, res) => {
+    try {
+      const result = await triggerGroupWhatsApp(req.params.paymentGroupId);
+
+      res.json({
+        success: true,
+        whatsappStatus: result.whatsappStatus,
+        hasPhone: !!result.retailerPhone,
+        message: result.retailerPhone
+          ? "WhatsApp receipts sent successfully"
+          : "No phone number found for this retailer — please add one first",
+      });
+    } catch (err) {
+      console.error("Group WhatsApp send error:", err.message);
+      res.status(500).json({
+        success: false,
+        message: err.message || "Failed to send WhatsApp message",
+      });
+    }
+  },
+);
 
 // ── Verification of a collection (admin, or staff with collections.verify permission) ──
 router.patch(

@@ -335,7 +335,9 @@ const RetailerList = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.message || `Import failed (status ${response.status})`);
+        throw new Error(
+          data?.message || `Import failed (status ${response.status})`,
+        );
       }
 
       setModalMessage(
@@ -930,9 +932,7 @@ const RetailerList = () => {
                       <FileText>Selected: {importFile.name}</FileText>
                     )}
 
-                    {importLoading && (
-                      <FileText>Importing...</FileText>
-                    )}
+                    {importLoading && <FileText>Importing...</FileText>}
 
                     <Hint>
                       Required: Retailer Name. Optional: Address 1, Address 2,

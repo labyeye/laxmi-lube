@@ -178,7 +178,6 @@ const BillsPage = () => {
     setError("");
     setMessage("");
 
-
     if (!importFile) {
       setError("Please select a file to upload");
       return;
@@ -445,7 +444,9 @@ const BillsPage = () => {
       );
       setBills((prev) => prev.filter((b) => !selectedIds.includes(b._id)));
       setSelectedIds([]);
-      setMessage(`${selectedIds.length} bill${selectedIds.length > 1 ? "s" : ""} deleted`);
+      setMessage(
+        `${selectedIds.length} bill${selectedIds.length > 1 ? "s" : ""} deleted`,
+      );
       setTimeout(() => setMessage(""), 5000);
     } catch {
       setError("Failed to delete selected bills.");
@@ -497,11 +498,16 @@ const BillsPage = () => {
             </AddBillButton>
             <RetailerSelect
               value={retailerFilter}
-              onChange={(e) => { setRetailerFilter(e.target.value); setSelectedIds([]); }}
+              onChange={(e) => {
+                setRetailerFilter(e.target.value);
+                setSelectedIds([]);
+              }}
             >
               <option value="">All Retailers</option>
               {uniqueRetailers.map((r) => (
-                <option key={r} value={r}>{r}</option>
+                <option key={r} value={r}>
+                  {r}
+                </option>
               ))}
             </RetailerSelect>
             <SearchBox>
@@ -536,7 +542,11 @@ const BillsPage = () => {
                 <thead>
                   <tr>
                     <th style={{ width: "36px" }}>
-                      <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} />
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        onChange={toggleSelectAll}
+                      />
                     </th>
                     <th>Bill #</th>
                     <th>Retailer</th>
@@ -692,9 +702,21 @@ const BillsPage = () => {
 
                       {importResult && (
                         <ImportSummary>
-                          {importResult.imported > 0 && <span className="ok">✓ {importResult.imported} imported</span>}
-                          {importResult.existing > 0 && <span className="skip">⊘ {importResult.existing} already exist</span>}
-                          {importResult.errors > 0 && <span className="err">✕ {importResult.errors} rows had errors</span>}
+                          {importResult.imported > 0 && (
+                            <span className="ok">
+                              ✓ {importResult.imported} imported
+                            </span>
+                          )}
+                          {importResult.existing > 0 && (
+                            <span className="skip">
+                              ⊘ {importResult.existing} already exist
+                            </span>
+                          )}
+                          {importResult.errors > 0 && (
+                            <span className="err">
+                              ✕ {importResult.errors} rows had errors
+                            </span>
+                          )}
                         </ImportSummary>
                       )}
 
@@ -1246,9 +1268,15 @@ const ImportSummary = styled.div`
   font-size: 0.85rem;
   font-weight: 600;
 
-  .ok { color: #15803d; }
-  .skip { color: #92400e; }
-  .err { color: #b91c1c; }
+  .ok {
+    color: #15803d;
+  }
+  .skip {
+    color: #92400e;
+  }
+  .err {
+    color: #b91c1c;
+  }
 `;
 
 const FormGroup = styled.div`

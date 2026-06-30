@@ -81,7 +81,9 @@ router.post(
           if (!custName && !billNo) continue;
 
           if (!custName || !billNo) {
-            errors.push(`Row ${index + 2}: Missing customer name or bill number`);
+            errors.push(
+              `Row ${index + 2}: Missing customer name or bill number`,
+            );
             continue;
           }
 
@@ -112,7 +114,8 @@ router.post(
 
           const collections = bill.collections || [];
           const hasNonCashUpi = collections.some(
-            (c) => !CASH_UPI_MODES.includes((c.paymentMode || "").toLowerCase()),
+            (c) =>
+              !CASH_UPI_MODES.includes((c.paymentMode || "").toLowerCase()),
           );
 
           if (hasNonCashUpi) {
@@ -123,7 +126,8 @@ router.post(
               localReceived,
               appCollected: null,
               difference: null,
-              assignedToName: bill.assignedTo?.name || bill.assignedToName || null,
+              assignedToName:
+                bill.assignedTo?.name || bill.assignedToName || null,
             });
             continue;
           }
@@ -133,7 +137,9 @@ router.post(
             0,
           );
 
-          const difference = parseFloat((localReceived - appCollected).toFixed(2));
+          const difference = parseFloat(
+            (localReceived - appCollected).toFixed(2),
+          );
           const match = Math.abs(difference) <= TOLERANCE;
 
           results.push({
@@ -143,7 +149,8 @@ router.post(
             localReceived,
             appCollected,
             difference,
-            assignedToName: bill.assignedTo?.name || bill.assignedToName || null,
+            assignedToName:
+              bill.assignedTo?.name || bill.assignedToName || null,
           });
         } catch (rowErr) {
           errors.push(`Row ${index + 2}: ${rowErr.message}`);
@@ -157,9 +164,8 @@ router.post(
         total: results.length,
         mismatchCount: results.filter((r) => r.status === "mismatch").length,
         notFoundCount: results.filter((r) => r.status === "not_found").length,
-        skippedCount: results.filter(
-          (r) => r.status === "skipped_non_cash_upi",
-        ).length,
+        skippedCount: results.filter((r) => r.status === "skipped_non_cash_upi")
+          .length,
         results,
         errors,
       });

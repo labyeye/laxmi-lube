@@ -257,9 +257,8 @@ const BillAssignedToday = () => {
     0,
   );
   const remainingToAllocate =
-    Math.round(
-      ((parseFloat(totalCollectAmount) || 0) - allocatedSum) * 100,
-    ) / 100;
+    Math.round(((parseFloat(totalCollectAmount) || 0) - allocatedSum) * 100) /
+    100;
 
   const handleSplitCollectionSubmit = async () => {
     if (remainingToAllocate !== 0 || !(parseFloat(totalCollectAmount) > 0)) {
@@ -990,10 +989,9 @@ const BillAssignedToday = () => {
                         </AllocationRow>
                       ))}
 
-                    <AllocationSummary
-                      balanced={remainingToAllocate === 0}
-                    >
-                      Remaining to allocate: {formatCurrency(remainingToAllocate)}
+                    <AllocationSummary balanced={remainingToAllocate === 0}>
+                      Remaining to allocate:{" "}
+                      {formatCurrency(remainingToAllocate)}
                     </AllocationSummary>
 
                     {submitError && <ErrorText>{submitError}</ErrorText>}
@@ -1074,7 +1072,10 @@ const BillAssignedToday = () => {
                           <strong>Adjusted Across:</strong>{" "}
                           {allocations
                             .filter((a) => parseFloat(a.amount) > 0)
-                            .map((a) => `#${a.billNumber} (${formatCurrency(a.amount)})`)
+                            .map(
+                              (a) =>
+                                `#${a.billNumber} (${formatCurrency(a.amount)})`,
+                            )
                             .join(", ")}
                         </div>
                       </SelectedBillInfo>
@@ -1111,7 +1112,10 @@ const BillAssignedToday = () => {
                             value={paymentAmount}
                             onChange={(e) => {
                               const value = e.target.value;
-                              if (/^\d*\.?\d{0,2}$/.test(value) || value === "") {
+                              if (
+                                /^\d*\.?\d{0,2}$/.test(value) ||
+                                value === ""
+                              ) {
                                 setPaymentAmount(value);
                               }
                             }}
@@ -1123,7 +1127,9 @@ const BillAssignedToday = () => {
                           <MaxButton
                             type="button"
                             onClick={() =>
-                              setPaymentAmount(selectedBill?.dueAmount.toFixed(2))
+                              setPaymentAmount(
+                                selectedBill?.dueAmount.toFixed(2),
+                              )
                             }
                           >
                             All Dues
@@ -1290,13 +1296,21 @@ const BillAssignedToday = () => {
                         type="file"
                         accept="image/*"
                         required
-                        onChange={(e) => setScreenshotFile(e.target.files[0] || null)}
+                        onChange={(e) =>
+                          setScreenshotFile(e.target.files[0] || null)
+                        }
                       />
                       {screenshotFile && (
                         <img
                           src={URL.createObjectURL(screenshotFile)}
                           alt="preview"
-                          style={{ marginTop: "0.5rem", maxWidth: "100%", maxHeight: "180px", borderRadius: "8px", objectFit: "contain" }}
+                          style={{
+                            marginTop: "0.5rem",
+                            maxWidth: "100%",
+                            maxHeight: "180px",
+                            borderRadius: "8px",
+                            objectFit: "contain",
+                          }}
                         />
                       )}
                     </FormGroup>
@@ -1315,7 +1329,9 @@ const BillAssignedToday = () => {
                           setSubmitError("");
                         }}
                       >
-                        {isSplitMode ? "Back to Adjustment" : "Back to Bill Selection"}
+                        {isSplitMode
+                          ? "Back to Adjustment"
+                          : "Back to Bill Selection"}
                       </BackButton>
                       <SubmitButton
                         onClick={
