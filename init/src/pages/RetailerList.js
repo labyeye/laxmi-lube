@@ -20,6 +20,7 @@ import {
   FaUpload,
 } from "react-icons/fa";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const API_BASE = "https://backend.laxmilube.in/api";
 const getAuthHeaders = () => ({
@@ -38,6 +39,7 @@ const DAYS = [
 ];
 
 const RetailerList = () => {
+  const navigate = useNavigate();
   const [records, setRecords] = useState([]);
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -284,14 +286,31 @@ const RetailerList = () => {
       formData.append("file", importFile);
       const token = localStorage.getItem("token");
 
+      if (!token) {
+        setModalError("Your session has expired. Please log in again.");
+        setImportLoading(false);
+        navigate("/login");
+        return;
+      }
+
       const response = await fetch(`${API_BASE}/retailers/import`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
 
-      if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (response.status === 401) {
+        localStorage.removeItem("token");
+        setModalError("Your session has expired. Please log in again.");
+        setImportLoading(false);
+        navigate("/login");
+        return;
+      }
+
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => null);
+        throw new Error(errBody?.message || `Import failed (status ${response.status})`);
+      }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -876,7 +895,7 @@ const RetailerList = () => {
 
                     <Hint>
                       Required: Retailer Name, Address 1. Optional: Address 2,
-                      Assigned To, Day Assigned, Phone (for WhatsApp).
+                      Assigned To, Day Assigned, Phone for WhatsApp.
                     </Hint>
                   </ModalBody>
 
