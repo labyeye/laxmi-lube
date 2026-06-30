@@ -216,7 +216,13 @@ const PermissionTemplates = () => {
           delete: false,
           assign: false,
         },
-        collections: { view: true, create: true, edit: true, delete: false },
+        collections: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: false,
+          verify: true,
+        },
         products: { view: true, create: false, edit: false, delete: false },
         retailers: { view: true, create: false, edit: false, delete: false },
         orders: {
@@ -248,7 +254,13 @@ const PermissionTemplates = () => {
           delete: false,
           assign: false,
         },
-        collections: { view: false, create: false, edit: false, delete: false },
+        collections: {
+          view: false,
+          create: false,
+          edit: false,
+          delete: false,
+          verify: false,
+        },
         products: { view: true, create: true, edit: true, delete: true },
         retailers: { view: true, create: false, edit: false, delete: false },
         orders: {
