@@ -30,10 +30,7 @@ const BillsPage = () => {
   const [fieldErrors, setFieldErrors] = useState({});
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
-  const [importProgress, setImportProgress] = useState({
-    current: 0,
-    total: 0,
-  });
+  const [importResult, setImportResult] = useState(null);
   const [editFormData, setEditFormData] = useState({
     billNumber: "",
     retailer: "",
@@ -99,7 +96,7 @@ const BillsPage = () => {
     setManualBill({});
     setFieldErrors({});
     setImportFile(null);
-    setImportProgress({ current: 0, total: 0 });
+    setImportResult(null);
     setError("");
     setMessage("");
     setIsAddModalOpen(true);
@@ -226,13 +223,12 @@ const BillsPage = () => {
           if (!line.trim()) continue;
           try {
             const data = JSON.parse(line);
-            if (data.type === "progress") {
-              setImportProgress({ current: data.current, total: data.total });
-            } else if (data.type === "result") {
-              const parts = [];
-              if (data.importedCount > 0) parts.push(`${data.importedCount} added`);
-              if (data.alreadyExistsCount > 0) parts.push(`${data.alreadyExistsCount} already existed`);
-              setMessage(parts.length > 0 ? parts.join(", ") : "No new bills imported");
+            if (data.type === "result") {
+              setImportResult({
+                imported: data.importedCount || 0,
+                existing: data.alreadyExistsCount || 0,
+                errors: data.errorCount || 0,
+              });
             } else if (data.type === "error") {
               setError(data.message || "Failed to import bills");
             }
@@ -592,11 +588,12 @@ const BillsPage = () => {
                         {importFile && <small>{importFile.name}</small>}
                       </FormGroup>
 
-                      {importLoading && importProgress.total > 0 && (
-                        <ImportProgressText>
-                          Importing {importProgress.current} of{" "}
-                          {importProgress.total} rows
-                        </ImportProgressText>
+                      {importResult && (
+                        <ImportSummary>
+                          {importResult.imported > 0 && <span className="ok">✓ {importResult.imported} imported</span>}
+                          {importResult.existing > 0 && <span className="skip">⊘ {importResult.existing} already exist</span>}
+                          {importResult.errors > 0 && <span className="err">✕ {importResult.errors} rows had errors</span>}
+                        </ImportSummary>
                       )}
 
                       <ButtonGroup>
@@ -1105,10 +1102,20 @@ const TabBtn = styled.button`
   cursor: pointer;
 `;
 
-const ImportProgressText = styled.div`
+const ImportSummary = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--nb-muted);
+  border-radius: 0.5rem;
   font-size: 0.85rem;
-  color: var(--nb-ink);
-  margin-bottom: 0.5rem;
+  font-weight: 600;
+
+  .ok { color: #15803d; }
+  .skip { color: #92400e; }
+  .err { color: #b91c1c; }
 `;
 
 const FormGroup = styled.div`
