@@ -313,20 +313,14 @@ router.post(
   adminOnly,
   upload.single("file"),
   async (req, res) => {
-    const { PassThrough } = require("stream");
-    const progressStream = new PassThrough();
     const errors = [];
-    const importedBills = [];
     const staffMap = new Map();
-    let processedRows = 0;
-    let totalRows = 0;
 
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      // Day abbreviations mapping
       const dayAbbreviations = {
         MON: "Monday",
         TUE: "Tuesday",
@@ -337,7 +331,6 @@ router.post(
         SUN: "Sunday",
       };
 
-      // Read file with cellDates option to properly handle Excel dates
       const workbook = xlsx.readFile(req.file.path, { cellDates: true });
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData = xlsx.utils.sheet_to_json(worksheet, {
@@ -345,12 +338,9 @@ router.post(
         defval: null,
       });
 
-      // Validate we have data
       if (!jsonData || jsonData.length === 0) {
         return res.status(400).json({ message: "No data found in the file" });
       }
-
-      totalRows = jsonData.length;
 
       try {
         const User = require("../models/User");
@@ -362,208 +352,164 @@ router.post(
         console.warn("Could not load staff members:", err.message);
       }
 
-      // Track processed bills by bill number AND customer name
-      const processedBills = {};
+      const getValue = (obj, possibleNames) => {
+        const key = Object.keys(obj).find((k) =>
+          possibleNames.some((name) => k.toLowerCase() === name.toLowerCase()),
+        );
+        return key ? obj[key] : null;
+      };
 
-      // Set headers for streaming response
-      res.setHeader("Content-Type", "application/x-ndjson");
-      res.setHeader("Transfer-Encoding", "chunked");
+      // ── Pass 1: parse & validate all rows ────────────────────────────────────
+      const validBills = [];
+      const seenKeys = new Set();
 
       for (const [index, row] of jsonData.entries()) {
-        try {
-          // Skip header row if present
-          if (
-            index === 0 &&
-            (row.CustName === "CustName" || row.BillNo === "BillNo")
-          ) {
-            continue;
-          }
+        if (
+          index === 0 &&
+          (row.CustName === "CustName" || row.BillNo === "BillNo")
+        )
+          continue;
 
-          // Get values with case-insensitive field names
-          const getValue = (obj, possibleNames) => {
-            const key = Object.keys(obj).find((k) =>
-              possibleNames.some(
-                (name) => k.toLowerCase() === name.toLowerCase(),
-              ),
-            );
-            return key ? obj[key] : null;
-          };
+        const custName = getValue(row, ["custname", "customer", "retailer"]);
+        const billNo = getValue(row, ["billno", "billnumber", "bill no"]);
+        const billDateValue = getValue(row, ["billdate", "date"]);
+        const billAmt = getValue(row, ["billamt", "amount"]);
+        const billRec = getValue(row, ["billrec", "received amount"]);
+        const billBalance = getValue(row, ["billbalance", "balance"]);
+        const staffName = getValue(row, ["staff name", "staff"]);
+        const collectionDayInput = getValue(row, ["day", "collectionday"]);
 
-          const custName = getValue(row, ["custname", "customer", "retailer"]);
-          const billNo = getValue(row, ["billno", "billnumber", "bill no"]);
-          const billDateValue = getValue(row, ["billdate", "date"]);
-          const billAmt = getValue(row, ["billamt", "amount"]);
-          const billRec = getValue(row, ["billrec", "received amount"]);
-          const billBalance = getValue(row, ["billbalance", "balance"]);
-          const staffName = getValue(row, ["staff name", "staff"]);
-          const collectionDayInput = getValue(row, ["day", "collectionday"]);
+        if (!custName && !billNo && !billAmt) continue;
 
-          // Skip if this is a header row or empty row
-          if (!custName && !billNo && !billAmt) {
-            continue;
-          }
+        if (!custName || !billNo || !billAmt || !billDateValue) {
+          errors.push(`Row ${index + 2}: Missing required fields`);
+          continue;
+        }
 
-          // Validate required fields
-          if (!custName || !billNo || !billAmt || !billDateValue) {
-            errors.push(`Row ${index + 2}: Missing required fields`);
-            continue;
-          }
-
-          // Process collection day (accept both full names and abbreviations)
-          let collectionDay = "Sunday"; // Default to Sunday if empty
-
-          if (collectionDayInput) {
-            if (dayAbbreviations[collectionDayInput?.toUpperCase()]) {
-              collectionDay =
-                dayAbbreviations[collectionDayInput.toUpperCase()];
-            } else if (
-              [
-                "Monday",
-                "Tuesday",
-                "Wednesday",
-                "Thursday",
-                "Friday",
-                "Saturday",
-                "Sunday",
-              ].includes(collectionDayInput)
-            ) {
-              collectionDay = collectionDayInput;
-            } else {
-              errors.push(
-                `Row ${
-                  index + 2
-                }: Invalid collection day format "${collectionDayInput}" - defaulting to Sunday`,
-              );
-            }
-          }
-
-          // Check for duplicate bill number AND customer name in this import
-          const billKey = `${billNo}_${custName}`.toUpperCase();
-          if (processedBills[billKey]) {
-            errors.push(
-              `Row ${
-                index + 2
-              }: Duplicate bill ${billNo} for customer ${custName} in this file`,
-            );
-            continue;
-          }
-          processedBills[billKey] = true;
-
-          // Parse date - handle Excel date objects and strings
-          let billDate;
-          if (billDateValue instanceof Date) {
-            billDate = billDateValue;
-          } else if (typeof billDateValue === "number") {
-            // Handle Excel serial dates
-            billDate = new Date((billDateValue - (25567 + 1)) * 86400 * 1000);
-          } else {
-            // Try parsing as string
-            billDate = new Date(billDateValue);
-            if (isNaN(billDate.getTime())) {
-              // Try alternative date formats if the first attempt fails
-              billDate = new Date(
-                billDateValue.replace(/(\d{2})-(\d{2})-(\d{4})/, "$2/$1/$3"),
-              );
-            }
-          }
-
-          if (isNaN(billDate.getTime())) {
-            errors.push(
-              `Row ${index + 2}: Invalid date format for ${billDateValue}`,
-            );
-            continue;
-          }
-
-          // Parse amounts
-          const amount = parseFloat(String(billAmt).replace(/,/g, "")) || 0;
-          const received = parseFloat(String(billRec).replace(/,/g, "")) || 0;
-          const balance =
-            parseFloat(String(billBalance).replace(/,/g, "")) ||
-            amount - received;
-
-          if (isNaN(amount) || amount <= 0) {
-            errors.push(`Row ${index + 2}: Invalid amount`);
-            continue;
-          }
-
-          // Determine status
-          let status = "Unpaid";
-          if (balance <= 0) {
-            status = "Paid";
-          } else if (received > 0) {
-            status = "Partially Paid";
-          }
-
-          // Create bill data object
-          const billData = {
-            billNumber: billNo,
-            retailer: custName,
-            amount: amount,
-            dueAmount: balance,
-            billDate: billDate,
-            collectionDay: collectionDay,
-            status: status,
-            assignedTo: staffName
-              ? staffMap.get(staffName.toUpperCase())
-              : null,
-          };
-
-          try {
-            // Check if bill already exists in database
-            // Check if bill already exists in database (using both billNumber and retailer)
-            const existingBill = await Bill.findOne({
-              billNumber: billNo,
-              retailer: custName,
-            });
-
-            if (existingBill) {
-              errors.push(
-                `Row ${
-                  index + 2
-                }: Bill number ${billNo} for customer ${custName} already exists in database`,
-              );
-              continue;
-            }
-
-            // Create and save new bill
-            const newBill = new Bill(billData);
-            await newBill.save();
-            importedBills.push(newBill);
-          } catch (saveError) {
-            errors.push(`Row ${index + 2}: ${saveError.message}`);
-          }
-
-          processedRows++;
-          res.write(
-            JSON.stringify({
-              type: "progress",
-              current: processedRows,
-              total: totalRows,
-            }) + "\n",
+        const billKey = `${billNo}_${custName}`.toUpperCase();
+        if (seenKeys.has(billKey)) {
+          errors.push(
+            `Row ${index + 2}: Duplicate bill ${billNo} for customer ${custName} in this file`,
           );
-        } catch (error) {
-          errors.push(`Row ${index + 2}: ${error.message}`);
+          continue;
+        }
+        seenKeys.add(billKey);
+
+        let collectionDay = "Sunday";
+        if (collectionDayInput) {
+          const upper = collectionDayInput.toUpperCase();
+          if (dayAbbreviations[upper]) {
+            collectionDay = dayAbbreviations[upper];
+          } else if (
+            ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].includes(collectionDayInput)
+          ) {
+            collectionDay = collectionDayInput;
+          } else {
+            errors.push(
+              `Row ${index + 2}: Invalid collection day "${collectionDayInput}" - defaulting to Sunday`,
+            );
+          }
+        }
+
+        let billDate;
+        if (billDateValue instanceof Date) {
+          billDate = billDateValue;
+        } else if (typeof billDateValue === "number") {
+          billDate = new Date((billDateValue - (25567 + 1)) * 86400 * 1000);
+        } else {
+          billDate = new Date(billDateValue);
+          if (isNaN(billDate.getTime())) {
+            billDate = new Date(
+              billDateValue.replace(/(\d{2})-(\d{2})-(\d{4})/, "$2/$1/$3"),
+            );
+          }
+        }
+
+        if (isNaN(billDate.getTime())) {
+          errors.push(`Row ${index + 2}: Invalid date format for ${billDateValue}`);
+          continue;
+        }
+
+        const amount = parseFloat(String(billAmt).replace(/,/g, "")) || 0;
+        const received = parseFloat(String(billRec || "0").replace(/,/g, "")) || 0;
+        const balance =
+          parseFloat(String(billBalance || "0").replace(/,/g, "")) ||
+          amount - received;
+
+        if (isNaN(amount) || amount <= 0) {
+          errors.push(`Row ${index + 2}: Invalid amount`);
+          continue;
+        }
+
+        let status = "Unpaid";
+        if (balance <= 0) status = "Paid";
+        else if (received > 0) status = "Partially Paid";
+
+        validBills.push({
+          rowIndex: index + 2,
+          billNumber: billNo,
+          retailer: custName,
+          amount,
+          dueAmount: balance,
+          billDate,
+          collectionDay,
+          status,
+          assignedTo: staffName ? staffMap.get(staffName.toUpperCase()) : null,
+        });
+      }
+
+      // ── Pass 2: single query to find all already-existing bills ──────────────
+      const billNumbers = validBills.map((b) => b.billNumber);
+      const existingBills = await Bill.find({
+        billNumber: { $in: billNumbers },
+      })
+        .select("billNumber retailer")
+        .lean();
+
+      const existingKeys = new Set(
+        existingBills.map((b) => `${b.billNumber}_${b.retailer}`.toUpperCase()),
+      );
+
+      const toInsert = [];
+      let alreadyExistsCount = 0;
+      for (const bill of validBills) {
+        const key = `${bill.billNumber}_${bill.retailer}`.toUpperCase();
+        if (existingKeys.has(key)) {
+          alreadyExistsCount++;
+        } else {
+          const { rowIndex, ...billData } = bill;
+          toInsert.push(billData);
         }
       }
 
-      // Send final result
-      const finalResult = {
-        type: "result",
-        importedCount: importedBills.length,
-        errorCount: errors.length,
-        errors: errors.slice(0, 10),
-      };
-      res.write(JSON.stringify(finalResult) + "\n");
+      // ── Pass 3: bulk insert all new bills in one shot ─────────────────────────
+      let insertedCount = 0;
+      if (toInsert.length > 0) {
+        const inserted = await Bill.insertMany(toInsert, { ordered: false });
+        insertedCount = inserted.length;
+      }
 
-      // Clean up uploaded file
       if (req.file && fs.existsSync(req.file.path)) {
         fs.unlinkSync(req.file.path);
       }
+
+      res.setHeader("Content-Type", "application/x-ndjson");
+      res.write(
+        JSON.stringify({
+          type: "result",
+          importedCount: insertedCount,
+          alreadyExistsCount,
+          errorCount: errors.length,
+          errors: errors.slice(0, 10),
+        }) + "\n",
+      );
+      res.end();
     } catch (error) {
       console.error("Import error:", error);
       if (req.file && fs.existsSync(req.file.path)) {
         fs.unlinkSync(req.file.path);
       }
+      res.setHeader("Content-Type", "application/x-ndjson");
       res.write(
         JSON.stringify({
           type: "error",
@@ -571,7 +517,6 @@ router.post(
           error: error.message,
         }) + "\n",
       );
-    } finally {
       res.end();
     }
   },

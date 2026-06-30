@@ -229,13 +229,10 @@ const BillsPage = () => {
             if (data.type === "progress") {
               setImportProgress({ current: data.current, total: data.total });
             } else if (data.type === "result") {
-              setMessage(
-                `Successfully imported ${data.importedCount} bills. ${data.errorCount} records had errors.`,
-              );
-              if (data.errorCount > 0) {
-                const exampleErrors = data.errors?.join("; ") || "";
-                setError(`Some rows had errors. ${exampleErrors}`);
-              }
+              const parts = [];
+              if (data.importedCount > 0) parts.push(`${data.importedCount} added`);
+              if (data.alreadyExistsCount > 0) parts.push(`${data.alreadyExistsCount} already existed`);
+              setMessage(parts.length > 0 ? parts.join(", ") : "No new bills imported");
             } else if (data.type === "error") {
               setError(data.message || "Failed to import bills");
             }
