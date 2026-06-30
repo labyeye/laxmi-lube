@@ -7,8 +7,6 @@ import {
   FaMoneyBillWave,
   FaChevronRight,
   FaStore,
-  FaTruck,
-  FaHourglassHalf,
   FaBoxes,
 } from "react-icons/fa";
 import axios from "axios";
@@ -343,26 +341,6 @@ const AdminDashboard = () => {
                 <div className="metric-content">
                   <h3>Total Retailers</h3>
                   <p>{formatIndianNumber(dashboardData?.totalRetailers)}</p>
-                </div>
-              </MetricCard>
-
-              <MetricCard>
-                <div className="icon-container red">
-                  <FaTruck size={20} />
-                </div>
-                <div className="metric-content">
-                  <h3>Delivered Vehicles</h3>
-                  <p>{formatIndianNumber(dashboardData?.deliveredVehicles)}</p>
-                </div>
-              </MetricCard>
-
-              <MetricCard>
-                <div className="icon-container">
-                  <FaHourglassHalf size={20} />
-                </div>
-                <div className="metric-content">
-                  <h3>Pending Vehicles</h3>
-                  <p>{formatIndianNumber(dashboardData?.pendingVehicles)}</p>
                 </div>
               </MetricCard>
 

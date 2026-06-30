@@ -13,6 +13,7 @@ import Users from "./pages/Users";
 import Logout from "./pages/Logout";
 import BillAssignedToday from "./pages/BillAssignedToday";
 import BillsPage from "./pages/BillsPage";
+import AdminCollectionHistory from "./pages/AdminCollectionHistory";
 import CollectionsHistory from "./pages/CollectionHistoryPage";
 import ReportPage from "./pages/ReportPage";
 import DSRCollectionSummary from "./pages/DSRCollectionSummary";
@@ -23,11 +24,6 @@ import OrderList from "./pages/OrderList";
 import SalaryPage from "./pages/SalaryPage";
 import AdvancePage from "./pages/AdvancePage";
 import SalaryLedgerPage from "./pages/SalaryLedgerPage";
-import AttendancePage from "./pages/AttendancePage";
-import DeliveryCreate from "./pages/DeliveryCreate";
-import DeliveryTracking from "./pages/DeliveryTracking";
-import DeliveryHistory from "./pages/DeliveryHistory";
-import MyDeliveries from "./pages/MyDeliveries";
 import RetailerDashboard from "./pages/RetailerDashboard";
 import RetailerBilling from "./pages/RetailerBilling";
 import RetailerCollectionHistory from "./pages/RetailerCollectionHistory";
@@ -324,6 +320,18 @@ const App = () => {
             }
           />
 
+          {/* Admin Collection History Page */}
+          <Route
+            path="/admin/collections-history"
+            element={
+              user?.role === "admin" ? (
+                <AdminCollectionHistory />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+
           {/* Salary Management Routes */}
           <Route
             path="/admin/salary"
@@ -351,61 +359,6 @@ const App = () => {
               )
             }
           />
-          <Route
-            path="/admin/attendance"
-            element={
-              user?.role === "admin" ? (
-                <AttendancePage />
-              ) : (
-                <Navigate to="/login" />
-              )
-            }
-          />
-
-          {/* Delivery Logistics Routes */}
-          <Route
-            path="/admin/delivery-create"
-            element={
-              user?.role === "admin" ? (
-                <DeliveryCreate />
-              ) : (
-                <Navigate to="/login" />
-              )
-            }
-          />
-          <Route
-            path="/admin/delivery-tracking"
-            element={
-              user?.role === "admin" ? (
-                <DeliveryTracking />
-              ) : (
-                <Navigate to="/login" />
-              )
-            }
-          />
-          <Route
-            path="/admin/delivery-history"
-            element={
-              user?.role === "admin" ? (
-                <DeliveryHistory />
-              ) : (
-                <Navigate to="/login" />
-              )
-            }
-          />
-
-          {/* Staff My Deliveries Route */}
-          <Route
-            path="/staff/my-deliveries"
-            element={
-              user?.role === "staff" ? (
-                <MyDeliveries />
-              ) : (
-                <Navigate to="/login" />
-              )
-            }
-          />
-
           <Route
             path="/staff/collections-history"
             element={<CollectionsHistory />}

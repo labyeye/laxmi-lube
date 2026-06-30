@@ -44,12 +44,6 @@ const DEFAULT_MODULES = {
     icon: "FaMoneyBillWave",
     key: "collection",
   },
-  attendance: {
-    singular: "Attendance",
-    plural: "Attendance",
-    icon: "FaCalendarCheck",
-    key: "attendance",
-  },
   salary: {
     singular: "Salary",
     plural: "Salaries",
@@ -61,18 +55,6 @@ const DEFAULT_MODULES = {
     plural: "Advances",
     icon: "FaMoneyBillWave",
     key: "advance",
-  },
-  delivery: {
-    singular: "Delivery",
-    plural: "Deliveries",
-    icon: "FaTruck",
-    key: "delivery",
-  },
-  logistics: {
-    singular: "Logistics",
-    plural: "Logistics",
-    icon: "FaTruck",
-    key: "logistics",
   },
   report: {
     singular: "Report",

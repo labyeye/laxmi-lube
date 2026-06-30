@@ -401,7 +401,8 @@ router.post("/", protect, uploadScreenshot.single("screenshot"), async (req, res
 router.get("/", protect, async (req, res) => {
   try {
     const { search, startDate, endDate } = req.query;
-    const filter = { collectedBy: req.user._id }; // Only show collections by current user
+    // Admins see all collections; staff only see their own
+    const filter = req.user.role === "admin" ? {} : { collectedBy: req.user._id };
 
     if (search) {
       const bills = await Bill.find({

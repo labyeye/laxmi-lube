@@ -2,9 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import styled from "styled-components";
 import {
-  FaHistory,
   FaFileInvoiceDollar,
-  FaPlusCircle,
   FaSignOutAlt,
   FaShoppingCart,
   FaBoxes,
@@ -13,15 +11,12 @@ import {
   FaChevronRight,
   FaMoneyBillWave,
   FaBook,
-  FaCalendarCheck,
-  FaTruck,
   FaCogs,
   FaBars,
   FaTimes,
   FaFileAlt,
   FaWallet,
   FaUserTie,
-  FaRoute,
   FaLayerGroup,
   FaChartLine,
   FaIdBadge,
@@ -41,8 +36,6 @@ const Layout = ({ children }) => {
     orders: false,
     collections: false,
     salary: false,
-    attendance: false,
-    logistics: false,
     reports: false,
     hrstaff: false,
     finance: false,
@@ -164,16 +157,26 @@ const Layout = ({ children }) => {
           <NavItem
             active={
               location.pathname === "/admin/bills" ||
-              location.pathname === "/admin/bills-add" ||
-              location.pathname === "/admin/bill-collection-history"
+              location.pathname === "/admin/bills-add"
             }
             onClick={closeSidebar}
           >
             <CategoryIcon>
               <FaFileInvoiceDollar />
             </CategoryIcon>
-            <span>Billing &amp; Collections</span>
+            <span>Bills</span>
             <Link to="/admin/bills" />
+          </NavItem>
+
+          <NavItem
+            active={location.pathname === "/admin/collections-history"}
+            onClick={closeSidebar}
+          >
+            <CategoryIcon>
+              <FaWallet />
+            </CategoryIcon>
+            <span>Collection History</span>
+            <Link to="/admin/collections-history" />
           </NavItem>
 
           {/* ── COMMUNICATIONS ───────────────────────────── */}
@@ -206,51 +209,6 @@ const Layout = ({ children }) => {
             <span>Products</span>
             <Link to="/admin/view-product" />
           </NavItem>
-
-          {/* ── LOGISTICS ─────────────────────────────────── */}
-          <SectionLabel>Logistics</SectionLabel>
-
-          <NavCategory onClick={() => toggleDropdown("logistics")}>
-            <CategoryHeader>
-              <CategoryIcon>
-                <FaTruck />
-                <span>Distribution</span>
-              </CategoryIcon>
-              <ChevronIcon>
-                {openDropdowns.logistics ? (
-                  <FaChevronDown />
-                ) : (
-                  <FaChevronRight />
-                )}
-              </ChevronIcon>
-            </CategoryHeader>
-          </NavCategory>
-          <DropdownMenu $isOpen={openDropdowns.logistics}>
-            <NavItem
-              active={location.pathname === "/admin/delivery-create"}
-              onClick={closeSidebar}
-            >
-              <FaPlusCircle />
-              <span>New Dispatch</span>
-              <Link to="/admin/delivery-create" />
-            </NavItem>
-            <NavItem
-              active={location.pathname === "/admin/delivery-tracking"}
-              onClick={closeSidebar}
-            >
-              <FaRoute />
-              <span>Live Tracking</span>
-              <Link to="/admin/delivery-tracking" />
-            </NavItem>
-            <NavItem
-              active={location.pathname === "/admin/delivery-history"}
-              onClick={closeSidebar}
-            >
-              <FaHistory />
-              <span>Dispatch History</span>
-              <Link to="/admin/delivery-history" />
-            </NavItem>
-          </DropdownMenu>
 
           {/* ── FINANCE ───────────────────────────────────── */}
           <SectionLabel>Finance</SectionLabel>
@@ -308,14 +266,6 @@ const Layout = ({ children }) => {
             </CategoryHeader>
           </NavCategory>
           <DropdownMenu $isOpen={openDropdowns.hrstaff}>
-            <NavItem
-              active={location.pathname === "/admin/attendance"}
-              onClick={closeSidebar}
-            >
-              <FaCalendarCheck />
-              <span>Attendance</span>
-              <Link to="/admin/attendance" />
-            </NavItem>
             <NavItem
               active={location.pathname === "/admin/users"}
               onClick={closeSidebar}

@@ -11,13 +11,10 @@ import {
   FaSignOutAlt,
   FaUserCircle,
   FaCheckCircle,
-  FaChevronDown,
-  FaChevronRight,
   FaCalendarDay,
   FaHistory,
-  FaTruck,
 } from "react-icons/fa";
-import { Link, useNavigate } from "react-router-dom";
+import {useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const API_BASE_URL = "https://backend.laxmilube.in/api";
@@ -42,7 +39,6 @@ const StaffDashboard = () => {
   const [error, setError] = useState("");
   const [retrying, setRetrying] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activeSubmenu, setActiveSubmenu] = useState(null);
   const navigate = useNavigate();
 
   const fetchUserInfo = useCallback(async () => {
@@ -124,14 +120,6 @@ const StaffDashboard = () => {
     navigate("/login"); // Redirect to the login page
   };
 
-  const toggleSubmenu = (menu) => {
-    if (activeSubmenu === menu) {
-      setActiveSubmenu(null);
-    } else {
-      setActiveSubmenu(menu);
-    }
-  };
-
   const formatDate = (dateString) => {
     const options = { day: "numeric", month: "short", year: "numeric" };
     return new Date(dateString).toLocaleDateString("en-US", options);
@@ -181,53 +169,19 @@ const StaffDashboard = () => {
             {<NavText>Order Create</NavText>}
           </NavItem>
 
-          <NavItem onClick={() => navigate("/staff/my-deliveries")}>
+          <NavItem onClick={() => navigate("/staff/bill-assigned-today")}>
             <NavIcon>
-              <FaTruck />
+              <FaMoneyCheckAlt />
             </NavIcon>
-            {<NavText>My Deliveries</NavText>}
+            {<NavText>Bills Assigned Today</NavText>}
           </NavItem>
 
-          <NavItemWithSubmenu>
-            <NavItemMain onClick={() => toggleSubmenu("collections")}>
-              <NavIcon>
-                <FaMoneyCheckAlt />
-              </NavIcon>
-              {
-                <>
-                  <NavText>Collections</NavText>
-                  <NavArrow>
-                    {activeSubmenu === "collections" ? (
-                      <FaChevronDown />
-                    ) : (
-                      <FaChevronRight />
-                    )}
-                  </NavArrow>
-                </>
-              }
-            </NavItemMain>
-
-            {activeSubmenu === "collections" && (
-              <Submenu>
-                <Link
-                  to="/staff/bill-assigned-today"
-                  style={{ textDecoration: "none" }}
-                >
-                  <SubmenuItem>
-                    <NavText>Assigned Today</NavText>
-                  </SubmenuItem>
-                </Link>
-                <Link
-                  to="/staff/collections-history"
-                  style={{ textDecoration: "none" }}
-                >
-                  <SubmenuItem>
-                    <NavText>History</NavText>
-                  </SubmenuItem>
-                </Link>
-              </Submenu>
-            )}
-          </NavItemWithSubmenu>
+          <NavItem onClick={() => navigate("/staff/collections-history")}>
+            <NavIcon>
+              <FaMoneyCheckAlt />
+            </NavIcon>
+            {<NavText>Collection History</NavText>}
+          </NavItem>
         </NavMenu>
         <LogoutButton onClick={handleLogout}>
           <NavIcon>
@@ -493,23 +447,6 @@ const NavCheckmark = styled.span`
   color: ${(props) => (props.active ? "var(--nb-blue)" : "var(--nb-ink)")};
 `;
 
-const SubmenuItem = styled.div`
-  display: flex;
-  align-items: center;
-  padding: 8px 20px 8px 40px;
-  color: var(--nb-ink);
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition: all 0.3s;
-
-  &:hover {
-    color: var(--nb-blue);
-  }
-
-  ${NavCheckmark} {
-    margin-left: auto;
-  }
-`;
 
 const HistoryIcon = styled.div`
   width: 40px;
@@ -688,27 +625,6 @@ const NavItem = styled.div`
   }
 `;
 
-const NavItemWithSubmenu = styled.div`
-  display: flex;
-  flex-direction: column;
-`;
-
-const NavItemMain = styled.div`
-  display: flex;
-  align-items: center;
-  padding: 12px 20px;
-  color: var(--nb-ink);
-  cursor: pointer;
-  transition: all 0.3s;
-  white-space: nowrap;
-  overflow: hidden;
-
-  &:hover {
-    background-color: var(--nb-muted);
-    color: var(--nb-blue);
-  }
-`;
-
 const NavIcon = styled.div`
   font-size: 1rem;
   margin-right: 10px;
@@ -719,14 +635,6 @@ const NavIcon = styled.div`
 
 const NavText = styled.div`
   flex: 1;
-`;
-
-const NavArrow = styled.div`
-  font-size: 0.8rem;
-`;
-
-const Submenu = styled.div`
-  padding-left: 40px;
 `;
 
 const LogoutButton = styled.div`

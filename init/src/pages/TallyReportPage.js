@@ -8,15 +8,12 @@ import {
   FaStore,
   FaUserTie,
   FaWallet,
-  FaTruck,
   FaFileAlt,
   FaPrint,
   FaSearch,
   FaSpinner,
   FaFilePdf,
-  FaCalendarCheck,
   FaMoneyBillWave,
-  FaRoute,
 } from "react-icons/fa";
 import Layout from "../components/Layout";
 
@@ -58,32 +55,11 @@ const REPORT_TYPES = [
     desc: "All collections for a date range",
   },
   {
-    id: "delivery",
-    label: "Delivery Report",
-    icon: <FaTruck />,
-    color: "#dc2626",
-    desc: "Delivery register for a date range",
-  },
-  {
-    id: "attendance",
-    label: "Attendance Report",
-    icon: <FaCalendarCheck />,
-    color: "#0891b2",
-    desc: "Staff attendance log for a date range",
-  },
-  {
     id: "salary",
     label: "Salary Report",
     icon: <FaMoneyBillWave />,
     color: "#d97706",
     desc: "Salary & advance details for staff",
-  },
-  {
-    id: "logistics",
-    label: "Logistics Report",
-    icon: <FaRoute />,
-    color: "#7c3aed",
-    desc: "Vehicle-wise dispatch & delivery overview",
   },
 ];
 
@@ -107,7 +83,6 @@ const TallyReportPage = () => {
   // extra filters
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
-  const [vehicleType, setVehicleType] = useState("");
 
   // fetch selectors
   useEffect(() => {
@@ -118,9 +93,7 @@ const TallyReportPage = () => {
         .catch(() => setError("Failed to load retailers"));
     }
     if (
-      (activeType === "staff" ||
-        activeType === "attendance" ||
-        activeType === "salary") &&
+      (activeType === "staff" || activeType === "salary") &&
       staffList.length === 0
     ) {
       axios
@@ -146,20 +119,10 @@ const TallyReportPage = () => {
         url = `${API_BASE}/tally/staff-report?staffId=${selectedStaff._id}&startDate=${startDate}&endDate=${endDate}`;
       } else if (activeType === "collection") {
         url = `${API_BASE}/tally/collection-report?startDate=${startDate}&endDate=${endDate}`;
-      } else if (activeType === "delivery") {
-        url = `${API_BASE}/tally/delivery-report?startDate=${startDate}&endDate=${endDate}`;
-      } else if (activeType === "attendance") {
-        url =
-          `${API_BASE}/tally/attendance-report?startDate=${startDate}&endDate=${endDate}` +
-          (selectedStaff ? `&staffId=${selectedStaff._id}` : "");
       } else if (activeType === "salary") {
         url =
           `${API_BASE}/tally/salary-report?month=${filterMonth}&year=${filterYear}` +
           (selectedStaff ? `&staffId=${selectedStaff._id}` : "");
-      } else if (activeType === "logistics") {
-        url =
-          `${API_BASE}/tally/logistics-report?startDate=${startDate}&endDate=${endDate}` +
-          (vehicleType ? `&vehicleType=${vehicleType}` : "");
       }
       const res = await axios.get(url, auth());
       setReportData(res.data);
@@ -176,7 +139,6 @@ const TallyReportPage = () => {
     endDate,
     filterMonth,
     filterYear,
-    vehicleType,
   ]);
 
   const handlePrint = () => window.print();
@@ -351,28 +313,6 @@ const TallyReportPage = () => {
                 </SelectGroup>
               )}
 
-              {/* Optional staff filter for attendance */}
-              {activeType === "attendance" && (
-                <SelectGroup>
-                  <SelectLabel>Staff (optional)</SelectLabel>
-                  <StyledSelect
-                    value={selectedStaff?._id || ""}
-                    onChange={(e) =>
-                      setSelectedStaff(
-                        staffList.find((s) => s._id === e.target.value) || null,
-                      )
-                    }
-                  >
-                    <option value="">-- All Staff --</option>
-                    {staffList.map((s) => (
-                      <option key={s._id} value={s._id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </StyledSelect>
-                </SelectGroup>
-              )}
-
               {/* Optional staff filter for salary */}
               {activeType === "salary" && (
                 <SelectGroup>
@@ -440,22 +380,6 @@ const TallyReportPage = () => {
                 </>
               )}
 
-              {/* Vehicle type for logistics */}
-              {activeType === "logistics" && (
-                <SelectGroup>
-                  <SelectLabel>Vehicle Type</SelectLabel>
-                  <StyledSelect
-                    value={vehicleType}
-                    onChange={(e) => setVehicleType(e.target.value)}
-                  >
-                    <option value="">-- All Types --</option>
-                    <option value="Bike">Bike</option>
-                    <option value="Tempo">Tempo</option>
-                    <option value="Truck">Truck</option>
-                  </StyledSelect>
-                </SelectGroup>
-              )}
-
               {/* Date range (hide for salary) */}
               {activeType !== "salary" && (
                 <>
@@ -513,14 +437,7 @@ const TallyReportPage = () => {
             {activeType === "collection" && (
               <CollectionReport data={reportData} />
             )}
-            {activeType === "delivery" && <DeliveryReport data={reportData} />}
-            {activeType === "attendance" && (
-              <AttendanceReport data={reportData} />
-            )}
             {activeType === "salary" && <SalaryReport data={reportData} />}
-            {activeType === "logistics" && (
-              <LogisticsReport data={reportData} />
-            )}
           </ReportWrap>
         )}
       </PageWrap>
@@ -817,351 +734,6 @@ const CollectionReport = ({ data }) => (
   </div>
 );
 
-// ─── Delivery Report ────────────────────────────────────────────────────────
-const STATUS_COLOR = {
-  Delivered: { bg: "#dcfce7", color: "#166534" },
-  "In Transit": { bg: "#fef9c3", color: "#854d0e" },
-  Pending: { bg: "#dbeafe", color: "#1e40af" },
-  Cancelled: { bg: "#fee2e2", color: "#991b1b" },
-};
-
-const DeliveryReport = ({ data }) => (
-  <div>
-    <TallyHeader>
-      <CompanyName>DELIVERY REPORT</CompanyName>
-      <PeriodLine>
-        Period: {fmt(data.period?.start)} — {fmt(data.period?.end)}
-      </PeriodLine>
-    </TallyHeader>
-
-    <SummaryGrid>
-      <SummaryCard>
-        <SummaryVal>{data.summary?.totalDeliveries || 0}</SummaryVal>
-        <SummaryLbl>Total Deliveries</SummaryLbl>
-      </SummaryCard>
-      <SummaryCard $accent="#059669">
-        <SummaryVal style={{ color: "#059669" }}>
-          {data.summary?.delivered || 0}
-        </SummaryVal>
-        <SummaryLbl>Delivered</SummaryLbl>
-      </SummaryCard>
-      <SummaryCard $accent="#d97706">
-        <SummaryVal style={{ color: "#d97706" }}>
-          {data.summary?.inTransit || 0}
-        </SummaryVal>
-        <SummaryLbl>In Transit</SummaryLbl>
-      </SummaryCard>
-      <SummaryCard $accent="#2563eb">
-        <SummaryVal style={{ color: "#2563eb" }}>
-          {data.summary?.pending || 0}
-        </SummaryVal>
-        <SummaryLbl>Pending</SummaryLbl>
-      </SummaryCard>
-      <SummaryCard $accent="#dc2626">
-        <SummaryVal style={{ color: "#dc2626" }}>
-          {data.summary?.cancelled || 0}
-        </SummaryVal>
-        <SummaryLbl>Cancelled</SummaryLbl>
-      </SummaryCard>
-      <SummaryCard $accent="#1e293b">
-        <SummaryVal>{INR(data.summary?.totalOrderAmount)}</SummaryVal>
-        <SummaryLbl>Total Order Value</SummaryLbl>
-      </SummaryCard>
-    </SummaryGrid>
-
-    <SectionTitle>Delivery Register</SectionTitle>
-    <TallyTable>
-      <thead>
-        <tr>
-          <Th>Dispatch Date</Th>
-          <Th>Retailer</Th>
-          <Th>Driver</Th>
-          <Th>Vehicle</Th>
-          <Th>Expected</Th>
-          <Th>Delivered On</Th>
-          <Th align="right">Order Value</Th>
-          <Th>Status</Th>
-        </tr>
-      </thead>
-      <tbody>
-        {(data.data || []).map((d, i) => (
-          <React.Fragment key={i}>
-            <tr style={{ background: i % 2 === 0 ? "#fff" : "#f8fafc" }}>
-              <Td>{fmt(d.dispatchDate)}</Td>
-              <Td>
-                <strong>{d.retailer}</strong>
-                <br />
-                <small style={{ color: "#94a3b8" }}>{d.retailerAddress}</small>
-              </Td>
-              <Td>{d.driverName}</Td>
-              <Td>
-                {d.vehicleNumber}
-                <br />
-                <small style={{ color: "#94a3b8" }}>{d.vehicleType}</small>
-              </Td>
-              <Td>{fmt(d.expectedDate)}</Td>
-              <Td style={{ color: "#059669" }}>
-                {d.actualDate ? fmt(d.actualDate) : "—"}
-              </Td>
-              <Td align="right" style={{ fontWeight: 600 }}>
-                {INR(d.totalOrderAmount)}
-              </Td>
-              <Td>
-                <DeliveryBadge
-                  style={
-                    STATUS_COLOR[d.status] || {
-                      bg: "#f1f5f9",
-                      color: "#475569",
-                    }
-                  }
-                  $bg={(STATUS_COLOR[d.status] || {}).bg}
-                  $color={(STATUS_COLOR[d.status] || {}).color}
-                >
-                  {d.status}
-                </DeliveryBadge>
-              </Td>
-            </tr>
-            {/* Order breakdown row */}
-            {(d.orders || []).length > 0 && (
-              <tr style={{ background: "#f0f9ff" }}>
-                <Td
-                  colSpan={8}
-                  style={{
-                    paddingLeft: 32,
-                    fontSize: "0.8rem",
-                    color: "#475569",
-                  }}
-                >
-                  {d.orders.map((o, j) => (
-                    <div
-                      key={j}
-                      style={{ marginBottom: j < d.orders.length - 1 ? 8 : 0 }}
-                    >
-                      <strong style={{ color: "#1e40af" }}>
-                        Order #{o.orderNumber}
-                      </strong>
-                      {" — "}
-                      {INR(o.orderAmount || o.amount)}
-                      {(o.deliveredItems || []).length > 0 && (
-                        <table
-                          style={{
-                            marginTop: 4,
-                            fontSize: "0.75rem",
-                            borderCollapse: "collapse",
-                            width: "100%",
-                          }}
-                        >
-                          <thead>
-                            <tr style={{ background: "#dbeafe" }}>
-                              <th
-                                style={{
-                                  padding: "2px 8px",
-                                  textAlign: "left",
-                                }}
-                              >
-                                Product
-                              </th>
-                              <th
-                                style={{
-                                  padding: "2px 8px",
-                                  textAlign: "center",
-                                }}
-                              >
-                                Ordered
-                              </th>
-                              <th
-                                style={{
-                                  padding: "2px 8px",
-                                  textAlign: "center",
-                                }}
-                              >
-                                Delivered
-                              </th>
-                              <th
-                                style={{
-                                  padding: "2px 8px",
-                                  textAlign: "right",
-                                }}
-                              >
-                                Value
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {o.deliveredItems.map((item, k) => (
-                              <tr
-                                key={k}
-                                style={{
-                                  background:
-                                    k % 2 === 0 ? "#f0f9ff" : "#e0f2fe",
-                                }}
-                              >
-                                <td style={{ padding: "2px 8px" }}>
-                                  {item.name}
-                                </td>
-                                <td
-                                  style={{
-                                    padding: "2px 8px",
-                                    textAlign: "center",
-                                    color: "#64748b",
-                                  }}
-                                >
-                                  {item.orderedQty}
-                                </td>
-                                <td
-                                  style={{
-                                    padding: "2px 8px",
-                                    textAlign: "center",
-                                    fontWeight: 700,
-                                    color:
-                                      item.deliverQty < item.orderedQty
-                                        ? "#d97706"
-                                        : "#059669",
-                                  }}
-                                >
-                                  {item.deliverQty}
-                                  {item.deliverQty < item.orderedQty && " ⚠️"}
-                                </td>
-                                <td
-                                  style={{
-                                    padding: "2px 8px",
-                                    textAlign: "right",
-                                    fontWeight: 600,
-                                  }}
-                                >
-                                  {INR(item.totalSale)}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      )}
-                    </div>
-                  ))}
-                  {d.remarks && (
-                    <em
-                      style={{
-                        color: "#7c3aed",
-                        display: "block",
-                        marginTop: 4,
-                      }}
-                    >
-                      Remarks: {d.remarks}
-                    </em>
-                  )}
-                </Td>
-              </tr>
-            )}
-          </React.Fragment>
-        ))}
-        <tr style={{ background: "#1e293b" }}>
-          <Td colSpan={6} style={{ color: "#fff", fontWeight: 700 }}>
-            GRAND TOTAL
-          </Td>
-          <Td align="right" style={{ color: "#4ade80", fontWeight: 700 }}>
-            {INR(data.summary?.totalOrderAmount)}
-          </Td>
-          <Td />
-        </tr>
-      </tbody>
-    </TallyTable>
-  </div>
-);
-
-// ─── Attendance Report ──────────────────────────────────────────────────────
-const STATUS_ATT_COLOR = {
-  Present: { bg: "#dcfce7", color: "#166534" },
-  Absent: { bg: "#fee2e2", color: "#991b1b" },
-  "Half Day": { bg: "#fef9c3", color: "#854d0e" },
-  Leave: { bg: "#ede9fe", color: "#5b21b6" },
-};
-
-const AttendanceReport = ({ data }) => (
-  <div>
-    <TallyHeader>
-      <CompanyName>ATTENDANCE REPORT</CompanyName>
-      <PeriodLine>
-        Period: {fmt(data.period?.start)} — {fmt(data.period?.end)}
-      </PeriodLine>
-    </TallyHeader>
-
-    <SummaryGrid>
-      <SummaryCard $accent="#059669">
-        <SummaryVal style={{ color: "#059669" }}>
-          {data.summary?.Present || 0}
-        </SummaryVal>
-        <SummaryLbl>Present</SummaryLbl>
-      </SummaryCard>
-      <SummaryCard $accent="#dc2626">
-        <SummaryVal style={{ color: "#dc2626" }}>
-          {data.summary?.Absent || 0}
-        </SummaryVal>
-        <SummaryLbl>Absent</SummaryLbl>
-      </SummaryCard>
-      <SummaryCard $accent="#d97706">
-        <SummaryVal style={{ color: "#d97706" }}>
-          {data.summary?.["Half Day"] || 0}
-        </SummaryVal>
-        <SummaryLbl>Half Day</SummaryLbl>
-      </SummaryCard>
-      <SummaryCard $accent="#7c3aed">
-        <SummaryVal style={{ color: "#7c3aed" }}>
-          {data.summary?.Leave || 0}
-        </SummaryVal>
-        <SummaryLbl>Leave</SummaryLbl>
-      </SummaryCard>
-      <SummaryCard $accent="#0891b2">
-        <SummaryVal style={{ color: "#0891b2" }}>
-          {(data.summary?.totalHours || 0).toFixed(1)}h
-        </SummaryVal>
-        <SummaryLbl>Total Hours</SummaryLbl>
-      </SummaryCard>
-    </SummaryGrid>
-
-    {(data.data || []).map((staff, si) => (
-      <div key={si} style={{ marginBottom: 24 }}>
-        <SectionTitle>{staff.name}</SectionTitle>
-        <TallyTable>
-          <thead>
-            <tr>
-              <Th>Date</Th>
-              <Th>Status</Th>
-              <Th>In Time</Th>
-              <Th>Out Time</Th>
-              <Th align="right">Hours</Th>
-              <Th>Remarks</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {(staff.records || []).map((r, i) => (
-              <tr
-                key={i}
-                style={{ background: i % 2 === 0 ? "#fff" : "#f8fafc" }}
-              >
-                <Td>{fmt(r.date)}</Td>
-                <Td>
-                  <StatusBadge
-                    style={STATUS_ATT_COLOR[r.status]}
-                    $status={r.status}
-                  >
-                    {r.status}
-                  </StatusBadge>
-                </Td>
-                <Td>{r.inTime || "—"}</Td>
-                <Td>{r.outTime || "—"}</Td>
-                <Td align="right">
-                  {r.workingHours ? `${r.workingHours}h` : "—"}
-                </Td>
-                <Td>{r.remarks || "—"}</Td>
-              </tr>
-            ))}
-          </tbody>
-        </TallyTable>
-      </div>
-    ))}
-  </div>
-);
-
 // ─── Salary Report ───────────────────────────────────────────────────────────
 const MONTHS = [
   "Jan",
@@ -1313,281 +885,6 @@ const SalaryReport = ({ data }) => (
         </TallyTable>
       </>
     )}
-  </div>
-);
-
-// ─── Logistics Report ────────────────────────────────────────────────────────
-const LogisticsReport = ({ data }) => (
-  <div>
-    <TallyHeader>
-      <CompanyName>LOGISTICS REPORT</CompanyName>
-      <PeriodLine>
-        Period: {fmt(data.period?.start)} — {fmt(data.period?.end)}
-      </PeriodLine>
-    </TallyHeader>
-
-    <SummaryGrid>
-      <SummaryCard>
-        <SummaryVal>{data.summary?.total || 0}</SummaryVal>
-        <SummaryLbl>Total Trips</SummaryLbl>
-      </SummaryCard>
-      <SummaryCard $accent="#059669">
-        <SummaryVal style={{ color: "#059669" }}>
-          {data.summary?.delivered || 0}
-        </SummaryVal>
-        <SummaryLbl>Delivered</SummaryLbl>
-      </SummaryCard>
-      <SummaryCard $accent="#d97706">
-        <SummaryVal style={{ color: "#d97706" }}>
-          {data.summary?.inTransit || 0}
-        </SummaryVal>
-        <SummaryLbl>In Transit</SummaryLbl>
-      </SummaryCard>
-      <SummaryCard $accent="#2563eb">
-        <SummaryVal style={{ color: "#2563eb" }}>
-          {data.summary?.pending || 0}
-        </SummaryVal>
-        <SummaryLbl>Pending</SummaryLbl>
-      </SummaryCard>
-      <SummaryCard $accent="#dc2626">
-        <SummaryVal style={{ color: "#dc2626" }}>
-          {data.summary?.cancelled || 0}
-        </SummaryVal>
-        <SummaryLbl>Cancelled</SummaryLbl>
-      </SummaryCard>
-      <SummaryCard $accent="#1e293b">
-        <SummaryVal>{INR(data.summary?.totalOrderValue)}</SummaryVal>
-        <SummaryLbl>Total Order Value</SummaryLbl>
-      </SummaryCard>
-    </SummaryGrid>
-
-    {/* Driver Summary */}
-    {(data.driverSummary || []).length > 0 && (
-      <>
-        <SectionTitle>Driver Summary</SectionTitle>
-        <TallyTable>
-          <thead>
-            <tr>
-              <Th>Driver</Th>
-              <Th>Mobile</Th>
-              <Th>Vehicles Used</Th>
-              <Th align="right">Trips</Th>
-              <Th align="right">Order Value</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.driverSummary.map((d, i) => (
-              <tr
-                key={i}
-                style={{ background: i % 2 === 0 ? "#fff" : "#f8fafc" }}
-              >
-                <Td>
-                  <strong>{d.name}</strong>
-                </Td>
-                <Td>{d.mobile}</Td>
-                <Td>{d.vehicles}</Td>
-                <Td align="right">{d.trips}</Td>
-                <Td align="right" style={{ fontWeight: 600 }}>
-                  {INR(d.value)}
-                </Td>
-              </tr>
-            ))}
-          </tbody>
-        </TallyTable>
-      </>
-    )}
-
-    <SectionTitle style={{ marginTop: 28 }}>Trip-wise Register</SectionTitle>
-    <TallyTable>
-      <thead>
-        <tr>
-          <Th>Dispatch</Th>
-          <Th>Retailer</Th>
-          <Th>Driver</Th>
-          <Th>Vehicle</Th>
-          <Th>Type</Th>
-          <Th>Expected</Th>
-          <Th>Delivered</Th>
-          <Th align="right">Value</Th>
-          <Th>Status</Th>
-        </tr>
-      </thead>
-      <tbody>
-        {(data.data || []).map((d, i) => (
-          <React.Fragment key={i}>
-            <tr style={{ background: i % 2 === 0 ? "#fff" : "#f8fafc" }}>
-              <Td>{fmt(d.dispatchDate)}</Td>
-              <Td>
-                <strong>{d.retailer}</strong>
-                <br />
-                <small style={{ color: "#94a3b8" }}>{d.retailerAddress}</small>
-              </Td>
-              <Td>
-                {d.driverName}
-                <br />
-                <small style={{ color: "#94a3b8" }}>{d.driverMobile}</small>
-              </Td>
-              <Td>{d.vehicleNumber}</Td>
-              <Td>{d.vehicleType}</Td>
-              <Td>{fmt(d.expectedDate)}</Td>
-              <Td style={{ color: "#059669" }}>
-                {d.actualDate ? fmt(d.actualDate) : "—"}
-              </Td>
-              <Td align="right" style={{ fontWeight: 600 }}>
-                {INR(d.totalOrderAmount)}
-              </Td>
-              <Td>
-                <DeliveryBadge
-                  $bg={(STATUS_COLOR[d.status] || {}).bg}
-                  $color={(STATUS_COLOR[d.status] || {}).color}
-                >
-                  {d.status}
-                </DeliveryBadge>
-              </Td>
-            </tr>
-            {(d.orders || []).length > 0 && (
-              <tr style={{ background: "#f0f9ff" }}>
-                <Td
-                  colSpan={9}
-                  style={{
-                    paddingLeft: 32,
-                    fontSize: "0.8rem",
-                    color: "#475569",
-                  }}
-                >
-                  {d.orders.map((o, j) => (
-                    <div
-                      key={j}
-                      style={{ marginBottom: j < d.orders.length - 1 ? 8 : 0 }}
-                    >
-                      <strong style={{ color: "#1e40af" }}>
-                        Order #{o.orderNumber}
-                      </strong>
-                      {" — "}
-                      {INR(o.orderAmount || o.amount)}
-                      {(o.deliveredItems || []).length > 0 && (
-                        <table
-                          style={{
-                            marginTop: 4,
-                            fontSize: "0.75rem",
-                            borderCollapse: "collapse",
-                            width: "100%",
-                          }}
-                        >
-                          <thead>
-                            <tr style={{ background: "#dbeafe" }}>
-                              <th
-                                style={{
-                                  padding: "2px 8px",
-                                  textAlign: "left",
-                                }}
-                              >
-                                Product
-                              </th>
-                              <th
-                                style={{
-                                  padding: "2px 8px",
-                                  textAlign: "center",
-                                }}
-                              >
-                                Ordered
-                              </th>
-                              <th
-                                style={{
-                                  padding: "2px 8px",
-                                  textAlign: "center",
-                                }}
-                              >
-                                Delivered
-                              </th>
-                              <th
-                                style={{
-                                  padding: "2px 8px",
-                                  textAlign: "right",
-                                }}
-                              >
-                                Value
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {o.deliveredItems.map((item, k) => (
-                              <tr
-                                key={k}
-                                style={{
-                                  background:
-                                    k % 2 === 0 ? "#f0f9ff" : "#e0f2fe",
-                                }}
-                              >
-                                <td style={{ padding: "2px 8px" }}>
-                                  {item.name}
-                                </td>
-                                <td
-                                  style={{
-                                    padding: "2px 8px",
-                                    textAlign: "center",
-                                    color: "#64748b",
-                                  }}
-                                >
-                                  {item.orderedQty}
-                                </td>
-                                <td
-                                  style={{
-                                    padding: "2px 8px",
-                                    textAlign: "center",
-                                    fontWeight: 700,
-                                    color:
-                                      item.deliverQty < item.orderedQty
-                                        ? "#d97706"
-                                        : "#059669",
-                                  }}
-                                >
-                                  {item.deliverQty}
-                                  {item.deliverQty < item.orderedQty && " ⚠️"}
-                                </td>
-                                <td
-                                  style={{
-                                    padding: "2px 8px",
-                                    textAlign: "right",
-                                    fontWeight: 600,
-                                  }}
-                                >
-                                  {INR(item.totalSale)}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      )}
-                    </div>
-                  ))}
-                  {d.remarks && (
-                    <em
-                      style={{
-                        color: "#7c3aed",
-                        display: "block",
-                        marginTop: 4,
-                      }}
-                    >
-                      Remarks: {d.remarks}
-                    </em>
-                  )}
-                </Td>
-              </tr>
-            )}
-          </React.Fragment>
-        ))}
-        <tr style={{ background: "#1e293b" }}>
-          <Td colSpan={7} style={{ color: "#fff", fontWeight: 700 }}>
-            GRAND TOTAL
-          </Td>
-          <Td align="right" style={{ color: "#4ade80", fontWeight: 700 }}>
-            {INR(data.summary?.totalOrderValue)}
-          </Td>
-          <Td />
-        </tr>
-      </tbody>
-    </TallyTable>
   </div>
 );
 
@@ -1959,16 +1256,6 @@ const StatusBadge = styled.span`
       : p.$status === "Unpaid"
         ? "#991b1b"
         : "#854d0e"};
-`;
-
-const DeliveryBadge = styled.span`
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 5px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  background: ${(p) => p.$bg || "#f1f5f9"};
-  color: ${(p) => p.$color || "#475569"};
 `;
 
 export default TallyReportPage;

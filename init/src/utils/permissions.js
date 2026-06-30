@@ -96,12 +96,10 @@ export const getAccessibleModules = (user) => {
       "products",
       "retailers",
       "orders",
-      "deliveries",
       "users",
       "reports",
       "salary",
       "advances",
-      "attendance",
       "settings",
     ];
   }

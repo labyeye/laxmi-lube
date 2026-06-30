@@ -5,7 +5,6 @@ const Collection = require("../models/Collection");
 const User = require("../models/User");
 const Retailer = require("../models/Retailer");
 const Product = require("../models/Product");
-const Delivery = require("../models/Delivery");
 const { protect, adminOnly } = require("../middleware/authMiddleware");
 const moment = require("moment");
 
@@ -49,14 +48,6 @@ router.get("/dashboard", protect, adminOnly, async (req, res) => {
     const totalRetailers = await Retailer.countDocuments();
     const totalProducts = await Product.countDocuments();
 
-    // Get delivery vehicle counts
-    const deliveredVehicles = await Delivery.countDocuments({
-      deliveryStatus: "Delivered",
-    });
-    const pendingVehicles = await Delivery.countDocuments({
-      deliveryStatus: { $in: ["Pending", "In Transit"] },
-    });
-
     const recentCollections = await Collection.find()
       .sort({ collectedOn: -1 })
       .limit(5)
@@ -91,8 +82,6 @@ router.get("/dashboard", protect, adminOnly, async (req, res) => {
       totalRetailers,
       totalProducts,
       totalStaff,
-      deliveredVehicles,
-      pendingVehicles,
       recentCollections,
       collectionTrends,
       billTrends,

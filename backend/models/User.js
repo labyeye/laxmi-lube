@@ -82,12 +82,6 @@ const userSchema = new mongoose.Schema({
       edit: { type: Boolean, default: false },
       delete: { type: Boolean, default: false },
     },
-    attendance: {
-      view: { type: Boolean, default: true },
-      create: { type: Boolean, default: false },
-      edit: { type: Boolean, default: false },
-      delete: { type: Boolean, default: false },
-    },
     settings: {
       view: { type: Boolean, default: false },
       edit: { type: Boolean, default: false },
