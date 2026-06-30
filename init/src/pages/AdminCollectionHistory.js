@@ -6,6 +6,11 @@ import {
   FaCalendarAlt,
   FaEye,
   FaMoneyBillWave,
+  FaChevronDown,
+  FaChevronRight,
+  FaSearchPlus,
+  FaCheckCircle,
+  FaTimesCircle,
 } from "react-icons/fa";
 import Layout from "../components/Layout";
 
@@ -16,7 +21,10 @@ const AdminCollectionHistory = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [viewCollection, setViewCollection] = useState(null);
+  const [viewGroup, setViewGroup] = useState(null); // array of collections shown in modal
+  const [expandedGroups, setExpandedGroups] = useState({});
+  const [zoomImage, setZoomImage] = useState(null);
+  const [verifyingId, setVerifyingId] = useState(null);
 
   const fetchCollections = async () => {
     try {
@@ -75,6 +83,63 @@ const AdminCollectionHistory = () => {
     );
   });
 
+  // Group collections that share a paymentGroupId (split payments) into one row
+  const groupedRows = [];
+  const seenGroups = new Set();
+  filteredCollections.forEach((c) => {
+    if (c.paymentGroupId) {
+      if (seenGroups.has(c.paymentGroupId)) return;
+      seenGroups.add(c.paymentGroupId);
+      const members = filteredCollections.filter(
+        (x) => x.paymentGroupId === c.paymentGroupId,
+      );
+      groupedRows.push({ isGroup: true, key: c.paymentGroupId, members });
+    } else {
+      groupedRows.push({ isGroup: false, key: c._id, members: [c] });
+    }
+  });
+  groupedRows.sort(
+    (a, b) =>
+      new Date(b.members[0].collectedOn) - new Date(a.members[0].collectedOn),
+  );
+
+  const toggleExpand = (key) => {
+    setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleVerify = async (collectionId, status) => {
+    setVerifyingId(collectionId);
+    try {
+      const res = await axios.patch(
+        `https://backend.laxmilube.in/api/collections/${collectionId}/verify`,
+        { status },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        },
+      );
+      setCollections((prev) =>
+        prev.map((c) => (c._id === collectionId ? { ...c, ...res.data } : c)),
+      );
+      setViewGroup((prev) =>
+        prev
+          ? prev.map((c) => (c._id === collectionId ? { ...c, ...res.data } : c))
+          : prev,
+      );
+    } catch (err) {
+      console.error("Verification update failed:", err);
+    } finally {
+      setVerifyingId(null);
+    }
+  };
+
+  const verificationBadge = (status) => {
+    if (status === "verified")
+      return <VerifyBadge status="verified">Verified</VerifyBadge>;
+    if (status === "not_verified")
+      return <VerifyBadge status="not_verified">Not Verified</VerifyBadge>;
+    return <VerifyBadge status="pending">Pending</VerifyBadge>;
+  };
+
   return (
     <Layout>
       <PageContainer>
@@ -117,45 +182,101 @@ const AdminCollectionHistory = () => {
           </LoadingIndicator>
         ) : error ? (
           <ErrorMessage>{error}</ErrorMessage>
-        ) : filteredCollections.length > 0 ? (
+        ) : groupedRows.length > 0 ? (
           <TableContainer>
             <DataTable>
               <thead>
                 <tr>
+                  <th></th>
                   <th>Bill #</th>
                   <th>Retailer</th>
                   <th>Amount</th>
                   <th>Payment Mode</th>
                   <th>Collected On</th>
                   <th>Collected By</th>
-                  <th>Remarks</th>
+                  <th>Verification</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {filteredCollections.map((collection) => (
-                  <tr key={collection._id}>
-                    <td>#{collection.bill?.billNumber}</td>
-                    <td>{collection.bill?.retailer}</td>
-                    <td>{formatCurrency(collection.amountCollected)}</td>
-                    <td>
-                      <PaymentMode mode={collection.paymentMode}>
-                        {collection.paymentMode}
-                      </PaymentMode>
-                    </td>
-                    <td>{formatDate(collection.collectedOn)}</td>
-                    <td>{collection.collectedBy?.name || "-"}</td>
-                    <td>{collection.remarks || "-"}</td>
-                    <td>
-                      <EyeBtn
-                        title="View details"
-                        onClick={() => setViewCollection(collection)}
-                      >
-                        <FaEye />
-                      </EyeBtn>
-                    </td>
-                  </tr>
-                ))}
+                {groupedRows.map((row) => {
+                  const first = row.members[0];
+                  const totalAmount = row.members.reduce(
+                    (sum, m) => sum + m.amountCollected,
+                    0,
+                  );
+                  const billLabel = row.isGroup
+                    ? `${row.members.length} bills`
+                    : `#${first.bill?.billNumber}`;
+                  const isExpanded = expandedGroups[row.key];
+
+                  return (
+                    <React.Fragment key={row.key}>
+                      <tr>
+                        <td>
+                          {row.isGroup && (
+                            <ExpandBtn onClick={() => toggleExpand(row.key)}>
+                              {isExpanded ? (
+                                <FaChevronDown />
+                              ) : (
+                                <FaChevronRight />
+                              )}
+                            </ExpandBtn>
+                          )}
+                        </td>
+                        <td>{billLabel}</td>
+                        <td>{first.bill?.retailer}</td>
+                        <td>{formatCurrency(totalAmount)}</td>
+                        <td>
+                          <PaymentMode mode={first.paymentMode}>
+                            {first.paymentMode}
+                          </PaymentMode>
+                        </td>
+                        <td>{formatDate(first.collectedOn)}</td>
+                        <td>{first.collectedBy?.name || "-"}</td>
+                        <td>
+                          {row.isGroup ? (
+                            <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+                              {row.members.filter(
+                                (m) => m.verificationStatus === "verified",
+                              ).length}
+                              /{row.members.length} verified
+                            </span>
+                          ) : (
+                            verificationBadge(first.verificationStatus)
+                          )}
+                        </td>
+                        <td>
+                          <EyeBtn
+                            title="View details"
+                            onClick={() => setViewGroup(row.members)}
+                          >
+                            <FaEye />
+                          </EyeBtn>
+                        </td>
+                      </tr>
+                      {row.isGroup &&
+                        isExpanded &&
+                        row.members.map((m) => (
+                          <SubRow key={m._id}>
+                            <td></td>
+                            <td>#{m.bill?.billNumber}</td>
+                            <td colSpan={2}>{formatCurrency(m.amountCollected)}</td>
+                            <td colSpan={2}></td>
+                            <td>{verificationBadge(m.verificationStatus)}</td>
+                            <td>
+                              <EyeBtn
+                                title="View bill"
+                                onClick={() => setViewGroup([m])}
+                              >
+                                <FaEye />
+                              </EyeBtn>
+                            </td>
+                          </SubRow>
+                        ))}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </DataTable>
           </TableContainer>
@@ -167,74 +288,108 @@ const AdminCollectionHistory = () => {
         )}
       </PageContainer>
 
-      {viewCollection && (
-        <ModalOverlay onClick={() => setViewCollection(null)}>
+      {viewGroup && (
+        <ModalOverlay onClick={() => setViewGroup(null)}>
           <DetailModal onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
-              <h3>Collection Details</h3>
-              <CloseBtn onClick={() => setViewCollection(null)}>×</CloseBtn>
+              <h3>
+                Collection Details
+                {viewGroup.length > 1 ? ` (${viewGroup.length} bills)` : ""}
+              </h3>
+              <CloseBtn onClick={() => setViewGroup(null)}>×</CloseBtn>
             </ModalHeader>
             <ModalBody>
               <DetailGrid>
                 <DetailRow>
-                  <DetailLabel>Bill #</DetailLabel>
-                  <DetailValue>#{viewCollection.bill?.billNumber}</DetailValue>
-                </DetailRow>
-                <DetailRow>
                   <DetailLabel>Retailer</DetailLabel>
-                  <DetailValue>{viewCollection.bill?.retailer}</DetailValue>
-                </DetailRow>
-                <DetailRow>
-                  <DetailLabel>Amount</DetailLabel>
-                  <DetailValue>
-                    {formatCurrency(viewCollection.amountCollected)}
-                  </DetailValue>
+                  <DetailValue>{viewGroup[0].bill?.retailer}</DetailValue>
                 </DetailRow>
                 <DetailRow>
                   <DetailLabel>Payment Mode</DetailLabel>
                   <DetailValue>
-                    <PaymentMode mode={viewCollection.paymentMode}>
-                      {viewCollection.paymentMode}
+                    <PaymentMode mode={viewGroup[0].paymentMode}>
+                      {viewGroup[0].paymentMode}
                     </PaymentMode>
                   </DetailValue>
                 </DetailRow>
                 <DetailRow>
                   <DetailLabel>Collected On</DetailLabel>
-                  <DetailValue>
-                    {formatDate(viewCollection.collectedOn)}
-                  </DetailValue>
+                  <DetailValue>{formatDate(viewGroup[0].collectedOn)}</DetailValue>
                 </DetailRow>
                 <DetailRow>
                   <DetailLabel>Collected By</DetailLabel>
                   <DetailValue>
-                    {viewCollection.collectedBy?.name || "-"}
+                    {viewGroup[0].collectedBy?.name || "-"}
                   </DetailValue>
                 </DetailRow>
-                {viewCollection.remarks && (
+                {viewGroup[0].remarks && (
                   <DetailRow>
                     <DetailLabel>Remarks</DetailLabel>
-                    <DetailValue>{viewCollection.remarks}</DetailValue>
+                    <DetailValue>{viewGroup[0].remarks}</DetailValue>
                   </DetailRow>
                 )}
-                {viewCollection.paymentDetails &&
-                  Object.entries(viewCollection.paymentDetails).map(
-                    ([k, v]) =>
-                      v ? (
-                        <DetailRow key={k}>
-                          <DetailLabel>{k}</DetailLabel>
-                          <DetailValue>{v}</DetailValue>
-                        </DetailRow>
-                      ) : null,
+                {viewGroup[0].paymentDetails &&
+                  Object.entries(viewGroup[0].paymentDetails).map(([k, v]) =>
+                    v ? (
+                      <DetailRow key={k}>
+                        <DetailLabel>{k}</DetailLabel>
+                        <DetailValue>{v}</DetailValue>
+                      </DetailRow>
+                    ) : null,
                   )}
               </DetailGrid>
 
-              {viewCollection.screenshotPath ? (
+              <BillsSection>
+                <DetailLabel>
+                  {viewGroup.length > 1 ? "Bills Adjusted" : "Bill"}
+                </DetailLabel>
+                {viewGroup.map((c) => (
+                  <BillVerifyRow key={c._id}>
+                    <div>
+                      <strong>#{c.bill?.billNumber}</strong>{" "}
+                      <span>{formatCurrency(c.amountCollected)}</span>
+                      <div>{verificationBadge(c.verificationStatus)}</div>
+                    </div>
+                    <VerifyBtnGroup>
+                      <VerifyBtn
+                        type="button"
+                        $variant="verified"
+                        disabled={verifyingId === c._id}
+                        onClick={() => handleVerify(c._id, "verified")}
+                      >
+                        <FaCheckCircle /> Verified
+                      </VerifyBtn>
+                      <VerifyBtn
+                        type="button"
+                        $variant="not_verified"
+                        disabled={verifyingId === c._id}
+                        onClick={() => handleVerify(c._id, "not_verified")}
+                      >
+                        <FaTimesCircle /> Not Verified
+                      </VerifyBtn>
+                    </VerifyBtnGroup>
+                  </BillVerifyRow>
+                ))}
+              </BillsSection>
+
+              {viewGroup[0].screenshotPath ? (
                 <SSSection>
                   <DetailLabel>Payment Screenshot</DetailLabel>
-                  <SSImage
-                    src={`https://backend.laxmilube.in/${viewCollection.screenshotPath.replace(/\\/g, "/")}`}
-                    alt="Payment screenshot"
-                  />
+                  <SSImageWrap
+                    onClick={() =>
+                      setZoomImage(
+                        `https://backend.laxmilube.in/${viewGroup[0].screenshotPath.replace(/\\/g, "/")}`,
+                      )
+                    }
+                  >
+                    <SSImage
+                      src={`https://backend.laxmilube.in/${viewGroup[0].screenshotPath.replace(/\\/g, "/")}`}
+                      alt="Payment screenshot"
+                    />
+                    <ZoomHint>
+                      <FaSearchPlus /> Click to zoom
+                    </ZoomHint>
+                  </SSImageWrap>
                 </SSSection>
               ) : (
                 <NoSS>No screenshot uploaded</NoSS>
@@ -242,6 +397,17 @@ const AdminCollectionHistory = () => {
             </ModalBody>
           </DetailModal>
         </ModalOverlay>
+      )}
+
+      {zoomImage && (
+        <ZoomOverlay onClick={() => setZoomImage(null)}>
+          <ZoomCloseBtn onClick={() => setZoomImage(null)}>×</ZoomCloseBtn>
+          <ZoomedImage
+            src={zoomImage}
+            alt="Payment screenshot zoomed"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </ZoomOverlay>
       )}
     </Layout>
   );
@@ -349,7 +515,7 @@ const DataTable = styled.table`
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
-  min-width: 900px;
+  min-width: 950px;
 
   th,
   td {
@@ -382,6 +548,26 @@ const DataTable = styled.table`
   }
 `;
 
+const SubRow = styled.tr`
+  background-color: #f9fafb;
+  font-size: 0.8rem;
+
+  td {
+    padding: 0.5rem 1rem;
+  }
+`;
+
+const ExpandBtn = styled.button`
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--nb-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+`;
+
 const PaymentMode = styled.span`
   display: inline-block;
   padding: 4px 12px;
@@ -394,6 +580,22 @@ const PaymentMode = styled.span`
       ? "var(--nb-blue)"
       : "var(--nb-orange)"};
   text-transform: capitalize;
+`;
+
+const VERIFY_COLORS = {
+  verified: { bg: "#dcfce7", color: "#15803d" },
+  not_verified: { bg: "#fee2e2", color: "#991b1b" },
+  pending: { bg: "#fef9c3", color: "#92400e" },
+};
+
+const VerifyBadge = styled.span`
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background-color: ${(p) => (VERIFY_COLORS[p.status] || VERIFY_COLORS.pending).bg};
+  color: ${(p) => (VERIFY_COLORS[p.status] || VERIFY_COLORS.pending).color};
 `;
 
 const EyeBtn = styled.button`
@@ -533,12 +735,82 @@ const DetailValue = styled.span`
   flex: 1;
 `;
 
+const BillsSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  border-top: 1px solid var(--nb-border);
+  padding-top: 1rem;
+  margin-bottom: 1rem;
+`;
+
+const BillVerifyRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--nb-border);
+  border-radius: 8px;
+
+  & > div:first-child {
+    font-size: 0.875rem;
+    color: var(--nb-ink);
+    span {
+      color: #6b7280;
+    }
+  }
+
+  @media (min-width: 480px) {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+`;
+
+const VerifyBtnGroup = styled.div`
+  display: flex;
+  gap: 0.4rem;
+`;
+
+const VerifyBtn = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid
+    ${(p) => (p.$variant === "verified" ? "#15803d" : "#991b1b")};
+  background: var(--nb-white);
+  color: ${(p) => (p.$variant === "verified" ? "#15803d" : "#991b1b")};
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: ${(p) => (p.$variant === "verified" ? "#dcfce7" : "#fee2e2")};
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
 const SSSection = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   border-top: 1px solid var(--nb-border);
   padding-top: 1rem;
+`;
+
+const SSImageWrap = styled.div`
+  position: relative;
+  cursor: zoom-in;
+
+  &:hover > div {
+    opacity: 1;
+  }
 `;
 
 const SSImage = styled.img`
@@ -549,12 +821,70 @@ const SSImage = styled.img`
   border: 1px solid var(--nb-border);
 `;
 
+const ZoomHint = styled.div`
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+`;
+
 const NoSS = styled.p`
   font-size: 0.8rem;
   color: #9ca3af;
   text-align: center;
   padding: 1rem 0;
   border-top: 1px solid var(--nb-border);
+`;
+
+const ZoomOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  cursor: zoom-out;
+`;
+
+const ZoomedImage = styled.img`
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  cursor: default;
+`;
+
+const ZoomCloseBtn = styled.button`
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #fff;
+  font-size: 2rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
 `;
 
 export default AdminCollectionHistory;

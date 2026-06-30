@@ -49,6 +49,17 @@ const collectionSchema = new mongoose.Schema(
     whatsappConfirmedBy: { type: String },
     screenshotPath: { type: String, default: null },
     paymentGroupId: { type: String, default: null, index: true },
+    verificationStatus: {
+      type: String,
+      enum: ["pending", "verified", "not_verified"],
+      default: "pending",
+    },
+    verifiedAt: { type: Date, default: null },
+    verifiedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
   },
   {
     timestamps: true,

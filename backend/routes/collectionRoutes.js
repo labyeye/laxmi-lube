@@ -7,7 +7,11 @@ const mongoose = require("mongoose");
 const Collection = require("../models/Collection");
 const Bill = require("../models/Bill");
 const Retailer = require("../models/Retailer");
-const { protect, adminOnly } = require("../middleware/authMiddleware");
+const {
+  protect,
+  adminOnly,
+  checkPermission,
+} = require("../middleware/authMiddleware");
 const { format } = require("date-fns");
 const exceljs = require("exceljs");
 const { generateReceiptPDF } = require("../services/pdfService");
@@ -44,7 +48,8 @@ const PAYMENT_MODE_LABELS = {
   upi: "UPI",
 };
 
-async function triggerWhatsApp(collectionId) {
+// Sends only the retailer's PDF receipt for one collection; does NOT notify admin.
+async function sendRetailerReceiptOnly(collectionId) {
   const collection = await Collection.findById(collectionId)
     .populate("bill", "billNumber retailer amount dueAmount billDate")
     .populate("collectedBy", "name");
@@ -96,19 +101,60 @@ async function triggerWhatsApp(collectionId) {
     whatsappSentAt: waStatus === "sent" ? new Date() : undefined,
   });
 
-  const adminPhone = process.env.ADMIN_WHATSAPP_PHONE;
-  if (adminPhone) {
-    await sendAdminNotification(adminPhone, {
-      retailerName: bill?.retailer || "N/A",
-      amount: amountFormatted,
-      billNumber,
-      paymentMode: paymentModeLabel,
-      staffName,
-      date: collectionDate,
-    });
-  }
+  return {
+    waStatus,
+    retailer,
+    bill,
+    staffName,
+    billNumber,
+    collectionDate,
+    amountFormatted,
+    paymentModeLabel,
+  };
+}
 
-  return { whatsappStatus: waStatus, retailerPhone: retailer?.phone || null };
+// Sends exactly one admin WhatsApp notification, regardless of how many bills were paid.
+async function sendAdminNotifyOnce({
+  retailerName,
+  retailerPhone,
+  retailerAddress,
+  amount,
+  billNumber,
+  paymentMode,
+  staffName,
+  date,
+}) {
+  const adminPhone = process.env.ADMIN_WHATSAPP_PHONE;
+  if (!adminPhone) return;
+  await sendAdminNotification(adminPhone, {
+    retailerName,
+    retailerPhone,
+    retailerAddress,
+    amount,
+    billNumber,
+    paymentMode,
+    staffName,
+    date,
+  });
+}
+
+async function triggerWhatsApp(collectionId) {
+  const r = await sendRetailerReceiptOnly(collectionId);
+
+  await sendAdminNotifyOnce({
+    retailerName: r.bill?.retailer || "N/A",
+    retailerPhone: r.retailer?.phone || "N/A",
+    retailerAddress:
+      [r.retailer?.address1, r.retailer?.address2].filter(Boolean).join(", ") ||
+      "N/A",
+    amount: r.amountFormatted,
+    billNumber: r.billNumber,
+    paymentMode: r.paymentModeLabel,
+    staffName: r.staffName,
+    date: r.collectionDate,
+  });
+
+  return { whatsappStatus: r.waStatus, retailerPhone: r.retailer?.phone || null };
 }
 
 // ── Helper function to filter payment details by payment mode ─────────────────
@@ -526,9 +572,40 @@ router.post(
 
       res.status(201).json({ paymentGroupId, collections: results });
 
-      // Auto-trigger WhatsApp for each bill paid (non-blocking)
-      createdCollections.forEach((c) => {
-        setImmediate(() => triggerWhatsApp(c._id).catch(() => {}));
+      // Auto-trigger WhatsApp in background: one receipt per bill to the
+      // retailer, but only ONE admin notification for the whole group.
+      setImmediate(async () => {
+        try {
+          const receiptResults = await Promise.all(
+            createdCollections.map((c) =>
+              sendRetailerReceiptOnly(c._id).catch(() => null),
+            ),
+          );
+          const first = receiptResults.find(Boolean);
+          if (first) {
+            const totalAmount = validatedAllocations
+              .reduce((sum, a) => sum + a.amount, 0)
+              .toFixed(2);
+            const combinedBillNumbers = validatedAllocations
+              .map((a) => a.bill.billNumber)
+              .join(", ");
+            await sendAdminNotifyOnce({
+              retailerName: first.bill?.retailer || "N/A",
+              retailerPhone: first.retailer?.phone || "N/A",
+              retailerAddress:
+                [first.retailer?.address1, first.retailer?.address2]
+                  .filter(Boolean)
+                  .join(", ") || "N/A",
+              amount: totalAmount,
+              billNumber: combinedBillNumbers,
+              paymentMode: first.paymentModeLabel,
+              staffName: first.staffName,
+              date: first.collectionDate,
+            });
+          }
+        } catch {
+          // best-effort background notification, ignore failures
+        }
       });
     } catch (err) {
       console.error("Split collection error:", err);
@@ -678,5 +755,46 @@ router.post("/:id/send-whatsapp", protect, async (req, res) => {
     });
   }
 });
+
+// ── Verification of a collection (admin, or staff with collections.verify permission) ──
+router.patch(
+  "/:id/verify",
+  protect,
+  checkPermission("collections", "verify"),
+  async (req, res) => {
+    try {
+      const { status } = req.body;
+      if (!["verified", "not_verified"].includes(status)) {
+        return res.status(400).json({
+          message: "Status must be 'verified' or 'not_verified'",
+        });
+      }
+
+      const collection = await Collection.findByIdAndUpdate(
+        req.params.id,
+        {
+          verificationStatus: status,
+          verifiedAt: new Date(),
+          verifiedBy: req.user._id,
+        },
+        { new: true },
+      )
+        .populate("bill", "billNumber retailer amount dueAmount billDate")
+        .populate("collectedBy", "name")
+        .populate("verifiedBy", "name");
+
+      if (!collection) {
+        return res.status(404).json({ message: "Collection not found" });
+      }
+
+      res.json(collection);
+    } catch (err) {
+      res.status(500).json({
+        message: "Failed to update verification status",
+        error: err.message,
+      });
+    }
+  },
+);
 
 module.exports = router;

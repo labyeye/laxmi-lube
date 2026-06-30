@@ -18,6 +18,7 @@ import {
   FaSort,
   FaTimes,
   FaUpload,
+  FaEdit,
 } from "react-icons/fa";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -69,6 +70,7 @@ const RetailerList = () => {
   const [modalError, setModalError] = useState("");
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
+  const [editingRetailerId, setEditingRetailerId] = useState(null);
   const fileInputRef = useRef(null);
 
   const fetchRetailers = async () => {
@@ -177,10 +179,28 @@ const RetailerList = () => {
     setModalMessage("");
     setModalError("");
     setImportFile(null);
+    setEditingRetailerId(null);
   };
 
   const handleAddNew = () => {
     resetModalState();
+    setModalTab("manual");
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (record) => {
+    resetModalState();
+    setForm({
+      name: record.name || "",
+      address1: record.address1 || "",
+      address2: record.address2 || "",
+      phone: record.phone || "",
+      assignedTo: record.assignedTo?._id || record.assignedTo || "",
+      dayAssigned: record.dayAssigned || "",
+      email: "",
+      password: "",
+    });
+    setEditingRetailerId(record._id);
     setModalTab("manual");
     setIsModalOpen(true);
   };
@@ -235,24 +255,34 @@ const RetailerList = () => {
         dayAssigned: form.dayAssigned || undefined,
       };
 
-      if (createLogin && form.email && form.password) {
+      if (!editingRetailerId && createLogin && form.email && form.password) {
         payload.email = form.email.trim();
         payload.password = form.password;
       }
 
-      await axios.post(`${API_BASE}/retailers`, payload, {
-        headers: getAuthHeaders(),
-      });
-      setModalMessage(
-        createLogin
-          ? "Retailer added with login credentials"
-          : "Retailer added successfully",
-      );
+      if (editingRetailerId) {
+        await axios.put(`${API_BASE}/retailers/${editingRetailerId}`, payload, {
+          headers: getAuthHeaders(),
+        });
+        setModalMessage("Retailer updated successfully");
+      } else {
+        await axios.post(`${API_BASE}/retailers`, payload, {
+          headers: getAuthHeaders(),
+        });
+        setModalMessage(
+          createLogin
+            ? "Retailer added with login credentials"
+            : "Retailer added successfully",
+        );
+      }
       await fetchRetailers();
       resetModalState();
       setIsModalOpen(false);
     } catch (err) {
-      setModalError(err.response?.data?.message || "Failed to add retailer");
+      setModalError(
+        err.response?.data?.message ||
+          `Failed to ${editingRetailerId ? "update" : "add"} retailer`,
+      );
     } finally {
       setSavingRetailer(false);
     }
@@ -369,6 +399,13 @@ const RetailerList = () => {
     const isActive = status === "ACTIVE";
     return (
       <RCard>
+        <CardEditBtn
+          type="button"
+          title="Edit retailer"
+          onClick={() => openEditModal(record)}
+        >
+          <FaEdit />
+        </CardEditBtn>
         <RCardAvatar>{initials}</RCardAvatar>
         <RCardName>{name}</RCardName>
         {address && <RCardSub>{address}</RCardSub>}
@@ -412,6 +449,15 @@ const RetailerList = () => {
           <RCardStatus active={status === "ACTIVE"} compact>
             {status}
           </RCardStatus>
+        </CCell>
+        <CCell>
+          <RowEditBtn
+            type="button"
+            title="Edit retailer"
+            onClick={() => openEditModal(record)}
+          >
+            <FaEdit />
+          </RowEditBtn>
         </CCell>
       </CRow>
     );
@@ -564,6 +610,7 @@ const RetailerList = () => {
                   <CTh>Day</CTh>
                   <CTh>Assigned To</CTh>
                   <CTh>Status</CTh>
+                  <CTh></CTh>
                 </tr>
               </CHead>
               <tbody>
@@ -599,6 +646,7 @@ const RetailerList = () => {
                   <CTh>Collection Day</CTh>
                   <CTh>Assigned To</CTh>
                   <CTh>Status</CTh>
+                  <CTh></CTh>
                 </tr>
               </CHead>
               <tbody>
@@ -614,6 +662,15 @@ const RetailerList = () => {
                         {r.status || "ACTIVE"}
                       </RCardStatus>
                     </CCell>
+                    <CCell>
+                      <RowEditBtn
+                        type="button"
+                        title="Edit retailer"
+                        onClick={() => openEditModal(r)}
+                      >
+                        <FaEdit />
+                      </RowEditBtn>
+                    </CCell>
                   </CRow>
                 ))}
               </tbody>
@@ -626,29 +683,35 @@ const RetailerList = () => {
             <ModalCard onClick={(e) => e.stopPropagation()}>
               <ModalHeader>
                 <h3>
-                  {modalTab === "manual" ? "Add Retailer" : "Import Retailers"}
+                  {modalTab === "manual"
+                    ? editingRetailerId
+                      ? "Edit Retailer"
+                      : "Add Retailer"
+                    : "Import Retailers"}
                 </h3>
                 <IconBtn type="button" onClick={closeModal}>
                   <FaTimes />
                 </IconBtn>
               </ModalHeader>
 
-              <ModalTabs>
-                <ModalTabButton
-                  type="button"
-                  active={modalTab === "manual"}
-                  onClick={() => setModalTab("manual")}
-                >
-                  Manual Entry
-                </ModalTabButton>
-                <ModalTabButton
-                  type="button"
-                  active={modalTab === "import"}
-                  onClick={() => setModalTab("import")}
-                >
-                  Excel Import
-                </ModalTabButton>
-              </ModalTabs>
+              {!editingRetailerId && (
+                <ModalTabs>
+                  <ModalTabButton
+                    type="button"
+                    active={modalTab === "manual"}
+                    onClick={() => setModalTab("manual")}
+                  >
+                    Manual Entry
+                  </ModalTabButton>
+                  <ModalTabButton
+                    type="button"
+                    active={modalTab === "import"}
+                    onClick={() => setModalTab("import")}
+                  >
+                    Excel Import
+                  </ModalTabButton>
+                </ModalTabs>
+              )}
 
               {modalMessage && <SuccessMsg>{modalMessage}</SuccessMsg>}
               {modalError && <ErrorMsg>{modalError}</ErrorMsg>}
@@ -754,19 +817,21 @@ const RetailerList = () => {
                       </Field>
                     </ModalGrid>
 
-                    <CheckboxRow>
-                      <input
-                        id="createLogin"
-                        type="checkbox"
-                        checked={createLogin}
-                        onChange={(e) => setCreateLogin(e.target.checked)}
-                      />
-                      <label htmlFor="createLogin">
-                        Create retailer login account
-                      </label>
-                    </CheckboxRow>
+                    {!editingRetailerId && (
+                      <CheckboxRow>
+                        <input
+                          id="createLogin"
+                          type="checkbox"
+                          checked={createLogin}
+                          onChange={(e) => setCreateLogin(e.target.checked)}
+                        />
+                        <label htmlFor="createLogin">
+                          Create retailer login account
+                        </label>
+                      </CheckboxRow>
+                    )}
 
-                    {createLogin && (
+                    {!editingRetailerId && createLogin && (
                       <ModalGrid>
                         <Field>
                           <label>Email *</label>
@@ -821,7 +886,11 @@ const RetailerList = () => {
                       Cancel
                     </SecondaryBtn>
                     <PrimaryBtn type="submit" disabled={savingRetailer}>
-                      {savingRetailer ? "Saving..." : "Save Retailer"}
+                      {savingRetailer
+                        ? "Saving..."
+                        : editingRetailerId
+                          ? "Update Retailer"
+                          : "Save Retailer"}
                     </PrimaryBtn>
                   </ModalFooter>
                 </form>
@@ -1125,6 +1194,7 @@ const CardsGrid = styled.div`
 `;
 
 const RCard = styled.div`
+  position: relative;
   background: var(--nb-white);
   border: 1px solid var(--nb-border);
   border-radius: var(--nb-radius);
@@ -1142,6 +1212,37 @@ const RCard = styled.div`
   &:hover {
     transform: translateY(-2px);
     box-shadow: var(--nb-shadow-lg);
+  }
+`;
+
+const CardEditBtn = styled.button`
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  background: var(--nb-muted);
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem;
+  cursor: pointer;
+  color: var(--nb-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  &:hover {
+    background: var(--nb-border);
+  }
+`;
+
+const RowEditBtn = styled.button`
+  background: none;
+  border: 1px solid var(--nb-border);
+  border-radius: 6px;
+  padding: 0.35rem 0.55rem;
+  cursor: pointer;
+  color: var(--nb-blue);
+  font-size: 0.85rem;
+  &:hover {
+    background: var(--nb-muted);
   }
 `;
 

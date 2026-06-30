@@ -12,7 +12,13 @@ const PermissionManager = ({ userId, currentPermissions, onUpdate }) => {
       delete: false,
       assign: false,
     },
-    collections: { view: true, create: true, edit: false, delete: false },
+    collections: {
+      view: true,
+      create: true,
+      edit: false,
+      delete: false,
+      verify: false,
+    },
     products: { view: true, create: false, edit: false, delete: false },
     retailers: { view: true, create: false, edit: false, delete: false },
     orders: {
@@ -52,7 +58,13 @@ const PermissionManager = ({ userId, currentPermissions, onUpdate }) => {
           delete: true,
           assign: true,
         },
-        collections: { view: true, create: true, edit: true, delete: true },
+        collections: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: true,
+          verify: true,
+        },
         products: { view: true, create: true, edit: true, delete: true },
         retailers: { view: true, create: true, edit: true, delete: true },
         orders: {
@@ -81,7 +93,13 @@ const PermissionManager = ({ userId, currentPermissions, onUpdate }) => {
           delete: false,
           assign: false,
         },
-        collections: { view: true, create: true, edit: false, delete: false },
+        collections: {
+      view: true,
+      create: true,
+      edit: false,
+      delete: false,
+      verify: false,
+    },
         products: { view: true, create: false, edit: false, delete: false },
         retailers: { view: true, create: false, edit: false, delete: false },
         orders: {
@@ -110,7 +128,13 @@ const PermissionManager = ({ userId, currentPermissions, onUpdate }) => {
           delete: false,
           assign: true,
         },
-        collections: { view: true, create: true, edit: true, delete: false },
+        collections: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: false,
+          verify: true,
+        },
         products: { view: true, create: true, edit: true, delete: false },
         retailers: { view: true, create: true, edit: true, delete: false },
         orders: {
@@ -139,7 +163,13 @@ const PermissionManager = ({ userId, currentPermissions, onUpdate }) => {
           delete: false,
           assign: false,
         },
-        collections: { view: true, create: false, edit: false, delete: false },
+        collections: {
+          view: true,
+          create: false,
+          edit: false,
+          delete: false,
+          verify: false,
+        },
         products: { view: true, create: false, edit: false, delete: false },
         retailers: { view: true, create: false, edit: false, delete: false },
         orders: {
@@ -151,6 +181,41 @@ const PermissionManager = ({ userId, currentPermissions, onUpdate }) => {
         },
         users: { view: false, create: false, edit: false, delete: false },
         reports: { view: true, export: false },
+        salary: { view: false, create: false, edit: false, delete: false },
+        advances: { view: false, create: false, edit: false, delete: false },
+        settings: { view: false, edit: false },
+      },
+    },
+    collectionVerifier: {
+      name: "Collection Verifier",
+      description: "Can only verify or reject staff collections",
+      permissions: {
+        dashboard: { view: true },
+        bills: {
+          view: true,
+          create: false,
+          edit: false,
+          delete: false,
+          assign: false,
+        },
+        collections: {
+          view: true,
+          create: false,
+          edit: false,
+          delete: false,
+          verify: true,
+        },
+        products: { view: false, create: false, edit: false, delete: false },
+        retailers: { view: true, create: false, edit: false, delete: false },
+        orders: {
+          view: false,
+          create: false,
+          edit: false,
+          delete: false,
+          approve: false,
+        },
+        users: { view: false, create: false, edit: false, delete: false },
+        reports: { view: false, export: false },
         salary: { view: false, create: false, edit: false, delete: false },
         advances: { view: false, create: false, edit: false, delete: false },
         settings: { view: false, edit: false },
@@ -168,7 +233,13 @@ const PermissionManager = ({ userId, currentPermissions, onUpdate }) => {
           delete: false,
           assign: false,
         },
-        collections: { view: true, create: true, edit: true, delete: false },
+        collections: {
+          view: true,
+          create: true,
+          edit: true,
+          delete: false,
+          verify: true,
+        },
         products: { view: true, create: false, edit: false, delete: false },
         retailers: { view: true, create: false, edit: false, delete: false },
         orders: {
@@ -209,6 +280,7 @@ const PermissionManager = ({ userId, currentPermissions, onUpdate }) => {
     assign: "Assign",
     approve: "Approve",
     export: "Export",
+    verify: "Verify Collections",
   };
 
   const handlePermissionChange = (module, action, value) => {

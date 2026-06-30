@@ -12,6 +12,7 @@ import {
   FaSearch,
   FaCalendarAlt,
   FaEye,
+  FaSearchPlus,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
@@ -31,6 +32,7 @@ const CollectionsHistory = () => {
   const [sendingWa, setSendingWa] = useState(null);
   const [waToast, setWaToast] = useState(null);
   const [viewCollection, setViewCollection] = useState(null);
+  const [zoomImage, setZoomImage] = useState(null);
   const navigate = useNavigate();
   const [staffInfo, setStaffInfo] = useState({
     name: "Loading...",
@@ -436,10 +438,21 @@ const CollectionsHistory = () => {
               {viewCollection.screenshotPath ? (
                 <SSSection>
                   <DetailLabel>Payment Screenshot</DetailLabel>
-                  <SSImage
-                    src={`https://backend.laxmilube.in/${viewCollection.screenshotPath.replace(/\\/g, "/")}`}
-                    alt="Payment screenshot"
-                  />
+                  <SSImageWrap
+                    onClick={() =>
+                      setZoomImage(
+                        `https://backend.laxmilube.in/${viewCollection.screenshotPath.replace(/\\/g, "/")}`,
+                      )
+                    }
+                  >
+                    <SSImage
+                      src={`https://backend.laxmilube.in/${viewCollection.screenshotPath.replace(/\\/g, "/")}`}
+                      alt="Payment screenshot"
+                    />
+                    <ZoomHint>
+                      <FaSearchPlus /> Click to zoom
+                    </ZoomHint>
+                  </SSImageWrap>
                 </SSSection>
               ) : (
                 <NoSS>No screenshot uploaded</NoSS>
@@ -447,6 +460,17 @@ const CollectionsHistory = () => {
             </ModalBody>
           </DetailModal>
         </ModalOverlay>
+      )}
+
+      {zoomImage && (
+        <ZoomOverlay onClick={() => setZoomImage(null)}>
+          <ZoomCloseBtn onClick={() => setZoomImage(null)}>×</ZoomCloseBtn>
+          <ZoomedImage
+            src={zoomImage}
+            alt="Payment screenshot zoomed"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </ZoomOverlay>
       )}
     </DashboardLayout>
   );
@@ -1043,6 +1067,73 @@ const SSImage = styled.img`
   object-fit: contain;
   border-radius: 8px;
   border: 1px solid var(--nb-border);
+`;
+
+const SSImageWrap = styled.div`
+  position: relative;
+  cursor: zoom-in;
+
+  &:hover > div {
+    opacity: 1;
+  }
+`;
+
+const ZoomHint = styled.div`
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+`;
+
+const ZoomOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  cursor: zoom-out;
+`;
+
+const ZoomedImage = styled.img`
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  cursor: default;
+`;
+
+const ZoomCloseBtn = styled.button`
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #fff;
+  font-size: 2rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
 `;
 
 const NoSS = styled.p`

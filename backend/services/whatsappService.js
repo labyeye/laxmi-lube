@@ -115,11 +115,15 @@ async function sendRetailerReceipt(
 /**
  * Send admin notification template.
  *
- * Meta template (collection_admin_notify) must be approved with:
- *   Body : "New collection recorded:\nRetailer: {{1}}\nAmount: {{2}}\nBill: {{3}}\nMode: {{4}}\nCollected by: {{5}}\nDate: {{6}}"
+ * Meta template (collection_admin_notify) must be approved with 8 body params:
+ *   Body : "New collection recorded:\nRetailer: {{1}}\nAddress: {{2}}\nPhone: {{3}}\nAmount: {{4}}\nBill: {{5}}\nMode: {{6}}\nCollected by: {{7}}\nDate: {{8}}"
+ * NOTE: if the template on Meta's side still only has 6 placeholders, sending
+ * 8 params will be rejected by the WhatsApp API — the template must be
+ * re-submitted for approval with the 2 extra {{2}} (address) / {{3}} (phone)
+ * placeholders before this will work end-to-end.
  *
  * @param {string} adminPhone - 10-digit admin phone number
- * @param {Object} params     - { retailerName, amount, billNumber, paymentMode, staffName, date }
+ * @param {Object} params     - { retailerName, amount, billNumber, paymentMode, staffName, date, retailerPhone, retailerAddress }
  */
 async function sendAdminNotification(adminPhone, params) {
   const to = `91${adminPhone}`;
@@ -136,6 +140,8 @@ async function sendAdminNotification(adminPhone, params) {
           type: "body",
           parameters: [
             { type: "text", text: params.retailerName },
+            { type: "text", text: params.retailerAddress || "N/A" },
+            { type: "text", text: params.retailerPhone || "N/A" },
             { type: "text", text: `₹${params.amount}` },
             { type: "text", text: params.billNumber },
             { type: "text", text: params.paymentMode },

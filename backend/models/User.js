@@ -34,6 +34,7 @@ const userSchema = new mongoose.Schema({
       create: { type: Boolean, default: true },
       edit: { type: Boolean, default: false },
       delete: { type: Boolean, default: false },
+      verify: { type: Boolean, default: false },
     },
     products: {
       view: { type: Boolean, default: true },
@@ -53,12 +54,6 @@ const userSchema = new mongoose.Schema({
       edit: { type: Boolean, default: false },
       delete: { type: Boolean, default: false },
       approve: { type: Boolean, default: false },
-    },
-    deliveries: {
-      view: { type: Boolean, default: true },
-      create: { type: Boolean, default: false },
-      edit: { type: Boolean, default: false },
-      delete: { type: Boolean, default: false },
     },
     users: {
       view: { type: Boolean, default: false },
