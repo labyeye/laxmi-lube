@@ -55,6 +55,7 @@ const BillAssignedToday = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [paymentRemarks, setPaymentRemarks] = useState("");
+  const [screenshotFile, setScreenshotFile] = useState(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [customerBills, setCustomerBills] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -241,23 +242,23 @@ const BillAssignedToday = () => {
     });
 
     try {
-      const collectionPayload = {
-        bill: selectedBill._id,
-        amountCollected: roundedAmount,
-        paymentMode,
-        remarks: paymentRemarks,
-        collectedOn: collectionDate,
-        paymentDetails:
-          paymentMode === "Cash"
-            ? {
-                receiptNumber: paymentDetails.receiptNumber || "Money Received",
-              }
-            : paymentDetails,
-      };
+      const pd =
+        paymentMode === "Cash"
+          ? { receiptNumber: paymentDetails.receiptNumber || "Money Received" }
+          : paymentDetails;
+
+      const formData = new FormData();
+      formData.append("bill", selectedBill._id);
+      formData.append("amountCollected", roundedAmount);
+      formData.append("paymentMode", paymentMode);
+      formData.append("remarks", paymentRemarks);
+      formData.append("collectedOn", collectionDate);
+      formData.append("paymentDetails", JSON.stringify(pd));
+      if (screenshotFile) formData.append("screenshot", screenshotFile);
 
       const saveRes = await axios.post(
         "https://backend.laxmilube.in/api/collections",
-        collectionPayload,
+        formData,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         },
@@ -393,6 +394,7 @@ const BillAssignedToday = () => {
     setPaymentAmount("");
     setPaymentMode("Cash");
     setPaymentRemarks("");
+    setScreenshotFile(null);
     setPaymentDetails({
       upiId: "",
       upiTransactionId: "",
@@ -451,6 +453,7 @@ const BillAssignedToday = () => {
     setPaymentAmount("");
     setPaymentMode("Cash");
     setPaymentRemarks("");
+    setScreenshotFile(null);
     setSubmitError("");
     setShowCollectionModal(true);
     fetchNextReceiptNumber();
@@ -1011,6 +1014,23 @@ const BillAssignedToday = () => {
                         placeholder="Add any additional notes..."
                         rows={3}
                       />
+                    </FormGroup>
+
+                    <FormGroup>
+                      <Label>Screenshot (Optional)</Label>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        required
+                        onChange={(e) => setScreenshotFile(e.target.files[0] || null)}
+                      />
+                      {screenshotFile && (
+                        <img
+                          src={URL.createObjectURL(screenshotFile)}
+                          alt="preview"
+                          style={{ marginTop: "0.5rem", maxWidth: "100%", maxHeight: "180px", borderRadius: "8px", objectFit: "contain" }}
+                        />
+                      )}
                     </FormGroup>
 
                     {submitError && <ErrorText>{submitError}</ErrorText>}

@@ -11,6 +11,7 @@ import {
   FaChevronRight,
   FaSearch,
   FaCalendarAlt,
+  FaEye,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
@@ -27,8 +28,9 @@ const CollectionsHistory = () => {
   const [activeSubmenu, setActiveSubmenu] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter] = useState("");
-  const [sendingWa, setSendingWa] = useState(null); // collectionId being sent
-  const [waToast, setWaToast] = useState(null); // { type: 'success'|'error', msg }
+  const [sendingWa, setSendingWa] = useState(null);
+  const [waToast, setWaToast] = useState(null);
+  const [viewCollection, setViewCollection] = useState(null);
   const navigate = useNavigate();
   const [staffInfo, setStaffInfo] = useState({
     name: "Loading...",
@@ -320,6 +322,7 @@ const CollectionsHistory = () => {
                   <TableHeaderCell>Collection Time</TableHeaderCell>
                   <TableHeaderCell>Remarks</TableHeaderCell>
                   <TableHeaderCell>WhatsApp</TableHeaderCell>
+                  <TableHeaderCell></TableHeaderCell>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -351,6 +354,11 @@ const CollectionsHistory = () => {
                         </ResendWaBtn>
                       </WaCellWrap>
                     </TableCell>
+                    <TableCell>
+                      <EyeBtn title="View details" onClick={() => setViewCollection(collection)}>
+                        <FaEye />
+                      </EyeBtn>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -363,6 +371,83 @@ const CollectionsHistory = () => {
           )}
         </ContentArea>
       </MainContent>
+
+      {viewCollection && (
+        <ModalOverlay onClick={() => setViewCollection(null)}>
+          <DetailModal onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <h3>Collection Details</h3>
+              <CloseBtn onClick={() => setViewCollection(null)}>×</CloseBtn>
+            </ModalHeader>
+            <ModalBody>
+              <DetailGrid>
+                <DetailRow>
+                  <DetailLabel>Bill #</DetailLabel>
+                  <DetailValue>#{viewCollection.bill?.billNumber}</DetailValue>
+                </DetailRow>
+                <DetailRow>
+                  <DetailLabel>Retailer</DetailLabel>
+                  <DetailValue>{viewCollection.bill?.retailer}</DetailValue>
+                </DetailRow>
+                <DetailRow>
+                  <DetailLabel>Amount</DetailLabel>
+                  <DetailValue>{formatCurrency(viewCollection.amountCollected)}</DetailValue>
+                </DetailRow>
+                <DetailRow>
+                  <DetailLabel>Payment Mode</DetailLabel>
+                  <DetailValue>
+                    <PaymentMode mode={viewCollection.paymentMode}>
+                      {viewCollection.paymentMode}
+                    </PaymentMode>
+                  </DetailValue>
+                </DetailRow>
+                <DetailRow>
+                  <DetailLabel>Collected On</DetailLabel>
+                  <DetailValue>{formatDate(viewCollection.collectedOn)}</DetailValue>
+                </DetailRow>
+                <DetailRow>
+                  <DetailLabel>Collected By</DetailLabel>
+                  <DetailValue>{viewCollection.collectedBy?.name || "-"}</DetailValue>
+                </DetailRow>
+                {viewCollection.remarks && (
+                  <DetailRow>
+                    <DetailLabel>Remarks</DetailLabel>
+                    <DetailValue>{viewCollection.remarks}</DetailValue>
+                  </DetailRow>
+                )}
+                {viewCollection.paymentDetails && Object.entries(viewCollection.paymentDetails).map(([k, v]) =>
+                  v ? (
+                    <DetailRow key={k}>
+                      <DetailLabel>{k}</DetailLabel>
+                      <DetailValue>{v}</DetailValue>
+                    </DetailRow>
+                  ) : null
+                )}
+                <DetailRow>
+                  <DetailLabel>WhatsApp</DetailLabel>
+                  <DetailValue>
+                    <WhatsAppBadge status={viewCollection.whatsappStatus}>
+                      {waLabel(viewCollection.whatsappStatus)}
+                    </WhatsAppBadge>
+                  </DetailValue>
+                </DetailRow>
+              </DetailGrid>
+
+              {viewCollection.screenshotPath ? (
+                <SSSection>
+                  <DetailLabel>Payment Screenshot</DetailLabel>
+                  <SSImage
+                    src={`https://backend.laxmilube.in/${viewCollection.screenshotPath.replace(/\\/g, "/")}`}
+                    alt="Payment screenshot"
+                  />
+                </SSSection>
+              ) : (
+                <NoSS>No screenshot uploaded</NoSS>
+              )}
+            </ModalBody>
+          </DetailModal>
+        </ModalOverlay>
+      )}
     </DashboardLayout>
   );
 };
@@ -859,6 +944,113 @@ const EmptyMessage = styled.p`
   font-size: 1rem;
   color: var(--nb-ink);
   margin: 20px 0;
+`;
+
+const EyeBtn = styled.button`
+  background: none;
+  border: 1px solid var(--nb-border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: var(--nb-blue);
+  font-size: 0.85rem;
+  transition: background 0.15s;
+  &:hover { background: var(--nb-muted); }
+`;
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+`;
+
+const DetailModal = styled.div`
+  background: var(--nb-white);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--nb-border);
+  h3 { margin: 0; font-size: 1rem; color: var(--nb-ink); }
+`;
+
+const CloseBtn = styled.button`
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--nb-ink);
+  line-height: 1;
+  padding: 0 4px;
+`;
+
+const ModalBody = styled.div`
+  padding: 1.25rem;
+`;
+
+const DetailGrid = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+`;
+
+const DetailRow = styled.div`
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+`;
+
+const DetailLabel = styled.span`
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b7280;
+  min-width: 120px;
+  text-transform: capitalize;
+`;
+
+const DetailValue = styled.span`
+  font-size: 0.875rem;
+  color: var(--nb-ink);
+  flex: 1;
+`;
+
+const SSSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-top: 1px solid var(--nb-border);
+  padding-top: 1rem;
+`;
+
+const SSImage = styled.img`
+  width: 100%;
+  max-height: 400px;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid var(--nb-border);
+`;
+
+const NoSS = styled.p`
+  font-size: 0.8rem;
+  color: #9ca3af;
+  text-align: center;
+  padding: 1rem 0;
+  border-top: 1px solid var(--nb-border);
 `;
 
 export default CollectionsHistory;

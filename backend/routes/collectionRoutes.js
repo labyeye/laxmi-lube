@@ -1,5 +1,8 @@
 const express = require("express");
 const router = express.Router();
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 const Collection = require("../models/Collection");
 const Bill = require("../models/Bill");
 const Retailer = require("../models/Retailer");
@@ -11,6 +14,26 @@ const {
   sendRetailerReceipt,
   sendAdminNotification,
 } = require("../services/whatsappService");
+
+const screenshotStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = "uploads/screenshots";
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `ss_${Date.now()}${ext}`);
+  },
+});
+const uploadScreenshot = multer({
+  storage: screenshotStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) cb(null, true);
+    else cb(new Error("Only image files allowed"));
+  },
+});
 
 // ── Shared WhatsApp trigger (used by auto-send and manual endpoint) ───────────
 const PAYMENT_MODE_LABELS = {
@@ -257,7 +280,7 @@ router.get("/next-receipt-number", protect, async (req, res) => {
 });
 
 // Create a new collection
-router.post("/", protect, async (req, res) => {
+router.post("/", protect, uploadScreenshot.single("screenshot"), async (req, res) => {
   try {
     const {
       bill,
@@ -267,6 +290,9 @@ router.post("/", protect, async (req, res) => {
       paymentDetails,
       collectedOn,
     } = req.body;
+
+    const parsedPaymentDetails =
+      typeof paymentDetails === "string" ? JSON.parse(paymentDetails) : paymentDetails;
 
     // Validate required fields
     if (!bill || !amountCollected || !paymentMode || !collectedOn) {
@@ -308,18 +334,18 @@ router.post("/", protect, async (req, res) => {
     let validationError;
     switch (paymentMode) {
       case "upi":
-        if (!paymentDetails?.upiId) {
+        if (!parsedPaymentDetails?.upiId) {
           validationError = "UPI ID is required for UPI payments";
         }
         break;
       case "cheque":
-        if (!paymentDetails?.chequeNumber || !paymentDetails?.bankName) {
+        if (!parsedPaymentDetails?.chequeNumber || !parsedPaymentDetails?.bankName) {
           validationError =
             "Cheque number and bank name are required for cheque payments";
         }
         break;
       case "bank_transfer":
-        if (!paymentDetails?.transactionId || !paymentDetails?.bankName) {
+        if (!parsedPaymentDetails?.transactionId || !parsedPaymentDetails?.bankName) {
           validationError =
             "Transaction ID and bank name are required for bank transfers";
         }
@@ -337,11 +363,12 @@ router.post("/", protect, async (req, res) => {
       paymentMode,
       paymentDetails:
         paymentMode === "Cash"
-          ? { receiptNumber: paymentDetails?.receiptNumber || "Money Received" }
-          : paymentDetails,
+          ? { receiptNumber: parsedPaymentDetails?.receiptNumber || "Money Received" }
+          : parsedPaymentDetails,
       collectedBy: req.user._id,
       remarks,
-      collectedOn: new Date(collectedOn), // Use the provided date
+      collectedOn: new Date(collectedOn),
+      screenshotPath: req.file ? req.file.path : null,
     });
 
     await collection.save();

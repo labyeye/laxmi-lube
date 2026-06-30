@@ -47,6 +47,7 @@ const collectionSchema = new mongoose.Schema(
     whatsappSentAt: { type: Date },
     whatsappConfirmedAt: { type: Date },
     whatsappConfirmedBy: { type: String },
+    screenshotPath: { type: String, default: null },
   },
   {
     timestamps: true,
