@@ -27,6 +27,7 @@ import {
   FaIdBadge,
   FaHome,
   FaWhatsapp,
+  FaBalanceScale,
 } from "react-icons/fa";
 import logo from "../image/logo.png";
 const Layout = ({ children }) => {
@@ -355,6 +356,14 @@ const Layout = ({ children }) => {
               <FaFileAlt />
               <span>Collection Reports</span>
               <Link to="/admin/reports" />
+            </NavItem>
+            <NavItem
+              active={location.pathname === "/admin/reconciliation"}
+              onClick={closeSidebar}
+            >
+              <FaBalanceScale />
+              <span>Collection Reconciliation</span>
+              <Link to="/admin/reconciliation" />
             </NavItem>
           </DropdownMenu>
 

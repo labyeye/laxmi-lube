@@ -35,6 +35,7 @@ import RetailerOrders from "./pages/RetailerOrders";
 import RetailerSettings from "./pages/RetailerSettings";
 import Settings from "./pages/Settings";
 import TallyReportPage from "./pages/TallyReportPage";
+import ReconciliationPage from "./pages/ReconciliationPage";
 import WhatsAppLogsPage from "./pages/WhatsAppLogsPage";
 
 // Helper: parse user/token from localStorage safely
@@ -299,6 +300,16 @@ const App = () => {
             element={
               user?.role === "admin" ? (
                 <TallyReportPage />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+          <Route
+            path="/admin/reconciliation"
+            element={
+              user?.role === "admin" ? (
+                <ReconciliationPage />
               ) : (
                 <Navigate to="/login" />
               )
