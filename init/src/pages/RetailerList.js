@@ -1457,30 +1457,4 @@ const Hint = styled.div`
   border-radius: 8px;
 `;
 
-const ProgressWrap = styled.div`
-  margin: 0.75rem 0;
-`;
-
-const ProgressTop = styled.div`
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.8rem;
-  color: var(--nb-ink);
-  margin-bottom: 0.35rem;
-`;
-
-const ProgressBar = styled.div`
-  width: 100%;
-  height: 8px;
-  background: var(--nb-muted);
-  border-radius: 999px;
-  overflow: hidden;
-`;
-
-const ProgressFill = styled.div`
-  height: 100%;
-  background: var(--nb-blue);
-  transition: width 0.2s ease;
-`;
-
 export default RetailerList;
