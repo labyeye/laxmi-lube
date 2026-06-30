@@ -41,6 +41,8 @@ const BillsPage = () => {
     status: "",
   });
   const [searchTerm, setSearchTerm] = useState("");
+  const [retailerFilter, setRetailerFilter] = useState("");
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -386,16 +388,69 @@ const BillsPage = () => {
     }
   };
 
-  const filteredBills = bills.filter(
-    (bill) =>
+  const uniqueRetailers = [...new Set(bills.map((b) => b.retailer))].sort();
+
+  const filteredBills = bills.filter((bill) => {
+    const matchesSearch =
       bill.billNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       bill.retailer.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (bill.assignedTo &&
         staff
           .find((s) => s._id === bill.assignedTo)
           ?.name.toLowerCase()
-          .includes(searchTerm.toLowerCase())),
-  );
+          .includes(searchTerm.toLowerCase()));
+    const matchesRetailer = !retailerFilter || bill.retailer === retailerFilter;
+    return matchesSearch && matchesRetailer;
+  });
+
+  const allSelected =
+    filteredBills.length > 0 &&
+    filteredBills.every((b) => selectedIds.includes(b._id));
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds((prev) =>
+        prev.filter((id) => !filteredBills.some((b) => b._id === id)),
+      );
+    } else {
+      setSelectedIds((prev) => [
+        ...new Set([...prev, ...filteredBills.map((b) => b._id)]),
+      ]);
+    }
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (
+      !window.confirm(
+        `Delete ${selectedIds.length} selected bill${selectedIds.length > 1 ? "s" : ""}?`,
+      )
+    )
+      return;
+    const token = localStorage.getItem("token");
+    try {
+      await Promise.all(
+        selectedIds.map((id) =>
+          axios.delete(`https://backend.laxmilube.in/api/bills/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ),
+      );
+      setBills((prev) => prev.filter((b) => !selectedIds.includes(b._id)));
+      setSelectedIds([]);
+      setMessage(`${selectedIds.length} bill${selectedIds.length > 1 ? "s" : ""} deleted`);
+      setTimeout(() => setMessage(""), 5000);
+    } catch {
+      setError("Failed to delete selected bills.");
+      setTimeout(() => setError(""), 5000);
+    }
+  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {
@@ -417,6 +472,15 @@ const BillsPage = () => {
             <AddBillButton onClick={openAddModal}>
               <FaPlus /> Add Bill
             </AddBillButton>
+            <RetailerSelect
+              value={retailerFilter}
+              onChange={(e) => { setRetailerFilter(e.target.value); setSelectedIds([]); }}
+            >
+              <option value="">All Retailers</option>
+              {uniqueRetailers.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </RetailerSelect>
             <SearchBox>
               <FaSearch />
               <input
@@ -426,6 +490,11 @@ const BillsPage = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </SearchBox>
+            {selectedIds.length > 0 && (
+              <BulkDeleteButton onClick={handleBulkDelete}>
+                <FaTrash /> Delete ({selectedIds.length})
+              </BulkDeleteButton>
+            )}
           </HeaderActions>
         </Header>
 
@@ -443,6 +512,9 @@ const BillsPage = () => {
               <BillsTable>
                 <thead>
                   <tr>
+                    <th style={{ width: "36px" }}>
+                      <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} />
+                    </th>
                     <th>Bill #</th>
                     <th>Retailer</th>
                     <th>Amount</th>
@@ -456,6 +528,13 @@ const BillsPage = () => {
                   {filteredBills.length > 0 ? (
                     filteredBills.map((bill) => (
                       <tr key={bill._id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(bill._id)}
+                            onChange={() => toggleSelect(bill._id)}
+                          />
+                        </td>
                         <td>{bill.billNumber}</td>
                         <td>{bill.retailer}</td>
                         <td>{formatCurrency(bill.amount)}</td>
@@ -489,7 +568,7 @@ const BillsPage = () => {
                   ) : (
                     <tr>
                       <td
-                        colSpan="7"
+                        colSpan="8"
                         style={{ textAlign: "center", padding: "20px" }}
                       >
                         No bills found matching your search
@@ -793,6 +872,37 @@ const Title = styled.div`
     h1 {
       font-size: 1.8rem;
     }
+  }
+`;
+
+const RetailerSelect = styled.select`
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--nb-border);
+  border-radius: 8px;
+  background: var(--nb-white);
+  font-size: 0.9rem;
+  color: var(--nb-ink);
+  box-shadow: var(--nb-shadow-md);
+  cursor: pointer;
+  max-width: 200px;
+`;
+
+const BulkDeleteButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  background-color: #b91c1c;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background-color: #991b1b;
   }
 `;
 
