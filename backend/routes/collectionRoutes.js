@@ -620,8 +620,12 @@ router.post(
 router.get("/", protect, async (req, res) => {
   try {
     const { search, startDate, endDate } = req.query;
-    // Admins see all collections; staff only see their own
-    const filter = req.user.role === "admin" ? {} : { collectedBy: req.user._id };
+    // Admins and staff with collections.verify permission see all collections
+    // (they need to review everyone's work); other staff only see their own.
+    const canSeeAll =
+      req.user.role === "admin" ||
+      req.user.permissions?.collections?.verify === true;
+    const filter = canSeeAll ? {} : { collectedBy: req.user._id };
 
     if (search) {
       const bills = await Bill.find({
