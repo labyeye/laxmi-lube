@@ -11,7 +11,6 @@ const RetailerSchema = new mongoose.Schema(
     },
     address1: {
       type: String,
-      required: [true, "Address line 1 is required"],
       trim: true,
     },
     address2: {

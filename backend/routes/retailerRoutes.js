@@ -142,9 +142,9 @@ router.post(
           h.includes("contact"),
       );
 
-      if (nameCol === -1 || addr1Col === -1) {
+      if (nameCol === -1) {
         cleanup();
-        return res.status(400).json({ message: "Required columns not found" });
+        return res.status(400).json({ message: "Retailer Name column not found" });
       }
 
       // ── Load all staff once for assignedTo lookup ──────────────────────────
@@ -161,13 +161,13 @@ router.post(
 
       for (const [index, row] of jsonData.entries()) {
         if (index === 0) continue;
-        if (!row[nameCol] && !row[addr1Col]) continue;
+        if (!row[nameCol]) continue;
 
         const name = row[nameCol]?.trim();
-        const address1 = row[addr1Col]?.trim();
+        const address1 = addr1Col !== -1 ? row[addr1Col]?.trim() : "";
 
-        if (!name || !address1) {
-          errors.push(`Row ${index + 1}: Missing required fields`);
+        if (!name) {
+          errors.push(`Row ${index + 1}: Missing retailer name`);
           continue;
         }
 

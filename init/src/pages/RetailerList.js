@@ -847,7 +847,7 @@ const RetailerList = () => {
                     )}
 
                     <Hint>
-                      Required: Retailer Name, Address 1. Optional: Address 2,
+                      Required: Retailer Name. Optional: Address 1, Address 2,
                       Assigned To, Day Assigned, Phone for WhatsApp.
                     </Hint>
                   </ModalBody>
