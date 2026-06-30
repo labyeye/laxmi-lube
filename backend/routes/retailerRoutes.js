@@ -139,6 +139,13 @@ router.post(
       const assignedToCol = lowerHeaders.findIndex(
         (h) => h.includes("assigned to") || h.includes("assignedto"),
       );
+      const phoneCol = lowerHeaders.findIndex(
+        (h) =>
+          h.includes("phone") ||
+          h.includes("mobile") ||
+          h.includes("whatsapp") ||
+          h.includes("contact"),
+      );
 
       if (nameCol === -1 || addr1Col === -1) {
         return res.status(400).json({ message: "Required columns not found" });
@@ -206,6 +213,25 @@ router.post(
             continue;
           }
 
+          let phone = null;
+          if (phoneCol !== -1 && row[phoneCol]) {
+            // Strip non-digits and a leading country code (e.g. 91) to get a 10-digit number
+            const digits = String(row[phoneCol]).replace(/\D/g, "");
+            const tenDigit =
+              digits.length === 12 && digits.startsWith("91")
+                ? digits.slice(2)
+                : digits;
+            if (/^[6-9]\d{9}$/.test(tenDigit)) {
+              phone = tenDigit;
+            } else {
+              errors.push(
+                `Row ${
+                  index + 1
+                }: Invalid phone number "${row[phoneCol]}" for "${name}" - skipped phone field`,
+              );
+            }
+          }
+
           // Create and save new retailer
           const retailer = new Retailer({
             name,
@@ -213,6 +239,7 @@ router.post(
             address2,
             dayAssigned: processedDayAssigned,
             assignedTo,
+            phone: phone || undefined,
             createdBy: req.user._id,
           });
 
