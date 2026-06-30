@@ -67,6 +67,9 @@ const BillAssignedToday = () => {
   const [standalonePreviewUrl, setStandalonePreviewUrl] = useState(null);
   const [pdfError, setPdfError] = useState("");
   const [customerSearch, setCustomerSearch] = useState("");
+  const [totalCollectAmount, setTotalCollectAmount] = useState("");
+  const [allocations, setAllocations] = useState([]); // [{ billId, billNumber, dueAmount, amount }]
+  const [splitConfirmed, setSplitConfirmed] = useState(false);
   const BANK_LIST = [
     "ALLAHABAD BANK",
     "ANDHRA BANK",
@@ -213,6 +216,148 @@ const BillAssignedToday = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDay]);
   const imageWidth = window.innerWidth < 768 ? "80%" : "50%";
+
+  const dueBillsForCustomer = selectedCustomer
+    ? bills.filter((b) => b.retailer === selectedCustomer && b.dueAmount > 0)
+    : [];
+  const isSplitMode = dueBillsForCustomer.length > 1;
+
+  // Auto-fill allocations across due bills, smallest due first
+  const autoSplitAllocations = (totalStr, dueBills) => {
+    const total = parseFloat(totalStr);
+    const sorted = [...dueBills].sort((a, b) => a.dueAmount - b.dueAmount);
+    let remaining = isNaN(total) ? 0 : total;
+    return sorted.map((b) => {
+      const alloc = Math.max(0, Math.min(remaining, b.dueAmount));
+      remaining = Math.round((remaining - alloc) * 100) / 100;
+      return {
+        billId: b._id,
+        billNumber: b.billNumber,
+        dueAmount: b.dueAmount,
+        amount: alloc > 0 ? alloc.toFixed(2) : "",
+      };
+    });
+  };
+
+  const handleTotalAmountChange = (value) => {
+    if (!(/^\d*\.?\d{0,2}$/.test(value) || value === "")) return;
+    setTotalCollectAmount(value);
+    setAllocations(autoSplitAllocations(value, dueBillsForCustomer));
+  };
+
+  const handleAllocationChange = (billId, value) => {
+    if (!(/^\d*\.?\d{0,2}$/.test(value) || value === "")) return;
+    setAllocations((prev) =>
+      prev.map((a) => (a.billId === billId ? { ...a, amount: value } : a)),
+    );
+  };
+
+  const allocatedSum = allocations.reduce(
+    (sum, a) => sum + (parseFloat(a.amount) || 0),
+    0,
+  );
+  const remainingToAllocate =
+    Math.round(
+      ((parseFloat(totalCollectAmount) || 0) - allocatedSum) * 100,
+    ) / 100;
+
+  const handleSplitCollectionSubmit = async () => {
+    if (remainingToAllocate !== 0 || !(parseFloat(totalCollectAmount) > 0)) {
+      setSubmitError("Allocated amount must exactly match the total entered");
+      return;
+    }
+    const finalAllocations = allocations.filter(
+      (a) => parseFloat(a.amount) > 0,
+    );
+    if (finalAllocations.length === 0) {
+      setSubmitError("Allocate the amount to at least one bill");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError("");
+    setWaProgress({
+      step1: "loading",
+      step2: "done",
+      result: null,
+      collectionId: null,
+    });
+
+    try {
+      const pd =
+        paymentMode === "Cash"
+          ? { receiptNumber: paymentDetails.receiptNumber || "Money Received" }
+          : paymentDetails;
+
+      const formData = new FormData();
+      formData.append(
+        "allocations",
+        JSON.stringify(
+          finalAllocations.map((a) => ({
+            billId: a.billId,
+            amount: a.amount,
+          })),
+        ),
+      );
+      formData.append("paymentMode", paymentMode);
+      formData.append("remarks", paymentRemarks);
+      formData.append("collectedOn", collectionDate);
+      formData.append("paymentDetails", JSON.stringify(pd));
+      if (screenshotFile) formData.append("screenshot", screenshotFile);
+
+      await axios.post(
+        "https://backend.laxmilube.in/api/collections/split",
+        formData,
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        },
+      );
+
+      setWaProgress({
+        step1: "done",
+        step2: "done",
+        result: "success",
+        message: `Payment adjusted across ${finalAllocations.length} bills`,
+        collectionId: null,
+      });
+
+      const d = new Date(collectionDate);
+      const dd = String(d.getDate()).padStart(2, "0");
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const yyyy = String(d.getFullYear());
+      setLastCollection({
+        rawDate: `${dd}/${mm}/${yyyy}`,
+        retailerName: selectedCustomer,
+        billNumber: finalAllocations.map((a) => a.billNumber).join(", "),
+        amount: parseFloat(totalCollectAmount),
+        paymentMode,
+        collectedBy: staffInfo.name,
+        remarks: paymentRemarks,
+        receiptNumber: paymentDetails.receiptNumber,
+        upiId: paymentDetails.upiId,
+        transactionId:
+          paymentDetails.upiTransactionId || paymentDetails.bankTransactionId,
+        chequeNumber: paymentDetails.chequeNumber,
+        chequeDate: paymentDetails.chequeNumber
+          ? `${dd}/${mm}/${yyyy}`
+          : undefined,
+        bankName: paymentDetails.bankName,
+        isSplit: true,
+        allocations: finalAllocations,
+      });
+
+      setCollectionSuccess(true);
+      await fetchBillsAssignedToday();
+    } catch (err) {
+      console.error("Split collection save error:", err);
+      setWaProgress(null);
+      setSubmitError(
+        err.response?.data?.message || "Failed to record collection",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleCollectionSubmit = async () => {
     const paidAmount = parseFloat(paymentAmount);
@@ -395,6 +540,9 @@ const BillAssignedToday = () => {
     setPaymentMode("Cash");
     setPaymentRemarks("");
     setScreenshotFile(null);
+    setTotalCollectAmount("");
+    setAllocations([]);
+    setSplitConfirmed(false);
     setPaymentDetails({
       upiId: "",
       upiTransactionId: "",
@@ -454,6 +602,9 @@ const BillAssignedToday = () => {
     setPaymentMode("Cash");
     setPaymentRemarks("");
     setScreenshotFile(null);
+    setTotalCollectAmount("");
+    setAllocations([]);
+    setSplitConfirmed(false);
     setSubmitError("");
     setShowCollectionModal(true);
     fetchNextReceiptNumber();
@@ -775,8 +926,94 @@ const BillAssignedToday = () => {
                         ))}
                     </CustomerBillsContainer>
                   </div>
-                ) : !selectedBill ? (
-                  // Step 2: Select Bill
+                ) : isSplitMode && !splitConfirmed ? (
+                  // Step 2a: Adjust amount across multiple bills
+                  <div>
+                    <ModalSubtitle>
+                      Adjust Amount for {selectedCustomer}
+                    </ModalSubtitle>
+                    <ButtonGroup>
+                      <BackButton
+                        onClick={() => {
+                          setSelectedCustomer(null);
+                          setTotalCollectAmount("");
+                          setAllocations([]);
+                        }}
+                      >
+                        Back to Customer Selection
+                      </BackButton>
+                    </ButtonGroup>
+
+                    <FormGroup>
+                      <Label>Total Amount Collected</Label>
+                      <Input
+                        type="text"
+                        value={totalCollectAmount}
+                        onChange={(e) =>
+                          handleTotalAmountChange(e.target.value)
+                        }
+                        placeholder="0.00"
+                        autoFocus
+                      />
+                    </FormGroup>
+
+                    <ModalSubtitle style={{ fontSize: "0.95rem" }}>
+                      Allocate across {dueBillsForCustomer.length} due bills
+                    </ModalSubtitle>
+                    {[...allocations]
+                      .sort((a, b) => a.dueAmount - b.dueAmount)
+                      .map((a) => (
+                        <AllocationRow key={a.billId}>
+                          <div>
+                            <strong>Bill #{a.billNumber}</strong>
+                            <div>Due: {formatCurrency(a.dueAmount)}</div>
+                          </div>
+                          <Input
+                            type="text"
+                            value={a.amount}
+                            onChange={(e) =>
+                              handleAllocationChange(a.billId, e.target.value)
+                            }
+                            placeholder="0.00"
+                            style={{ maxWidth: "120px" }}
+                          />
+                        </AllocationRow>
+                      ))}
+
+                    <AllocationSummary
+                      balanced={remainingToAllocate === 0}
+                    >
+                      Remaining to allocate: {formatCurrency(remainingToAllocate)}
+                    </AllocationSummary>
+
+                    {submitError && <ErrorText>{submitError}</ErrorText>}
+
+                    <ButtonGroup>
+                      <SubmitButton
+                        onClick={() => {
+                          if (
+                            remainingToAllocate !== 0 ||
+                            !(parseFloat(totalCollectAmount) > 0)
+                          ) {
+                            setSubmitError(
+                              "Allocated amount must exactly match the total entered",
+                            );
+                            return;
+                          }
+                          setSubmitError("");
+                          setSplitConfirmed(true);
+                        }}
+                        disabled={
+                          remainingToAllocate !== 0 ||
+                          !(parseFloat(totalCollectAmount) > 0)
+                        }
+                      >
+                        Continue
+                      </SubmitButton>
+                    </ButtonGroup>
+                  </div>
+                ) : !isSplitMode && !selectedBill ? (
+                  // Step 2b: Select a single bill
                   <div>
                     <ModalSubtitle>
                       Select Bill for {selectedCustomer}
@@ -814,18 +1051,37 @@ const BillAssignedToday = () => {
                 ) : (
                   // Step 3: Payment Details
                   <>
-                    <SelectedBillInfo>
-                      <div>
-                        <strong>Bill #:</strong> {selectedBill.billNumber}
-                      </div>
-                      <div>
-                        <strong>Retailer:</strong> {selectedBill.retailer}
-                      </div>
-                      <div>
-                        <strong>Due Amount:</strong>{" "}
-                        {formatCurrency(selectedBill.dueAmount.toFixed(2))}
-                      </div>
-                    </SelectedBillInfo>
+                    {isSplitMode ? (
+                      <SelectedBillInfo>
+                        <div>
+                          <strong>Retailer:</strong> {selectedCustomer}
+                        </div>
+                        <div>
+                          <strong>Total Amount:</strong>{" "}
+                          {formatCurrency(totalCollectAmount)}
+                        </div>
+                        <div>
+                          <strong>Adjusted Across:</strong>{" "}
+                          {allocations
+                            .filter((a) => parseFloat(a.amount) > 0)
+                            .map((a) => `#${a.billNumber} (${formatCurrency(a.amount)})`)
+                            .join(", ")}
+                        </div>
+                      </SelectedBillInfo>
+                    ) : (
+                      <SelectedBillInfo>
+                        <div>
+                          <strong>Bill #:</strong> {selectedBill.billNumber}
+                        </div>
+                        <div>
+                          <strong>Retailer:</strong> {selectedBill.retailer}
+                        </div>
+                        <div>
+                          <strong>Due Amount:</strong>{" "}
+                          {formatCurrency(selectedBill.dueAmount.toFixed(2))}
+                        </div>
+                      </SelectedBillInfo>
+                    )}
                     <FormGroup>
                       <Label>Collection Date</Label>
                       <Input
@@ -836,33 +1092,35 @@ const BillAssignedToday = () => {
                       />
                     </FormGroup>
 
-                    <FormGroup>
-                      <Label>Amount Paid</Label>
-                      <AmountInputContainer>
-                        <Input
-                          type="number"
-                          value={paymentAmount}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (/^\d*\.?\d{0,2}$/.test(value) || value === "") {
-                              setPaymentAmount(value);
+                    {!isSplitMode && (
+                      <FormGroup>
+                        <Label>Amount Paid</Label>
+                        <AmountInputContainer>
+                          <Input
+                            type="number"
+                            value={paymentAmount}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (/^\d*\.?\d{0,2}$/.test(value) || value === "") {
+                                setPaymentAmount(value);
+                              }
+                            }}
+                            placeholder="0.00"
+                            step="0.01"
+                            min="0.01"
+                            max={selectedBill?.dueAmount}
+                          />
+                          <MaxButton
+                            type="button"
+                            onClick={() =>
+                              setPaymentAmount(selectedBill?.dueAmount.toFixed(2))
                             }
-                          }}
-                          placeholder="0.00"
-                          step="0.01"
-                          min="0.01"
-                          max={selectedBill?.dueAmount}
-                        />
-                        <MaxButton
-                          type="button"
-                          onClick={() =>
-                            setPaymentAmount(selectedBill?.dueAmount.toFixed(2))
-                          }
-                        >
-                          All Dues
-                        </MaxButton>
-                      </AmountInputContainer>
-                    </FormGroup>
+                          >
+                            All Dues
+                          </MaxButton>
+                        </AmountInputContainer>
+                      </FormGroup>
+                    )}
 
                     <FormGroup>
                       <Label>Payment Mode</Label>
@@ -1038,16 +1296,27 @@ const BillAssignedToday = () => {
                     <ButtonGroup>
                       <BackButton
                         onClick={() => {
-                          setSelectedBill(null);
-                          setPaymentAmount("");
+                          if (isSplitMode) {
+                            setSplitConfirmed(false);
+                          } else {
+                            setSelectedBill(null);
+                            setPaymentAmount("");
+                          }
                           setSubmitError("");
                         }}
                       >
-                        Back to Bill Selection
+                        {isSplitMode ? "Back to Adjustment" : "Back to Bill Selection"}
                       </BackButton>
                       <SubmitButton
-                        onClick={handleCollectionSubmit}
-                        disabled={isSubmitting || !paymentAmount}
+                        onClick={
+                          isSplitMode
+                            ? handleSplitCollectionSubmit
+                            : handleCollectionSubmit
+                        }
+                        disabled={
+                          isSubmitting ||
+                          (isSplitMode ? !totalCollectAmount : !paymentAmount)
+                        }
                       >
                         {isSubmitting ? "Processing..." : "Submit Collection"}
                       </SubmitButton>
@@ -1774,6 +2043,31 @@ const SelectedBillInfo = styled.div`
     color: var(--nb-orange);
     font-weight: 500;
   }
+`;
+
+const AllocationRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--nb-border);
+  border-radius: 6px;
+  margin-bottom: 10px;
+
+  & > div:first-child {
+    font-size: 0.9rem;
+  }
+`;
+
+const AllocationSummary = styled.div`
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  margin: 10px 0 16px;
+  background-color: ${(props) =>
+    props.balanced ? "#dcfce7" : "var(--nb-muted)"};
+  color: ${(props) => (props.balanced ? "#15803d" : "var(--nb-orange)")};
 `;
 
 const Label = styled.label`

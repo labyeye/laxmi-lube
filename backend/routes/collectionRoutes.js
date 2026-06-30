@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const mongoose = require("mongoose");
 const Collection = require("../models/Collection");
 const Bill = require("../models/Bill");
 const Retailer = require("../models/Retailer");
@@ -397,6 +398,147 @@ router.post("/", protect, uploadScreenshot.single("screenshot"), async (req, res
     });
   }
 });
+
+// Create a collection split across multiple bills of the same retailer
+router.post(
+  "/split",
+  protect,
+  uploadScreenshot.single("screenshot"),
+  async (req, res) => {
+    try {
+      const { allocations, paymentMode, remarks, paymentDetails, collectedOn } =
+        req.body;
+
+      const parsedAllocations =
+        typeof allocations === "string" ? JSON.parse(allocations) : allocations;
+      const parsedPaymentDetails =
+        typeof paymentDetails === "string"
+          ? JSON.parse(paymentDetails)
+          : paymentDetails;
+
+      if (
+        !Array.isArray(parsedAllocations) ||
+        parsedAllocations.length === 0 ||
+        !paymentMode ||
+        !collectedOn
+      ) {
+        return res.status(400).json({
+          message:
+            "Allocations, payment mode and collection date are required",
+        });
+      }
+
+      // Validate payment details based on payment mode
+      let validationError;
+      switch (paymentMode) {
+        case "upi":
+          if (!parsedPaymentDetails?.upiId) {
+            validationError = "UPI ID is required for UPI payments";
+          }
+          break;
+        case "cheque":
+          if (
+            !parsedPaymentDetails?.chequeNumber ||
+            !parsedPaymentDetails?.bankName
+          ) {
+            validationError =
+              "Cheque number and bank name are required for cheque payments";
+          }
+          break;
+        case "bank_transfer":
+          if (
+            !parsedPaymentDetails?.transactionId ||
+            !parsedPaymentDetails?.bankName
+          ) {
+            validationError =
+              "Transaction ID and bank name are required for bank transfers";
+          }
+          break;
+      }
+      if (validationError) {
+        return res.status(400).json({ message: validationError });
+      }
+
+      // Validate each allocation against its bill's current due amount
+      const validatedAllocations = [];
+      for (const alloc of parsedAllocations) {
+        const amount = parseFloat(alloc.amount);
+        if (!alloc.billId || isNaN(amount) || amount <= 0) {
+          return res.status(400).json({
+            message: "Each allocation needs a valid bill and a positive amount",
+          });
+        }
+        if (!/^\d+(\.\d{1,2})?$/.test(String(alloc.amount))) {
+          return res.status(400).json({
+            message: "Amounts must have up to 2 decimal places",
+          });
+        }
+
+        const bill = await Bill.findById(alloc.billId);
+        if (!bill) {
+          return res
+            .status(404)
+            .json({ message: `Bill ${alloc.billId} not found` });
+        }
+        if (amount > bill.dueAmount) {
+          return res.status(400).json({
+            message: `Amount for bill ${bill.billNumber} cannot exceed its due of ${bill.dueAmount.toFixed(2)}`,
+          });
+        }
+
+        validatedAllocations.push({ bill, amount });
+      }
+
+      const paymentGroupId = new mongoose.Types.ObjectId().toString();
+      const finalPaymentDetails =
+        paymentMode === "Cash"
+          ? { receiptNumber: parsedPaymentDetails?.receiptNumber || "Money Received" }
+          : parsedPaymentDetails;
+
+      const createdCollections = [];
+      for (const { bill, amount } of validatedAllocations) {
+        const collection = new Collection({
+          bill: bill._id,
+          amountCollected: amount,
+          paymentMode,
+          paymentDetails: finalPaymentDetails,
+          collectedBy: req.user._id,
+          remarks,
+          collectedOn: new Date(collectedOn),
+          screenshotPath: req.file ? req.file.path : null,
+          paymentGroupId,
+        });
+        await collection.save();
+        createdCollections.push(collection);
+
+        const newDueAmount = bill.dueAmount - amount;
+        await Bill.findByIdAndUpdate(bill._id, {
+          dueAmount: newDueAmount,
+          status: newDueAmount <= 0 ? "Paid" : "Partially Paid",
+        });
+      }
+
+      const results = await Collection.find({
+        _id: { $in: createdCollections.map((c) => c._id) },
+      })
+        .populate("bill", "billNumber retailer amount dueAmount billDate")
+        .populate("collectedBy", "name");
+
+      res.status(201).json({ paymentGroupId, collections: results });
+
+      // Auto-trigger WhatsApp for each bill paid (non-blocking)
+      createdCollections.forEach((c) => {
+        setImmediate(() => triggerWhatsApp(c._id).catch(() => {}));
+      });
+    } catch (err) {
+      console.error("Split collection error:", err);
+      res.status(500).json({
+        message: "Failed to record split collection",
+        error: process.env.NODE_ENV === "development" ? err.message : undefined,
+      });
+    }
+  },
+);
 
 router.get("/", protect, async (req, res) => {
   try {
