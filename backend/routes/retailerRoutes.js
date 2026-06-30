@@ -92,12 +92,7 @@ router.post(
   adminOnly,
   upload.single("file"),
   async (req, res) => {
-    const { PassThrough } = require("stream");
-    const progressStream = new PassThrough();
     const errors = [];
-    const importedRetailers = [];
-    let processedRows = 0;
-    let totalRows = 0;
     const cleanup = () => {
       if (req.file && fs.existsSync(req.file.path)) {
         fs.unlinkSync(req.file.path);
@@ -148,141 +143,126 @@ router.post(
       );
 
       if (nameCol === -1 || addr1Col === -1) {
+        cleanup();
         return res.status(400).json({ message: "Required columns not found" });
       }
 
-      res.setHeader("Content-Type", "application/x-ndjson");
-      res.setHeader("Transfer-Encoding", "chunked");
+      // ── Load all staff once for assignedTo lookup ──────────────────────────
+      const staffMembers = await User.find({ role: "staff" })
+        .select("name")
+        .lean();
+      const staffMap = new Map(
+        staffMembers.map((s) => [s.name.toUpperCase(), s._id]),
+      );
 
-      totalRows = jsonData.length - 1;
+      // ── Pass 1: parse & validate all rows in memory (no DB calls) ──────────
+      const validRetailers = [];
+      const seenNames = new Set();
 
       for (const [index, row] of jsonData.entries()) {
         if (index === 0) continue;
+        if (!row[nameCol] && !row[addr1Col]) continue;
 
-        try {
-          if (!row[nameCol] && !row[addr1Col]) continue;
-          const name = row[nameCol]?.trim();
-          const address1 = row[addr1Col]?.trim();
-          const address2 = addr2Col !== -1 ? row[addr2Col]?.trim() : "";
-          const dayAssigned =
-            dayAssignedCol !== -1 ? row[dayAssignedCol]?.trim() : "";
-          let processedDayAssigned = dayAssigned;
-          if (dayAbbreviations[dayAssigned?.toUpperCase()]) {
-            processedDayAssigned = dayAbbreviations[dayAssigned.toUpperCase()];
-          } else if (
-            ![
-              "Monday",
-              "Tuesday",
-              "Wednesday",
-              "Thursday",
-              "Friday",
-              "Saturday",
-              "Sunday",
-            ].includes(dayAssigned)
-          ) {
-            processedDayAssigned = "";
-          }
-          let assignedTo = null;
-          if (assignedToCol !== -1 && row[assignedToCol]) {
-            const assignedToName = row[assignedToCol]?.trim();
-            const staff = await User.findOne({
-              name: { $regex: new RegExp(assignedToName, "i") },
-              role: "staff",
-            });
-            assignedTo = staff?._id || null;
-            if (!staff) {
-              errors.push(
-                `Row ${index + 1}: Staff member "${assignedToName}" not found`,
-              );
-            }
-          }
+        const name = row[nameCol]?.trim();
+        const address1 = row[addr1Col]?.trim();
 
-          if (!name || !address1) {
-            errors.push(`Row ${index + 1}: Missing required fields`);
-            continue;
-          }
-          const existingRetailer = await Retailer.findOne({
-            name: { $regex: new RegExp(`^${name.trim()}$`, "i") },
-          });
-          if (existingRetailer) {
-            errors.push(
-              `Row ${
-                index + 1
-              }: Retailer with exact name "${name}" already exists`,
-            );
-            continue;
-          }
-
-          let phone = null;
-          if (phoneCol !== -1 && row[phoneCol]) {
-            // Strip non-digits and a leading country code (e.g. 91) to get a 10-digit number
-            const digits = String(row[phoneCol]).replace(/\D/g, "");
-            const tenDigit =
-              digits.length === 12 && digits.startsWith("91")
-                ? digits.slice(2)
-                : digits;
-            if (/^[6-9]\d{9}$/.test(tenDigit)) {
-              phone = tenDigit;
-            } else {
-              errors.push(
-                `Row ${
-                  index + 1
-                }: Invalid phone number "${row[phoneCol]}" for "${name}" - skipped phone field`,
-              );
-            }
-          }
-
-          // Create and save new retailer
-          const retailer = new Retailer({
-            name,
-            address1,
-            address2,
-            dayAssigned: processedDayAssigned,
-            assignedTo,
-            phone: phone || undefined,
-            createdBy: req.user._id,
-          });
-
-          await retailer.save();
-          importedRetailers.push(retailer);
-
-          processedRows++;
-          res.write(
-            JSON.stringify({
-              type: "progress",
-              current: processedRows,
-              total: totalRows,
-            }) + "\n",
-          );
-        } catch (err) {
-          errors.push(`Row ${index + 1}: ${err.message}`);
+        if (!name || !address1) {
+          errors.push(`Row ${index + 1}: Missing required fields`);
+          continue;
         }
+
+        const nameKey = name.toUpperCase();
+        if (seenNames.has(nameKey)) {
+          errors.push(`Row ${index + 1}: Duplicate retailer "${name}" in this file`);
+          continue;
+        }
+        seenNames.add(nameKey);
+
+        const address2 = addr2Col !== -1 ? row[addr2Col]?.trim() : "";
+        const dayAssigned =
+          dayAssignedCol !== -1 ? row[dayAssignedCol]?.trim() : "";
+        let processedDayAssigned = dayAssigned;
+        if (dayAbbreviations[dayAssigned?.toUpperCase()]) {
+          processedDayAssigned = dayAbbreviations[dayAssigned.toUpperCase()];
+        } else if (
+          !["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].includes(dayAssigned)
+        ) {
+          processedDayAssigned = "";
+        }
+
+        // If assignedTo staff name isn't found, just skip the field (no error)
+        let assignedTo = null;
+        if (assignedToCol !== -1 && row[assignedToCol]) {
+          const assignedToName = row[assignedToCol]?.trim();
+          assignedTo = staffMap.get(assignedToName?.toUpperCase()) || null;
+        }
+
+        let phone = null;
+        if (phoneCol !== -1 && row[phoneCol]) {
+          const digits = String(row[phoneCol]).replace(/\D/g, "");
+          const tenDigit =
+            digits.length === 12 && digits.startsWith("91")
+              ? digits.slice(2)
+              : digits;
+          if (/^[6-9]\d{9}$/.test(tenDigit)) {
+            phone = tenDigit;
+          } else {
+            errors.push(
+              `Row ${index + 1}: Invalid phone number "${row[phoneCol]}" for "${name}" - skipped phone field`,
+            );
+          }
+        }
+
+        validRetailers.push({
+          name,
+          address1,
+          address2,
+          dayAssigned: processedDayAssigned,
+          assignedTo,
+          phone: phone || undefined,
+          createdBy: req.user._id,
+        });
       }
 
-      // Send final result
-      const finalResult = {
-        type: "result",
-        importedCount: importedRetailers.length,
+      // ── Pass 2: single query to find already-existing retailers ────────────
+      const names = validRetailers.map((r) => r.name);
+      const existingRetailers = await Retailer.find({
+        name: { $in: names.map((n) => new RegExp(`^${n}$`, "i")) },
+      })
+        .select("name")
+        .lean();
+      const existingNames = new Set(
+        existingRetailers.map((r) => r.name.toUpperCase()),
+      );
+
+      const toInsert = validRetailers.filter((r) => {
+        if (existingNames.has(r.name.toUpperCase())) {
+          errors.push(`Retailer with exact name "${r.name}" already exists`);
+          return false;
+        }
+        return true;
+      });
+
+      // ── Pass 3: bulk insert all new retailers in one shot ──────────────────
+      let insertedCount = 0;
+      if (toInsert.length > 0) {
+        const inserted = await Retailer.insertMany(toInsert, { ordered: false });
+        insertedCount = inserted.length;
+      }
+
+      res.json({
+        importedCount: insertedCount,
         errorCount: errors.length,
         errors: errors.slice(0, 10),
-      };
-      res.write(JSON.stringify(finalResult) + "\n");
+      });
     } catch (error) {
       console.error("Import error:", error);
-      res.write(
-        JSON.stringify({
-          type: "error",
-          message: "Failed to import retailers",
-          error: error.message,
-        }) + "\n",
-      );
+      res.status(500).json({
+        message: "Failed to import retailers",
+        error: error.message,
+      });
     } finally {
       cleanup();
-      try {
-        res.end();
-      } catch (err) {
-        console.error("Error ending response:", err);
-      }
     }
   },
 );

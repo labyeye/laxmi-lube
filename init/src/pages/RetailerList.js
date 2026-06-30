@@ -69,10 +69,6 @@ const RetailerList = () => {
   const [modalError, setModalError] = useState("");
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
-  const [importProgress, setImportProgress] = useState({
-    current: 0,
-    total: 0,
-  });
   const fileInputRef = useRef(null);
 
   const fetchRetailers = async () => {
@@ -279,7 +275,6 @@ const RetailerList = () => {
     setImportLoading(true);
     setModalError("");
     setModalMessage("");
-    setImportProgress({ current: 0, total: 0 });
 
     try {
       const formData = new FormData();
@@ -307,44 +302,17 @@ const RetailerList = () => {
         return;
       }
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errBody = await response.json().catch(() => null);
-        throw new Error(errBody?.message || `Import failed (status ${response.status})`);
+        throw new Error(data?.message || `Import failed (status ${response.status})`);
       }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const data = JSON.parse(line);
-            if (data.type === "progress") {
-              setImportProgress({ current: data.current, total: data.total });
-            } else if (data.type === "result") {
-              setModalMessage(
-                `Imported ${data.importedCount} retailers. ${data.errorCount} rows had errors.`,
-              );
-              if (data.errorCount > 0) {
-                setModalError(
-                  data.errors?.join("; ") || "Some rows had errors",
-                );
-              }
-            } else if (data.type === "error") {
-              setModalError(data.message || "Failed to import retailers");
-            }
-          } catch {
-            // ignore parse errors for non-json chunks
-          }
-        }
+      setModalMessage(
+        `Imported ${data.importedCount} retailers. ${data.errorCount} rows had errors.`,
+      );
+      if (data.errorCount > 0) {
+        setModalError(data.errors?.join("; ") || "Some rows had errors");
       }
 
       await fetchRetailers();
@@ -875,22 +843,8 @@ const RetailerList = () => {
                       <FileText>Selected: {importFile.name}</FileText>
                     )}
 
-                    {importLoading && importProgress.total > 0 && (
-                      <ProgressWrap>
-                        <ProgressTop>
-                          <span>Importing...</span>
-                          <span>
-                            {importProgress.current}/{importProgress.total}
-                          </span>
-                        </ProgressTop>
-                        <ProgressBar>
-                          <ProgressFill
-                            style={{
-                              width: `${Math.round((importProgress.current / importProgress.total) * 100)}%`,
-                            }}
-                          />
-                        </ProgressBar>
-                      </ProgressWrap>
+                    {importLoading && (
+                      <FileText>Importing...</FileText>
                     )}
 
                     <Hint>
