@@ -379,17 +379,17 @@ router.post(
         const staffName = getValue(row, ["staff name", "staff"]);
         const collectionDayInput = getValue(row, ["day", "collectionday"]);
 
-        if (!custName && !billNo && !billAmt) continue;
+        if (!custName && !billAmt) continue;
 
-        if (!custName || !billNo || !billAmt || !billDateValue) {
-          errors.push(`Row ${index + 2}: Missing required fields`);
+        if (!custName || !billAmt || !billDateValue) {
+          errors.push(`Row ${index + 2}: Missing required fields (retailer, amount, date)`);
           continue;
         }
 
-        const billKey = `${billNo}_${custName}`.toUpperCase();
+        const billKey = `${custName}_${billDateValue}_${billAmt}`.toUpperCase();
         if (seenKeys.has(billKey)) {
           errors.push(
-            `Row ${index + 2}: Duplicate bill ${billNo} for customer ${custName} in this file`,
+            `Row ${index + 2}: Duplicate entry for ${custName} on ${billDateValue} with amount ${billAmt}`,
           );
           continue;
         }
@@ -459,23 +459,26 @@ router.post(
       }
 
       // ── Pass 2: single query to find all already-existing bills ──────────────
-      const billNumbers = validBills.map((b) => b.billNumber);
+      const retailerNames = validBills.map((b) => b.retailer);
       const existingBills = await Bill.find({
-        billNumber: { $in: billNumbers },
+        retailer: { $in: retailerNames },
       })
-        .select("billNumber retailer")
+        .select("retailer billDate amount")
         .lean();
 
       const existingKeys = new Set(
-        existingBills.map((b) => `${b.billNumber}_${b.retailer}`.toUpperCase()),
+        existingBills.map((b) =>
+          `${b.retailer}_${new Date(b.billDate).toISOString().slice(0,10)}_${b.amount}`.toUpperCase()
+        ),
       );
 
       const toInsert = [];
       let alreadyExistsCount = 0;
       for (const bill of validBills) {
-        const key = `${bill.billNumber}_${bill.retailer}`.toUpperCase();
+        const key = `${bill.retailer}_${new Date(bill.billDate).toISOString().slice(0,10)}_${bill.amount}`.toUpperCase();
         if (existingKeys.has(key)) {
           alreadyExistsCount++;
+          errors.push(`Row ${bill.rowIndex}: ${bill.retailer} on ${new Date(bill.billDate).toLocaleDateString("en-IN")} for ₹${bill.amount} already exists in DB`);
         } else {
           const { rowIndex, ...billData } = bill;
           toInsert.push(billData);
