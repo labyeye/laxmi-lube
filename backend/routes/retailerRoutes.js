@@ -197,6 +197,8 @@ router.post(
           assignedTo = staffMap.get(assignedToName?.toUpperCase()) || null;
         }
 
+        // Phone is best-effort: if missing or invalid, just skip it silently
+        // and still import the retailer — it can be fixed later via edit.
         let phone = null;
         if (phoneCol !== -1 && row[phoneCol]) {
           const digits = String(row[phoneCol]).replace(/\D/g, "");
@@ -206,10 +208,6 @@ router.post(
               : digits;
           if (/^[6-9]\d{9}$/.test(tenDigit)) {
             phone = tenDigit;
-          } else {
-            errors.push(
-              `Row ${index + 1}: Invalid phone number "${row[phoneCol]}" for "${name}" - skipped phone field`,
-            );
           }
         }
 
