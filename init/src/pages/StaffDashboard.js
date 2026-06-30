@@ -13,6 +13,7 @@ import {
   FaCheckCircle,
   FaCalendarDay,
   FaHistory,
+  FaCheckDouble,
 } from "react-icons/fa";
 import {useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -35,6 +36,7 @@ const StaffDashboard = () => {
     name: "Loading...",
     role: "Collections",
   });
+  const [canVerifyCollections, setCanVerifyCollections] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [retrying, setRetrying] = useState(false);
@@ -54,6 +56,9 @@ const StaffDashboard = () => {
         name: response.data.name || "Staff Member",
         role: response.data.role || "Collections",
       });
+      setCanVerifyCollections(
+        response.data.permissions?.collections?.verify === true,
+      );
     } catch (err) {
       console.error("Failed to fetch user info:", err);
     }
@@ -182,6 +187,15 @@ const StaffDashboard = () => {
             </NavIcon>
             {<NavText>Collection History</NavText>}
           </NavItem>
+
+          {canVerifyCollections && (
+            <NavItem onClick={() => navigate("/staff/verify-collections")}>
+              <NavIcon>
+                <FaCheckDouble />
+              </NavIcon>
+              {<NavText>Verify Collections</NavText>}
+            </NavItem>
+          )}
         </NavMenu>
         <LogoutButton onClick={handleLogout}>
           <NavIcon>

@@ -9,6 +9,7 @@ import {
   FaSearch,
   FaFileInvoiceDollar,
   FaPlus,
+  FaDownload,
 } from "react-icons/fa";
 import Layout from "../components/Layout";
 import DynamicForm from "../components/DynamicForm";
@@ -452,6 +453,25 @@ const BillsPage = () => {
     }
   };
 
+  const exportExcel = () => {
+    const rows = filteredBills.map((bill) => ({
+      "Bill #": bill.billNumber || "",
+      Retailer: bill.retailer || "",
+      Amount: bill.amount || 0,
+      "Due Amount": bill.dueAmount || 0,
+      "Bill Date": bill.billDate
+        ? new Date(bill.billDate).toLocaleDateString()
+        : "",
+      "Collection Day": bill.collectionDay || "",
+      Status: bill.status || "",
+      "Assigned To": bill.assignedToName || "Not Assigned",
+    }));
+    const worksheet = xlsx.utils.json_to_sheet(rows);
+    const workbook = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(workbook, worksheet, "Bills");
+    xlsx.writeFile(workbook, "bills.xlsx");
+  };
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -471,6 +491,9 @@ const BillsPage = () => {
           <HeaderActions>
             <AddBillButton onClick={openAddModal}>
               <FaPlus /> Add Bill
+            </AddBillButton>
+            <AddBillButton onClick={exportExcel}>
+              <FaDownload /> Export Excel
             </AddBillButton>
             <RetailerSelect
               value={retailerFilter}

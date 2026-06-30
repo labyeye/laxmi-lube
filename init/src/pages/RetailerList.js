@@ -22,6 +22,7 @@ import {
 } from "react-icons/fa";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import * as xlsx from "xlsx";
 
 const API_BASE = "https://backend.laxmilube.in/api";
 const getAuthHeaders = () => ({
@@ -383,6 +384,21 @@ const RetailerList = () => {
     URL.revokeObjectURL(url);
   };
 
+  const exportExcel = () => {
+    const rows = filteredRecords.map((r) => ({
+      Name: r.name || "",
+      "Address 1": r.address1 || "",
+      "Address 2": r.address2 || "",
+      "Day Assigned": r.dayAssigned || "",
+      "Assigned To": r.assignedTo?.name || "",
+      Status: r.status || "",
+    }));
+    const worksheet = xlsx.utils.json_to_sheet(rows);
+    const workbook = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(workbook, worksheet, "Retailers");
+    xlsx.writeFile(workbook, "retailers.xlsx");
+  };
+
   // Card view
   const RecordCard = ({ record }) => {
     const name = record.name || record._id;
@@ -478,6 +494,9 @@ const RetailerList = () => {
             </RefreshBtn>
             <ExportBtn onClick={exportCSV}>
               <FaDownload /> Export CSV
+            </ExportBtn>
+            <ExportBtn onClick={exportExcel}>
+              <FaDownload /> Export Excel
             </ExportBtn>
             <AddBtn onClick={handleAddNew}>
               <FaPlus /> Add Retailer

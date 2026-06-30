@@ -14,6 +14,7 @@ import Logout from "./pages/Logout";
 import BillAssignedToday from "./pages/BillAssignedToday";
 import BillsPage from "./pages/BillsPage";
 import AdminCollectionHistory from "./pages/AdminCollectionHistory";
+import VerifyCollectionsPage from "./pages/VerifyCollectionsPage";
 import CollectionsHistory from "./pages/CollectionHistoryPage";
 import ReportPage from "./pages/ReportPage";
 import DSRCollectionSummary from "./pages/DSRCollectionSummary";
@@ -362,6 +363,19 @@ const App = () => {
           <Route
             path="/staff/collections-history"
             element={<CollectionsHistory />}
+          />
+
+          {/* Verify Collections — staff with collections.verify permission */}
+          <Route
+            path="/staff/verify-collections"
+            element={
+              user?.role === "staff" &&
+              user?.permissions?.collections?.verify === true ? (
+                <VerifyCollectionsPage />
+              ) : (
+                <Navigate to="/staff" />
+              )
+            }
           />
 
           {/* Logout Route */}
