@@ -176,7 +176,7 @@ const BillsPage = () => {
     e.preventDefault();
     setError("");
     setMessage("");
-    setImportProgress({ current: 0, total: 0 });
+
 
     if (!importFile) {
       setError("Please select a file to upload");
