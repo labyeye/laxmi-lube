@@ -177,7 +177,6 @@ const RetailerList = () => {
     setModalMessage("");
     setModalError("");
     setImportFile(null);
-    setImportProgress({ current: 0, total: 0 });
   };
 
   const handleAddNew = () => {
