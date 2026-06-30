@@ -170,7 +170,7 @@ BillSchema.methods.updatePaymentStatus = async function () {
 };
 
 // Indexes
-BillSchema.index({ billNumber: 1 }, { unique: true });
+BillSchema.index({ billNumber: 1 });
 BillSchema.index({ retailer: 1 });
 BillSchema.index({ status: 1 });
 BillSchema.index({ assignedTo: 1 });

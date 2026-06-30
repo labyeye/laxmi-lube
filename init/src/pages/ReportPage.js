@@ -125,7 +125,7 @@ const ReportPage = () => {
 
   useEffect(() => {
     fetchReports();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showHistory, selectedDate, pagination.page]);
 
   const toggleHistoryView = () => {

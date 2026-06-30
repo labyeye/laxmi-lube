@@ -31,26 +31,69 @@ const POS = {
 };
 
 const _ones = [
-  "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
-  "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
-  "Seventeen", "Eighteen", "Nineteen",
+  "",
+  "One",
+  "Two",
+  "Three",
+  "Four",
+  "Five",
+  "Six",
+  "Seven",
+  "Eight",
+  "Nine",
+  "Ten",
+  "Eleven",
+  "Twelve",
+  "Thirteen",
+  "Fourteen",
+  "Fifteen",
+  "Sixteen",
+  "Seventeen",
+  "Eighteen",
+  "Nineteen",
 ];
-const _tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+const _tens = [
+  "",
+  "",
+  "Twenty",
+  "Thirty",
+  "Forty",
+  "Fifty",
+  "Sixty",
+  "Seventy",
+  "Eighty",
+  "Ninety",
+];
 
 function _words(n) {
   if (n === 0) return "";
   if (n < 20) return _ones[n];
-  if (n < 100) return _tens[Math.floor(n / 10)] + (n % 10 ? " " + _ones[n % 10] : "");
-  return _ones[Math.floor(n / 100)] + " Hundred" + (n % 100 ? " " + _words(n % 100) : "");
+  if (n < 100)
+    return _tens[Math.floor(n / 10)] + (n % 10 ? " " + _ones[n % 10] : "");
+  return (
+    _ones[Math.floor(n / 100)] +
+    " Hundred" +
+    (n % 100 ? " " + _words(n % 100) : "")
+  );
 }
 
 function toWords(amount) {
   const n = Math.round(Math.abs(amount));
   if (n === 0) return "Zero Only";
-  let rem = n, parts = [];
-  if (rem >= 10000000) { parts.push(_words(Math.floor(rem / 10000000)) + " Crore"); rem %= 10000000; }
-  if (rem >= 100000) { parts.push(_words(Math.floor(rem / 100000)) + " Lakh"); rem %= 100000; }
-  if (rem >= 1000) { parts.push(_words(Math.floor(rem / 1000)) + " Thousand"); rem %= 1000; }
+  let rem = n,
+    parts = [];
+  if (rem >= 10000000) {
+    parts.push(_words(Math.floor(rem / 10000000)) + " Crore");
+    rem %= 10000000;
+  }
+  if (rem >= 100000) {
+    parts.push(_words(Math.floor(rem / 100000)) + " Lakh");
+    rem %= 100000;
+  }
+  if (rem >= 1000) {
+    parts.push(_words(Math.floor(rem / 1000)) + " Thousand");
+    rem %= 1000;
+  }
   if (rem > 0) parts.push(_words(rem));
   return parts.join(" ") + " Only";
 }
@@ -77,12 +120,28 @@ async function generateReceiptPDF(collection, bill, retailer) {
     if (!pos) return;
     const { x, y } = pos;
     const green = rgb(0, 0.6, 0);
-    page.drawLine({ start: { x, y: y + 3 }, end: { x: x + 3, y }, thickness: 1.5, color: green });
-    page.drawLine({ start: { x: x + 3, y }, end: { x: x + 9, y: y + 8 }, thickness: 1.5, color: green });
+    page.drawLine({
+      start: { x, y: y + 3 },
+      end: { x: x + 3, y },
+      thickness: 1.5,
+      color: green,
+    });
+    page.drawLine({
+      start: { x: x + 3, y },
+      end: { x: x + 9, y: y + 8 },
+      thickness: 1.5,
+      color: green,
+    });
   };
 
   const putX = (pos, size = 11) => {
-    page.drawText("X", { x: pos.x, y: pos.y, size, font: boldFont, color: rgb(0.85, 0, 0) });
+    page.drawText("X", {
+      x: pos.x,
+      y: pos.y,
+      size,
+      font: boldFont,
+      color: rgb(0.85, 0, 0),
+    });
   };
 
   // Receipt number
@@ -108,7 +167,12 @@ async function generateReceiptPDF(collection, bill, retailer) {
 
   // Amount
   put(toWords(collection.amountCollected), POS.amountWords, 9);
-  put(parseFloat(collection.amountCollected).toFixed(2), POS.amountNum, 10, true);
+  put(
+    parseFloat(collection.amountCollected).toFixed(2),
+    POS.amountNum,
+    10,
+    true,
+  );
 
   // Payment mode marks
   const mode = collection.paymentMode;

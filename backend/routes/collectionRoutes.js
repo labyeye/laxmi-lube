@@ -249,12 +249,10 @@ router.get("/next-receipt-number", protect, async (req, res) => {
     const nextNumber = String(count + 1).padStart(4, "0");
     res.json({ receiptNumber: nextNumber });
   } catch (err) {
-    res
-      .status(500)
-      .json({
-        message: "Failed to generate receipt number",
-        error: err.message,
-      });
+    res.status(500).json({
+      message: "Failed to generate receipt number",
+      error: err.message,
+    });
   }
 });
 
@@ -447,10 +445,16 @@ router.get("/whatsapp-logs", protect, adminOnly, async (req, res) => {
       .skip((parseInt(page) - 1) * parseInt(limit));
 
     // Attach retailer phone from Retailer collection
-    const retailerNames = [...new Set(collections.map((c) => c.bill?.retailer).filter(Boolean))];
-    const retailers = await Retailer.find({ name: { $in: retailerNames } }).select("name phone");
+    const retailerNames = [
+      ...new Set(collections.map((c) => c.bill?.retailer).filter(Boolean)),
+    ];
+    const retailers = await Retailer.find({
+      name: { $in: retailerNames },
+    }).select("name phone");
     const phoneMap = {};
-    retailers.forEach((r) => { phoneMap[r.name] = r.phone || null; });
+    retailers.forEach((r) => {
+      phoneMap[r.name] = r.phone || null;
+    });
 
     const enriched = collections.map((c) => ({
       _id: c._id,
@@ -469,7 +473,9 @@ router.get("/whatsapp-logs", protect, adminOnly, async (req, res) => {
 
     res.json(enriched);
   } catch (err) {
-    res.status(500).json({ message: "Failed to fetch WhatsApp logs", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to fetch WhatsApp logs", error: err.message });
   }
 });
 

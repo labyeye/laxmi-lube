@@ -4,18 +4,38 @@ import axios from "axios";
 import Layout from "../components/Layout";
 
 const API = "https://backend.laxmilube.in/api";
-const getHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
+const getHeaders = () => ({
+  Authorization: `Bearer ${localStorage.getItem("token")}`,
+});
 
 const PAYMENT_LABELS = {
-  Cash: "Cash", cheque: "Cheque", bank_transfer: "Bank Transfer", upi: "UPI",
+  Cash: "Cash",
+  cheque: "Cheque",
+  bank_transfer: "Bank Transfer",
+  upi: "UPI",
 };
 
 const STATUS_META = {
-  received:     { ticks: "✓✓", tickColor: "#4fc3f7", label: "Received",     dot: "#22c55e" },
-  not_received: { ticks: "✗",  tickColor: "#ef4444", label: "Not Received", dot: "#ef4444" },
-  sent:         { ticks: "✓✓", tickColor: "#aaa",    label: "Sent",         dot: "#3b82f6" },
-  pending:      { ticks: "⏱",  tickColor: "#aaa",    label: "Pending",      dot: "#f59e0b" },
-  no_phone:     { ticks: "—",  tickColor: "#ccc",    label: "No Phone",     dot: "#9ca3af" },
+  received: {
+    ticks: "✓✓",
+    tickColor: "#4fc3f7",
+    label: "Received",
+    dot: "#22c55e",
+  },
+  not_received: {
+    ticks: "✗",
+    tickColor: "#ef4444",
+    label: "Not Received",
+    dot: "#ef4444",
+  },
+  sent: { ticks: "✓✓", tickColor: "#aaa", label: "Sent", dot: "#3b82f6" },
+  pending: { ticks: "⏱", tickColor: "#aaa", label: "Pending", dot: "#f59e0b" },
+  no_phone: {
+    ticks: "—",
+    tickColor: "#ccc",
+    label: "No Phone",
+    dot: "#9ca3af",
+  },
 };
 
 function fmt(date) {
@@ -24,7 +44,11 @@ function fmt(date) {
   const now = new Date();
   const diff = now - d;
   if (diff < 86400000 && d.getDate() === now.getDate()) {
-    return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+    return d.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
   }
   if (diff < 172800000) return "Yesterday";
   return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
@@ -33,13 +57,21 @@ function fmt(date) {
 function fmtFull(date) {
   if (!date) return "";
   return new Date(date).toLocaleString("en-IN", {
-    day: "2-digit", month: "short", year: "numeric",
-    hour: "2-digit", minute: "2-digit", hour12: true,
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
   });
 }
 
 function formatINR(n) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(n);
 }
 
 export default function WhatsAppLogsPage() {
@@ -54,7 +86,10 @@ export default function WhatsAppLogsPage() {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API}/collections/whatsapp-logs?limit=500`, { headers: getHeaders() });
+      const res = await axios.get(
+        `${API}/collections/whatsapp-logs?limit=500`,
+        { headers: getHeaders() },
+      );
       setLogs(res.data);
     } catch {
       setLogs([]);
@@ -63,7 +98,9 @@ export default function WhatsAppLogsPage() {
     }
   };
 
-  useEffect(() => { fetchLogs(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    fetchLogs();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -74,17 +111,23 @@ export default function WhatsAppLogsPage() {
     const map = {};
     logs.forEach((l) => {
       const key = l.retailerName;
-      if (!map[key]) map[key] = { retailerName: key, phone: l.retailerPhone, messages: [] };
+      if (!map[key])
+        map[key] = { retailerName: key, phone: l.retailerPhone, messages: [] };
       map[key].messages.push(l);
     });
-    return Object.values(map).sort((a, b) =>
-      new Date(b.messages[0].collectedOn) - new Date(a.messages[0].collectedOn)
+    return Object.values(map).sort(
+      (a, b) =>
+        new Date(b.messages[0].collectedOn) -
+        new Date(a.messages[0].collectedOn),
     );
   })();
 
   const filtered = contacts.filter((c) => {
-    const matchSearch = c.retailerName.toLowerCase().includes(search.toLowerCase());
-    const matchFilter = filter === "all" || c.messages.some((m) => m.whatsappStatus === filter);
+    const matchSearch = c.retailerName
+      .toLowerCase()
+      .includes(search.toLowerCase());
+    const matchFilter =
+      filter === "all" || c.messages.some((m) => m.whatsappStatus === filter);
     return matchSearch && matchFilter;
   });
 
@@ -98,7 +141,7 @@ export default function WhatsAppLogsPage() {
       await axios.post(
         `${API}/collections/${collectionId}/send-whatsapp`,
         {},
-        { headers: getHeaders() }
+        { headers: getHeaders() },
       );
       await fetchLogs();
     } catch {
@@ -116,7 +159,13 @@ export default function WhatsAppLogsPage() {
           <WaHeader>
             <HeaderTitle>WhatsApp Logs</HeaderTitle>
             <HeaderActions>
-              <FilterSelect value={filter} onChange={(e) => { setFilter(e.target.value); setSelectedRetailer(null); }}>
+              <FilterSelect
+                value={filter}
+                onChange={(e) => {
+                  setFilter(e.target.value);
+                  setSelectedRetailer(null);
+                }}
+              >
                 <option value="all">All</option>
                 <option value="received">Received</option>
                 <option value="not_received">Not Received</option>
@@ -138,17 +187,26 @@ export default function WhatsAppLogsPage() {
 
           <ContactList>
             {loading ? (
-              <LoadingWrap><Spinner /></LoadingWrap>
+              <LoadingWrap>
+                <Spinner />
+              </LoadingWrap>
             ) : filtered.length === 0 ? (
               <EmptyContacts>No contacts found</EmptyContacts>
             ) : (
               filtered.map((c) => {
                 const last = c.messages[0];
-                const sm = STATUS_META[last.whatsappStatus] || STATUS_META.pending;
+                const sm =
+                  STATUS_META[last.whatsappStatus] || STATUS_META.pending;
                 const isActive = selectedRetailer === c.retailerName;
-                const unreadCount = c.messages.filter((m) => m.whatsappStatus === "not_received").length;
+                const unreadCount = c.messages.filter(
+                  (m) => m.whatsappStatus === "not_received",
+                ).length;
                 return (
-                  <ContactItem key={c.retailerName} active={isActive} onClick={() => setSelectedRetailer(c.retailerName)}>
+                  <ContactItem
+                    key={c.retailerName}
+                    active={isActive}
+                    onClick={() => setSelectedRetailer(c.retailerName)}
+                  >
                     <Avatar>{c.retailerName.charAt(0).toUpperCase()}</Avatar>
                     <ContactInfo>
                       <ContactRow>
@@ -157,12 +215,14 @@ export default function WhatsAppLogsPage() {
                       </ContactRow>
                       <ContactRow>
                         <ContactPreview>
-                          <Ticks color={sm.tickColor}>{sm.ticks}</Ticks>
-                          {" "}{formatINR(last.amount)} · Bill #{last.billNumber}
+                          <Ticks color={sm.tickColor}>{sm.ticks}</Ticks>{" "}
+                          {formatINR(last.amount)} · Bill #{last.billNumber}
                         </ContactPreview>
                         <StatusRow>
                           <StatusDot color={sm.dot} />
-                          {unreadCount > 0 && <UnreadBadge>{unreadCount}</UnreadBadge>}
+                          {unreadCount > 0 && (
+                            <UnreadBadge>{unreadCount}</UnreadBadge>
+                          )}
                         </StatusRow>
                       </ContactRow>
                     </ContactInfo>
@@ -179,25 +239,37 @@ export default function WhatsAppLogsPage() {
             <EmptyChat>
               <EmptyChatIcon>💬</EmptyChatIcon>
               <EmptyChatTitle>WhatsApp Receipt Logs</EmptyChatTitle>
-              <EmptyChatSub>Select a retailer to view message history</EmptyChatSub>
+              <EmptyChatSub>
+                Select a retailer to view message history
+              </EmptyChatSub>
             </EmptyChat>
           ) : (
             <>
               {/* Chat header */}
               <ChatHeader>
-                <ChatAvatar>{activeContact.retailerName.charAt(0).toUpperCase()}</ChatAvatar>
+                <ChatAvatar>
+                  {activeContact.retailerName.charAt(0).toUpperCase()}
+                </ChatAvatar>
                 <ChatHeaderInfo>
                   <ChatName>{activeContact.retailerName}</ChatName>
-                  <ChatSub>{activeContact.phone ? `+91 ${activeContact.phone}` : "No phone number"}</ChatSub>
+                  <ChatSub>
+                    {activeContact.phone
+                      ? `+91 ${activeContact.phone}`
+                      : "No phone number"}
+                  </ChatSub>
                 </ChatHeaderInfo>
-                <MsgCount>{activeContact.messages.length} message{activeContact.messages.length !== 1 ? "s" : ""}</MsgCount>
+                <MsgCount>
+                  {activeContact.messages.length} message
+                  {activeContact.messages.length !== 1 ? "s" : ""}
+                </MsgCount>
               </ChatHeader>
 
               {/* Messages */}
               <ChatBody>
                 <WaWallpaper />
                 {[...activeContact.messages].reverse().map((msg) => {
-                  const sm = STATUS_META[msg.whatsappStatus] || STATUS_META.pending;
+                  const sm =
+                    STATUS_META[msg.whatsappStatus] || STATUS_META.pending;
                   return (
                     <BubbleWrap key={msg._id}>
                       <Bubble>
@@ -205,25 +277,46 @@ export default function WhatsAppLogsPage() {
                           📄 Receipt — Bill #{msg.billNumber}
                         </BubbleHeader>
                         <BubbleBody>
-                          <BubbleRow><BubbleLabel>Amount</BubbleLabel><BubbleVal bold>{formatINR(msg.amount)}</BubbleVal></BubbleRow>
-                          <BubbleRow><BubbleLabel>Mode</BubbleLabel><BubbleVal>{PAYMENT_LABELS[msg.paymentMode] || msg.paymentMode}</BubbleVal></BubbleRow>
-                          <BubbleRow><BubbleLabel>Collected By</BubbleLabel><BubbleVal>{msg.collectedBy}</BubbleVal></BubbleRow>
-                          <BubbleRow><BubbleLabel>Date</BubbleLabel><BubbleVal>{fmtFull(msg.collectedOn)}</BubbleVal></BubbleRow>
+                          <BubbleRow>
+                            <BubbleLabel>Amount</BubbleLabel>
+                            <BubbleVal bold>{formatINR(msg.amount)}</BubbleVal>
+                          </BubbleRow>
+                          <BubbleRow>
+                            <BubbleLabel>Mode</BubbleLabel>
+                            <BubbleVal>
+                              {PAYMENT_LABELS[msg.paymentMode] ||
+                                msg.paymentMode}
+                            </BubbleVal>
+                          </BubbleRow>
+                          <BubbleRow>
+                            <BubbleLabel>Collected By</BubbleLabel>
+                            <BubbleVal>{msg.collectedBy}</BubbleVal>
+                          </BubbleRow>
+                          <BubbleRow>
+                            <BubbleLabel>Date</BubbleLabel>
+                            <BubbleVal>{fmtFull(msg.collectedOn)}</BubbleVal>
+                          </BubbleRow>
                         </BubbleBody>
 
                         {msg.whatsappConfirmedAt && (
                           <ConfirmedNote status={msg.whatsappStatus}>
-                            {msg.whatsappStatus === "received" ? "✅ Retailer confirmed receipt" : "❌ Retailer reported not received"}
-                            {" · "}{fmtFull(msg.whatsappConfirmedAt)}
+                            {msg.whatsappStatus === "received"
+                              ? "✅ Retailer confirmed receipt"
+                              : "❌ Retailer reported not received"}
+                            {" · "}
+                            {fmtFull(msg.whatsappConfirmedAt)}
                           </ConfirmedNote>
                         )}
 
                         <BubbleFooter>
                           <BubbleTime>{fmt(msg.collectedOn)}</BubbleTime>
-                          <TickStatus color={sm.tickColor} title={sm.label}>{sm.ticks}</TickStatus>
+                          <TickStatus color={sm.tickColor} title={sm.label}>
+                            {sm.ticks}
+                          </TickStatus>
                         </BubbleFooter>
 
-                        {(msg.whatsappStatus === "pending" || msg.whatsappStatus === "no_phone") && (
+                        {(msg.whatsappStatus === "pending" ||
+                          msg.whatsappStatus === "no_phone") && (
                           <ResendBtn
                             disabled={resending === msg._id}
                             onClick={() => handleResend(msg._id)}
@@ -275,7 +368,11 @@ const LeftPanel = styled.div`
   display: flex;
   flex-direction: column;
   border-right: 1px solid #e9edef;
-  @media (max-width: 640px) { width: 100%; max-width: 100%; display: ${(p) => p.hide ? "none" : "flex"}; }
+  @media (max-width: 640px) {
+    width: 100%;
+    max-width: 100%;
+    display: ${(p) => (p.hide ? "none" : "flex")};
+  }
 `;
 
 const WaHeader = styled.div`
@@ -294,17 +391,23 @@ const HeaderTitle = styled.h2`
   margin: 0;
 `;
 
-const HeaderActions = styled.div`display: flex; gap: 8px;`;
+const HeaderActions = styled.div`
+  display: flex;
+  gap: 8px;
+`;
 
 const FilterSelect = styled.select`
-  background: rgba(255,255,255,0.15);
+  background: rgba(255, 255, 255, 0.15);
   color: #fff;
   border: none;
   border-radius: 6px;
   padding: 4px 8px;
   font-size: 0.8rem;
   cursor: pointer;
-  option { color: #111; background: #fff; }
+  option {
+    color: #111;
+    background: #fff;
+  }
 `;
 
 const SearchBar = styled.div`
@@ -317,7 +420,10 @@ const SearchBar = styled.div`
   gap: 8px;
 `;
 
-const SearchIcon = styled.span`font-size: 0.9rem; color: #667781;`;
+const SearchIcon = styled.span`
+  font-size: 0.9rem;
+  color: #667781;
+`;
 
 const SearchInput = styled.input`
   border: none;
@@ -326,14 +432,21 @@ const SearchInput = styled.input`
   flex: 1;
   font-size: 0.9rem;
   color: #111;
-  &::placeholder { color: #aaa; }
+  &::placeholder {
+    color: #aaa;
+  }
 `;
 
 const ContactList = styled.div`
   flex: 1;
   overflow-y: auto;
-  &::-webkit-scrollbar { width: 4px; }
-  &::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+  }
 `;
 
 const ContactItem = styled.div`
@@ -343,9 +456,11 @@ const ContactItem = styled.div`
   padding: 12px 16px;
   cursor: pointer;
   border-bottom: 1px solid #f0f2f5;
-  background: ${(p) => p.active ? "#e8f5e9" : "transparent"};
+  background: ${(p) => (p.active ? "#e8f5e9" : "transparent")};
   transition: background 0.15s;
-  &:hover { background: ${(p) => p.active ? "#e8f5e9" : "#f5f6f6"}; }
+  &:hover {
+    background: ${(p) => (p.active ? "#e8f5e9" : "#f5f6f6")};
+  }
 `;
 
 const Avatar = styled.div`
@@ -362,7 +477,10 @@ const Avatar = styled.div`
   flex-shrink: 0;
 `;
 
-const ContactInfo = styled.div`flex: 1; overflow: hidden;`;
+const ContactInfo = styled.div`
+  flex: 1;
+  overflow: hidden;
+`;
 
 const ContactRow = styled.div`
   display: flex;
@@ -395,7 +513,12 @@ const ContactPreview = styled.span`
   flex: 1;
 `;
 
-const StatusRow = styled.div`display: flex; align-items: center; gap: 4px; flex-shrink: 0;`;
+const StatusRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+`;
 
 const StatusDot = styled.span`
   width: 8px;
@@ -444,9 +567,18 @@ const EmptyChat = styled.div`
   background: #f0f2f5;
 `;
 
-const EmptyChatIcon = styled.div`font-size: 4rem;`;
-const EmptyChatTitle = styled.h3`margin: 0; font-size: 1.2rem; color: #41525d;`;
-const EmptyChatSub = styled.p`margin: 0; font-size: 0.88rem;`;
+const EmptyChatIcon = styled.div`
+  font-size: 4rem;
+`;
+const EmptyChatTitle = styled.h3`
+  margin: 0;
+  font-size: 1.2rem;
+  color: #41525d;
+`;
+const EmptyChatSub = styled.p`
+  margin: 0;
+  font-size: 0.88rem;
+`;
 
 const ChatHeader = styled.div`
   background: #f0f2f5;
@@ -473,10 +605,25 @@ const ChatAvatar = styled.div`
   flex-shrink: 0;
 `;
 
-const ChatHeaderInfo = styled.div`flex: 1;`;
-const ChatName = styled.div`font-size: 0.95rem; font-weight: 600; color: #111;`;
-const ChatSub = styled.div`font-size: 0.78rem; color: #667781;`;
-const MsgCount = styled.div`font-size: 0.75rem; color: #667781; background: #e9edef; padding: 2px 8px; border-radius: 10px;`;
+const ChatHeaderInfo = styled.div`
+  flex: 1;
+`;
+const ChatName = styled.div`
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #111;
+`;
+const ChatSub = styled.div`
+  font-size: 0.78rem;
+  color: #667781;
+`;
+const MsgCount = styled.div`
+  font-size: 0.75rem;
+  color: #667781;
+  background: #e9edef;
+  padding: 2px 8px;
+  border-radius: 10px;
+`;
 
 const WaWallpaper = styled.div`
   position: absolute;
@@ -496,8 +643,13 @@ const ChatBody = styled.div`
   display: flex;
   flex-direction: column;
   gap: 10px;
-  &::-webkit-scrollbar { width: 4px; }
-  &::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+  }
 `;
 
 const BubbleWrap = styled.div`
@@ -510,7 +662,7 @@ const Bubble = styled.div`
   border-radius: 12px 0 12px 12px;
   max-width: 460px;
   width: 100%;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
   padding: 10px 12px 6px;
   position: relative;
 `;
@@ -520,18 +672,31 @@ const BubbleHeader = styled.div`
   font-weight: 700;
   color: #128c7e;
   margin-bottom: 8px;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   padding-bottom: 6px;
 `;
 
-const BubbleBody = styled.div`display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px;`;
+const BubbleBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+`;
 
-const BubbleRow = styled.div`display: flex; gap: 8px; align-items: baseline;`;
-const BubbleLabel = styled.span`font-size: 0.72rem; color: #667781; min-width: 90px;`;
+const BubbleRow = styled.div`
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+`;
+const BubbleLabel = styled.span`
+  font-size: 0.72rem;
+  color: #667781;
+  min-width: 90px;
+`;
 const BubbleVal = styled.span`
   font-size: 0.82rem;
   color: #111;
-  font-weight: ${(p) => p.bold ? "700" : "400"};
+  font-weight: ${(p) => (p.bold ? "700" : "400")};
 `;
 
 const ConfirmedNote = styled.div`
@@ -539,8 +704,8 @@ const ConfirmedNote = styled.div`
   padding: 4px 8px;
   border-radius: 6px;
   margin-bottom: 4px;
-  background: ${(p) => p.status === "received" ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.1)"};
-  color: ${(p) => p.status === "received" ? "#15803d" : "#991b1b"};
+  background: ${(p) => (p.status === "received" ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.1)")};
+  color: ${(p) => (p.status === "received" ? "#15803d" : "#991b1b")};
 `;
 
 const BubbleFooter = styled.div`
@@ -551,7 +716,10 @@ const BubbleFooter = styled.div`
   margin-top: 2px;
 `;
 
-const BubbleTime = styled.span`font-size: 0.68rem; color: #667781;`;
+const BubbleTime = styled.span`
+  font-size: 0.68rem;
+  color: #667781;
+`;
 
 const TickStatus = styled.span`
   font-size: 0.82rem;
@@ -572,8 +740,13 @@ const ResendBtn = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s;
-  &:hover:not(:disabled) { background: rgba(18,140,126,0.08); }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  &:hover:not(:disabled) {
+    background: rgba(18, 140, 126, 0.08);
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 `;
 
 const ChatLegend = styled.div`
@@ -586,14 +759,31 @@ const ChatLegend = styled.div`
   z-index: 2;
 `;
 
-const LegendItem = styled.div`display: flex; align-items: center; gap: 4px;`;
-const LegendLabel = styled.span`font-size: 0.72rem; color: #667781;`;
+const LegendItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`;
+const LegendLabel = styled.span`
+  font-size: 0.72rem;
+  color: #667781;
+`;
 
-const LoadingWrap = styled.div`display: flex; justify-content: center; padding: 40px;`;
-const EmptyContacts = styled.div`padding: 40px 16px; text-align: center; color: #aaa; font-size: 0.88rem;`;
+const LoadingWrap = styled.div`
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+`;
+const EmptyContacts = styled.div`
+  padding: 40px 16px;
+  text-align: center;
+  color: #aaa;
+  font-size: 0.88rem;
+`;
 
 const Spinner = styled.div`
-  width: 28px; height: 28px;
+  width: 28px;
+  height: 28px;
   border: 3px solid #e9edef;
   border-top-color: #128c7e;
   border-radius: 50%;
