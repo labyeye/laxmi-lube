@@ -225,9 +225,10 @@ router.post(
       }
 
       // ── Pass 2: single query to find already-existing retailers ────────────
+      const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const names = validRetailers.map((r) => r.name);
       const existingRetailers = await Retailer.find({
-        name: { $in: names.map((n) => new RegExp(`^${n}$`, "i")) },
+        name: { $in: names.map((n) => new RegExp(`^${escapeRegex(n)}$`, "i")) },
       })
         .select("name")
         .lean();
