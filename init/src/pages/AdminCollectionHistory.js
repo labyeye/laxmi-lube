@@ -25,6 +25,7 @@ const AdminCollectionHistory = () => {
   const [expandedGroups, setExpandedGroups] = useState({});
   const [zoomImage, setZoomImage] = useState(null);
   const [verifyingId, setVerifyingId] = useState(null);
+  const [verifyRemarks, setVerifyRemarks] = useState({}); // { [collectionId]: string }
 
   const fetchCollections = async () => {
     try {
@@ -112,7 +113,7 @@ const AdminCollectionHistory = () => {
     try {
       const res = await axios.patch(
         `https://backend.laxmilube.in/api/collections/${collectionId}/verify`,
-        { status },
+        { status, remarks: verifyRemarks[collectionId] || "" },
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         },
@@ -345,29 +346,53 @@ const AdminCollectionHistory = () => {
                 </DetailLabel>
                 {viewGroup.map((c) => (
                   <BillVerifyRow key={c._id}>
-                    <div>
-                      <strong>#{c.bill?.billNumber}</strong>{" "}
-                      <span>{formatCurrency(c.amountCollected)}</span>
-                      <div>{verificationBadge(c.verificationStatus)}</div>
-                    </div>
-                    <VerifyBtnGroup>
-                      <VerifyBtn
-                        type="button"
-                        $variant="verified"
-                        disabled={verifyingId === c._id}
-                        onClick={() => handleVerify(c._id, "verified")}
-                      >
-                        <FaCheckCircle /> Verified
-                      </VerifyBtn>
-                      <VerifyBtn
-                        type="button"
-                        $variant="not_verified"
-                        disabled={verifyingId === c._id}
-                        onClick={() => handleVerify(c._id, "not_verified")}
-                      >
-                        <FaTimesCircle /> Not Verified
-                      </VerifyBtn>
-                    </VerifyBtnGroup>
+                    <BillVerifyTopLine>
+                      <div>
+                        <strong>#{c.bill?.billNumber}</strong>{" "}
+                        <span>{formatCurrency(c.amountCollected)}</span>
+                        <div>{verificationBadge(c.verificationStatus)}</div>
+                      </div>
+                      <VerifyBtnGroup>
+                        <VerifyBtn
+                          type="button"
+                          $variant="verified"
+                          disabled={verifyingId === c._id}
+                          onClick={() => handleVerify(c._id, "verified")}
+                        >
+                          <FaCheckCircle /> Verified
+                        </VerifyBtn>
+                        <VerifyBtn
+                          type="button"
+                          $variant="not_verified"
+                          disabled={verifyingId === c._id}
+                          onClick={() => handleVerify(c._id, "not_verified")}
+                        >
+                          <FaTimesCircle /> Not Verified
+                        </VerifyBtn>
+                      </VerifyBtnGroup>
+                    </BillVerifyTopLine>
+
+                    <RemarksInput
+                      placeholder="Add a remark (optional)..."
+                      value={
+                        verifyRemarks[c._id] !== undefined
+                          ? verifyRemarks[c._id]
+                          : c.verificationRemarks || ""
+                      }
+                      onChange={(e) =>
+                        setVerifyRemarks((prev) => ({
+                          ...prev,
+                          [c._id]: e.target.value,
+                        }))
+                      }
+                      maxLength={300}
+                    />
+                    {c.verificationStatus !== "pending" &&
+                      c.verificationRemarks && (
+                        <SavedRemark>
+                          Saved remark: "{c.verificationRemarks}"
+                        </SavedRemark>
+                      )}
                   </BillVerifyRow>
                 ))}
               </BillsSection>
@@ -751,6 +776,12 @@ const BillVerifyRow = styled.div`
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--nb-border);
   border-radius: 8px;
+`;
+
+const BillVerifyTopLine = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 
   & > div:first-child {
     font-size: 0.875rem;
@@ -765,6 +796,29 @@ const BillVerifyRow = styled.div`
     align-items: center;
     justify-content: space-between;
   }
+`;
+
+const RemarksInput = styled.textarea`
+  width: 100%;
+  min-height: 50px;
+  resize: vertical;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--nb-border);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-family: inherit;
+  color: var(--nb-ink);
+
+  &:focus {
+    outline: none;
+    border-color: var(--nb-blue);
+  }
+`;
+
+const SavedRemark = styled.div`
+  font-size: 0.78rem;
+  color: #6b7280;
+  font-style: italic;
 `;
 
 const VerifyBtnGroup = styled.div`

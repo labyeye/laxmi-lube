@@ -287,7 +287,12 @@ const BillAssignedToday = () => {
       const pd =
         paymentMode === "Cash"
           ? { receiptNumber: paymentDetails.receiptNumber || "Money Received" }
-          : paymentDetails;
+          : {
+              ...paymentDetails,
+              transactionId:
+                paymentDetails.upiTransactionId ||
+                paymentDetails.bankTransactionId,
+            };
 
       const formData = new FormData();
       formData.append(
@@ -390,7 +395,12 @@ const BillAssignedToday = () => {
       const pd =
         paymentMode === "Cash"
           ? { receiptNumber: paymentDetails.receiptNumber || "Money Received" }
-          : paymentDetails;
+          : {
+              ...paymentDetails,
+              transactionId:
+                paymentDetails.upiTransactionId ||
+                paymentDetails.bankTransactionId,
+            };
 
       const formData = new FormData();
       formData.append("bill", selectedBill._id);

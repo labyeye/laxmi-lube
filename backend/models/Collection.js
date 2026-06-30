@@ -60,6 +60,11 @@ const collectionSchema = new mongoose.Schema(
       ref: "User",
       default: null,
     },
+    verificationRemarks: {
+      type: String,
+      maxlength: [300, "Verification remarks cannot exceed 300 characters"],
+      default: "",
+    },
   },
   {
     timestamps: true,

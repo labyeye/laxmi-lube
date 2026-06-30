@@ -767,7 +767,7 @@ router.patch(
   checkPermission("collections", "verify"),
   async (req, res) => {
     try {
-      const { status } = req.body;
+      const { status, remarks } = req.body;
       if (!["verified", "not_verified"].includes(status)) {
         return res.status(400).json({
           message: "Status must be 'verified' or 'not_verified'",
@@ -780,6 +780,7 @@ router.patch(
           verificationStatus: status,
           verifiedAt: new Date(),
           verifiedBy: req.user._id,
+          verificationRemarks: (remarks || "").trim(),
         },
         { new: true },
       )
