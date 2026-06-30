@@ -62,6 +62,12 @@ const RetailerBilling = () => {
   const totalPaid = bills.reduce((sum, bill) => sum + bill.paidAmount, 0);
   const totalDue = bills.reduce((sum, bill) => sum + bill.dueAmount, 0);
 
+  const billNumberCounts = bills.reduce((acc, bill) => {
+    acc[bill.billNumber] = (acc[bill.billNumber] || 0) + 1;
+    return acc;
+  }, {});
+  const duplicateCount = Object.values(billNumberCounts).filter((c) => c > 1).reduce((sum, c) => sum + (c - 1), 0);
+
   return (
     <RetailerLayout>
       <PageContainer>
@@ -112,6 +118,11 @@ const RetailerBilling = () => {
             Unpaid
           </FilterButton>
         </FilterSection>
+
+        {/* Duplicate Warning */}
+        {bills.length > 0 && duplicateCount > 0 && (
+          <DuplicateBanner>{duplicateCount} duplicate {duplicateCount === 1 ? "bill" : "bills"}</DuplicateBanner>
+        )}
 
         {/* Bills Table */}
         <ContentSection>
@@ -420,6 +431,17 @@ const LoadingIndicator = styled.div`
     margin: 0;
     font-size: 0.95rem;
   }
+`;
+
+const DuplicateBanner = styled.div`
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffc107;
+  border-radius: 0.5rem;
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
 `;
 
 const ErrorMessage = styled.div`
