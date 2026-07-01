@@ -35,6 +35,7 @@ import Settings from "./pages/Settings";
 import TallyReportPage from "./pages/TallyReportPage";
 import ReconciliationPage from "./pages/ReconciliationPage";
 import WhatsAppLogsPage from "./pages/WhatsAppLogsPage";
+import CashAndSalePage from "./pages/CashAndSalePage";
 
 // Helper: parse user/token from localStorage safely
 const getStoredAuth = () => {
@@ -340,6 +341,18 @@ const App = () => {
             element={
               user?.role === "admin" ? (
                 <AdminApprovedCollections />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+
+          {/* Cash & Sale Page */}
+          <Route
+            path="/admin/cash-and-sale"
+            element={
+              user?.role === "admin" ? (
+                <CashAndSalePage />
               ) : (
                 <Navigate to="/login" />
               )

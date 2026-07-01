@@ -24,6 +24,7 @@ import {
   FaWhatsapp,
   FaBalanceScale,
   FaCheckCircle,
+  FaExchangeAlt,
 } from "react-icons/fa";
 import logo from "../image/logo.png";
 const Layout = ({ children }) => {
@@ -189,6 +190,17 @@ const Layout = ({ children }) => {
             </CategoryIcon>
             <span>Approved Collections</span>
             <Link to="/admin/approved-collections" />
+          </NavItem>
+
+          <NavItem
+            active={location.pathname === "/admin/cash-and-sale"}
+            onClick={closeSidebar}
+          >
+            <CategoryIcon>
+              <FaExchangeAlt />
+            </CategoryIcon>
+            <span>Cash &amp; Sale</span>
+            <Link to="/admin/cash-and-sale" />
           </NavItem>
 
           {/* ── COMMUNICATIONS ───────────────────────────── */}
