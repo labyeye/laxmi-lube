@@ -149,7 +149,8 @@ const AdminCollectionHistory = () => {
     const matchesVerification =
       !verificationFilter || collection.verificationStatus === verificationFilter;
     const matchesPayment =
-      !paymentModeFilter || collection.paymentMode === paymentModeFilter;
+      !paymentModeFilter ||
+      collection.paymentMode?.toLowerCase() === paymentModeFilter.toLowerCase();
     return matchesSearch && matchesVerification && matchesPayment;
   });
 
@@ -313,6 +314,7 @@ const AdminCollectionHistory = () => {
                       <option value="Cash">Cash</option>
                       <option value="upi">UPI</option>
                       <option value="bank_transfer">Bank Transfer</option>
+                      <option value="cheque">Cheque</option>
                     </FilterSelect>
                   </th>
                   <th></th>
@@ -327,6 +329,7 @@ const AdminCollectionHistory = () => {
                     >
                       <option value="">All Status</option>
                       <option value="pending">Pending</option>
+                      <option value="verified">Verified</option>
                       <option value="not_verified">Not Verified</option>
                     </FilterSelect>
                   </th>
@@ -459,6 +462,25 @@ const AdminCollectionHistory = () => {
           <EmptyState>
             <FaMoneyBillWave size={40} />
             <p>No collections found</p>
+            {(searchTerm || startDate || endDate || verificationFilter || paymentModeFilter) && (
+              <ClearFiltersBtn
+                onClick={() => {
+                  setSearchTerm("");
+                  setStartDate("");
+                  setEndDate("");
+                  setVerificationFilter("");
+                  setPaymentModeFilter("");
+                  localStorage.removeItem("adminColl_search");
+                  localStorage.removeItem("adminColl_startDate");
+                  localStorage.removeItem("adminColl_endDate");
+                  localStorage.removeItem("adminColl_verifFilter");
+                  localStorage.removeItem("adminColl_paymentFilter");
+                  fetchCollections();
+                }}
+              >
+                Clear all filters
+              </ClearFiltersBtn>
+            )}
           </EmptyState>
         )}
       </PageContainer>
@@ -1150,6 +1172,21 @@ const ZoomCloseBtn = styled.button`
 
   &:hover {
     background: rgba(255, 255, 255, 0.25);
+  }
+`;
+
+const ClearFiltersBtn = styled.button`
+  margin-top: 0.75rem;
+  padding: 0.4rem 1rem;
+  border: 1px solid var(--nb-border);
+  border-radius: 6px;
+  background: var(--nb-white);
+  color: var(--nb-blue);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  &:hover {
+    background: var(--nb-muted);
   }
 `;
 
