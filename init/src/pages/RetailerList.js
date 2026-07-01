@@ -461,6 +461,7 @@ const RetailerList = () => {
       <CRow alt={idx % 2 === 1}>
         <CCell bold>{name}</CCell>
         <CCell>{address}</CCell>
+        <CCell>{record.phone || "—"}</CCell>
         <CCell>{record.dayAssigned || "—"}</CCell>
         <CCell>{record.assignedTo?.name || "—"}</CCell>
         <CCell>
@@ -628,6 +629,7 @@ const RetailerList = () => {
                     )}
                   </CTh>
                   <CTh>Address</CTh>
+                  <CTh>Phone No</CTh>
                   <CTh>Day</CTh>
                   <CTh>Assigned To</CTh>
                   <CTh>Status</CTh>
@@ -664,6 +666,7 @@ const RetailerList = () => {
                   </CTh>
                   <CTh>Address 1</CTh>
                   <CTh>Address 2</CTh>
+                  <CTh>Phone No</CTh>
                   <CTh>Collection Day</CTh>
                   <CTh>Assigned To</CTh>
                   <CTh>Status</CTh>
@@ -676,6 +679,7 @@ const RetailerList = () => {
                     <CCell bold>{r.name || "—"}</CCell>
                     <CCell>{r.address1 || "—"}</CCell>
                     <CCell>{r.address2 || "—"}</CCell>
+                    <CCell>{r.phone || "—"}</CCell>
                     <CCell>{r.dayAssigned || "—"}</CCell>
                     <CCell>{r.assignedTo?.name || "—"}</CCell>
                     <CCell>
