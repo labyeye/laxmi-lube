@@ -14,6 +14,7 @@ import Logout from "./pages/Logout";
 import BillAssignedToday from "./pages/BillAssignedToday";
 import BillsPage from "./pages/BillsPage";
 import AdminCollectionHistory from "./pages/AdminCollectionHistory";
+import AdminApprovedCollections from "./pages/AdminApprovedCollections";
 import VerifyCollectionsPage from "./pages/VerifyCollectionsPage";
 import CollectionsHistory from "./pages/CollectionHistoryPage";
 import ReportPage from "./pages/ReportPage";
@@ -327,6 +328,18 @@ const App = () => {
             element={
               user?.role === "admin" ? (
                 <AdminCollectionHistory />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+
+          {/* Admin Approved Collections Page */}
+          <Route
+            path="/admin/approved-collections"
+            element={
+              user?.role === "admin" ? (
+                <AdminApprovedCollections />
               ) : (
                 <Navigate to="/login" />
               )

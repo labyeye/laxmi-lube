@@ -10,26 +10,20 @@ import {
   FaChevronRight,
   FaSearchPlus,
   FaCheckCircle,
-  FaTimesCircle,
-  FaDownload,
 } from "react-icons/fa";
-import { jsPDF } from "jspdf";
 import Layout from "../components/Layout";
 
-const AdminCollectionHistory = () => {
+const AdminApprovedCollections = () => {
   const [collections, setCollections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [searchTerm, setSearchTerm] = useState(() => localStorage.getItem("adminColl_search") || "");
-  const [startDate, setStartDate] = useState(() => localStorage.getItem("adminColl_startDate") || "");
-  const [endDate, setEndDate] = useState(() => localStorage.getItem("adminColl_endDate") || "");
-  const [verificationFilter, setVerificationFilter] = useState(() => localStorage.getItem("adminColl_verifFilter") || "");
-  const [paymentModeFilter, setPaymentModeFilter] = useState(() => localStorage.getItem("adminColl_paymentFilter") || "");
-  const [viewGroup, setViewGroup] = useState(null); // array of collections shown in modal
+  const [searchTerm, setSearchTerm] = useState(() => localStorage.getItem("adminApprColl_search") || "");
+  const [startDate, setStartDate] = useState(() => localStorage.getItem("adminApprColl_startDate") || "");
+  const [endDate, setEndDate] = useState(() => localStorage.getItem("adminApprColl_endDate") || "");
+  const [paymentModeFilter, setPaymentModeFilter] = useState(() => localStorage.getItem("adminApprColl_paymentFilter") || "");
+  const [viewGroup, setViewGroup] = useState(null);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [zoomImage, setZoomImage] = useState(null);
-  const [verifyingId, setVerifyingId] = useState(null);
-  const [verifyRemarks, setVerifyRemarks] = useState({}); // { [collectionId]: string }
 
   const fetchCollections = async () => {
     try {
@@ -49,7 +43,7 @@ const AdminCollectionHistory = () => {
       setCollections(response.data);
     } catch (err) {
       console.error("Error fetching collections:", err);
-      setError("Failed to fetch collection history. Please try again.");
+      setError("Failed to fetch approved collections. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -78,82 +72,18 @@ const AdminCollectionHistory = () => {
       maximumFractionDigits: 0,
     }).format(amount);
 
-  const generateCollectionPDF = (group, remarkText) => {
-    const doc = new jsPDF();
-    const first = group[0];
-    const totalAmount = group.reduce((sum, c) => sum + c.amountCollected, 0);
-
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("Collection Verification Receipt", 105, 20, { align: "center" });
-    doc.setDrawColor(200, 200, 200);
-    doc.line(20, 26, 190, 26);
-
-    doc.setFontSize(10);
-    let y = 36;
-    const addRow = (label, value) => {
-      doc.setFont("helvetica", "bold");
-      doc.text(`${label}:`, 20, y);
-      doc.setFont("helvetica", "normal");
-      doc.text(String(value || "-"), 75, y);
-      y += 8;
-    };
-    addRow("Retailer", first.bill?.retailer);
-    addRow("Payment Mode", first.paymentMode);
-    addRow("Collected On", formatDate(first.collectedOn));
-    addRow("Collected By", first.collectedBy?.name);
-    addRow("Total Amount", formatCurrency(totalAmount));
-    addRow("Verification Status", "Verified");
-
-    y += 2;
-    doc.line(20, y, 190, y);
-    y += 8;
-    doc.setFont("helvetica", "bold");
-    doc.text("Bills:", 20, y);
-    y += 8;
-    doc.setFont("helvetica", "normal");
-    group.forEach((c) => {
-      doc.text(
-        `  Bill #${c.bill?.billNumber}  –  ${formatCurrency(c.amountCollected)}`,
-        20,
-        y,
-      );
-      y += 7;
-    });
-
-    if (remarkText) {
-      y += 4;
-      doc.line(20, y, 190, y);
-      y += 8;
-      doc.setFont("helvetica", "bold");
-      doc.text("Verification Remarks:", 20, y);
-      y += 7;
-      doc.setFont("helvetica", "normal");
-      doc.text(doc.splitTextToSize(remarkText, 160), 20, y);
-    }
-
-    const fileName =
-      group.length > 1
-        ? `collection-receipt-group-${first.bill?.billNumber}.pdf`
-        : `collection-receipt-${first.bill?.billNumber}.pdf`;
-    doc.save(fileName);
-  };
-
+  // Only show verified collections
   const filteredCollections = collections.filter((collection) => {
-    // Verified collections are shown in Approved Collections page
-    if (collection.verificationStatus === "verified") return false;
+    if (collection.verificationStatus !== "verified") return false;
     const matchesSearch =
       !searchTerm ||
       collection.bill?.billNumber?.toString().includes(searchTerm) ||
       collection.bill?.retailer?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesVerification =
-      !verificationFilter || collection.verificationStatus === verificationFilter;
     const matchesPayment =
       !paymentModeFilter || collection.paymentMode === paymentModeFilter;
-    return matchesSearch && matchesVerification && matchesPayment;
+    return matchesSearch && matchesPayment;
   });
 
-  // Group collections that share a paymentGroupId (split payments) into one row
   const groupedRows = [];
   const seenGroups = new Set();
   filteredCollections.forEach((c) => {
@@ -177,64 +107,14 @@ const AdminCollectionHistory = () => {
     setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handleVerify = async (collectionId, status) => {
-    setVerifyingId(collectionId);
-    const groupKey = viewGroup
-      ? viewGroup[0].paymentGroupId || viewGroup[0]._id
-      : collectionId;
-    const remarkText = verifyRemarks[groupKey] || "";
-    try {
-      const res = await axios.patch(
-        `https://backend.laxmilube.in/api/collections/${collectionId}/verify`,
-        { status, remarks: remarkText },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        },
-      );
-      setCollections((prev) =>
-        prev.map((c) => (c._id === collectionId ? { ...c, ...res.data } : c)),
-      );
-      const updatedGroup = viewGroup
-        ? viewGroup.map((c) =>
-            c._id === collectionId ? { ...c, ...res.data } : c,
-          )
-        : null;
-      setViewGroup(updatedGroup);
-      if (status === "verified" && updatedGroup) {
-        const allVerified = updatedGroup.every(
-          (c) => c.verificationStatus === "verified",
-        );
-        if (allVerified) {
-          generateCollectionPDF(updatedGroup, remarkText);
-        }
-      }
-    } catch (err) {
-      console.error("Verification update failed:", err);
-    } finally {
-      setVerifyingId(null);
-    }
-  };
-
-  const verificationBadge = (status) => {
-    if (status === "verified")
-      return <VerifyBadge status="verified">Verified</VerifyBadge>;
-    if (status === "not_verified")
-      return <VerifyBadge status="not_verified">Not Verified</VerifyBadge>;
-    return <VerifyBadge status="pending">Pending</VerifyBadge>;
-  };
-
-  const activeGroupKey = viewGroup
-    ? viewGroup[0].paymentGroupId || viewGroup[0]._id
-    : null;
-  const allGroupVerified = viewGroup
-    ? viewGroup.every((c) => c.verificationStatus === "verified")
-    : false;
-
   return (
     <Layout>
       <PageContainer>
         <Header>
-          <h1>Collection History</h1>
+          <TitleRow>
+            <FaCheckCircle size={22} color="#15803d" />
+            <h1>Approved Collections</h1>
+          </TitleRow>
           <HeaderActions>
             <SearchBox>
               <FaSearch />
@@ -244,7 +124,7 @@ const AdminCollectionHistory = () => {
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
-                  localStorage.setItem("adminColl_search", e.target.value);
+                  localStorage.setItem("adminApprColl_search", e.target.value);
                 }}
               />
             </SearchBox>
@@ -255,7 +135,7 @@ const AdminCollectionHistory = () => {
                 value={startDate}
                 onChange={(e) => {
                   setStartDate(e.target.value);
-                  localStorage.setItem("adminColl_startDate", e.target.value);
+                  localStorage.setItem("adminApprColl_startDate", e.target.value);
                 }}
               />
             </DateBox>
@@ -266,7 +146,7 @@ const AdminCollectionHistory = () => {
                 value={endDate}
                 onChange={(e) => {
                   setEndDate(e.target.value);
-                  localStorage.setItem("adminColl_endDate", e.target.value);
+                  localStorage.setItem("adminApprColl_endDate", e.target.value);
                 }}
               />
             </DateBox>
@@ -277,7 +157,7 @@ const AdminCollectionHistory = () => {
         {loading ? (
           <LoadingIndicator>
             <Spinner />
-            Loading collection history...
+            Loading approved collections...
           </LoadingIndicator>
         ) : error ? (
           <ErrorMessage>{error}</ErrorMessage>
@@ -293,7 +173,7 @@ const AdminCollectionHistory = () => {
                   <th>Payment Mode</th>
                   <th>Collected On</th>
                   <th>Collected By</th>
-                  <th>Verification</th>
+                  <th>Status</th>
                   <th></th>
                 </tr>
                 <tr>
@@ -306,7 +186,7 @@ const AdminCollectionHistory = () => {
                       value={paymentModeFilter}
                       onChange={(e) => {
                         setPaymentModeFilter(e.target.value);
-                        localStorage.setItem("adminColl_paymentFilter", e.target.value);
+                        localStorage.setItem("adminApprColl_paymentFilter", e.target.value);
                       }}
                     >
                       <option value="">All Modes</option>
@@ -317,19 +197,7 @@ const AdminCollectionHistory = () => {
                   </th>
                   <th></th>
                   <th></th>
-                  <th>
-                    <FilterSelect
-                      value={verificationFilter}
-                      onChange={(e) => {
-                        setVerificationFilter(e.target.value);
-                        localStorage.setItem("adminColl_verifFilter", e.target.value);
-                      }}
-                    >
-                      <option value="">All Status</option>
-                      <option value="pending">Pending</option>
-                      <option value="not_verified">Not Verified</option>
-                    </FilterSelect>
-                  </th>
+                  <th></th>
                   <th></th>
                 </tr>
               </thead>
@@ -370,47 +238,17 @@ const AdminCollectionHistory = () => {
                         <td>{formatDate(first.collectedOn)}</td>
                         <td>{first.collectedBy?.name || "-"}</td>
                         <td>
-                          {verificationBadge(
-                            row.isGroup
-                              ? row.members.every(
-                                  (m) => m.verificationStatus === "verified",
-                                )
-                                ? "verified"
-                                : row.members.some(
-                                    (m) =>
-                                      m.verificationStatus === "not_verified",
-                                  )
-                                ? "not_verified"
-                                : "pending"
-                              : first.verificationStatus,
-                          )}
+                          <VerifiedBadge>
+                            <FaCheckCircle size={11} /> Verified
+                          </VerifiedBadge>
                         </td>
                         <td>
-                          <ActionBtns>
-                            <EyeBtn
-                              title="View details"
-                              onClick={() => setViewGroup(row.members)}
-                            >
-                              <FaEye />
-                            </EyeBtn>
-                            {(row.isGroup
-                              ? row.members.every(
-                                  (m) => m.verificationStatus === "verified",
-                                )
-                              : first.verificationStatus === "verified") && (
-                              <EyeBtn
-                                title="Download PDF"
-                                onClick={() =>
-                                  generateCollectionPDF(
-                                    row.members,
-                                    row.members[0].verificationRemarks || "",
-                                  )
-                                }
-                              >
-                                <FaDownload />
-                              </EyeBtn>
-                            )}
-                          </ActionBtns>
+                          <EyeBtn
+                            title="View details"
+                            onClick={() => setViewGroup(row.members)}
+                          >
+                            <FaEye />
+                          </EyeBtn>
                         </td>
                       </tr>
                       {row.isGroup &&
@@ -423,29 +261,18 @@ const AdminCollectionHistory = () => {
                               {formatCurrency(m.amountCollected)}
                             </td>
                             <td colSpan={2}></td>
-                            <td>{verificationBadge(m.verificationStatus)}</td>
                             <td>
-                              <ActionBtns>
-                                <EyeBtn
-                                  title="View bill"
-                                  onClick={() => setViewGroup([m])}
-                                >
-                                  <FaEye />
-                                </EyeBtn>
-                                {m.verificationStatus === "verified" && (
-                                  <EyeBtn
-                                    title="Download PDF"
-                                    onClick={() =>
-                                      generateCollectionPDF(
-                                        [m],
-                                        m.verificationRemarks || "",
-                                      )
-                                    }
-                                  >
-                                    <FaDownload />
-                                  </EyeBtn>
-                                )}
-                              </ActionBtns>
+                              <VerifiedBadge>
+                                <FaCheckCircle size={11} /> Verified
+                              </VerifiedBadge>
+                            </td>
+                            <td>
+                              <EyeBtn
+                                title="View bill"
+                                onClick={() => setViewGroup([m])}
+                              >
+                                <FaEye />
+                              </EyeBtn>
                             </td>
                           </SubRow>
                         ))}
@@ -458,7 +285,7 @@ const AdminCollectionHistory = () => {
         ) : (
           <EmptyState>
             <FaMoneyBillWave size={40} />
-            <p>No collections found</p>
+            <p>No approved collections found</p>
           </EmptyState>
         )}
       </PageContainer>
@@ -517,78 +344,23 @@ const AdminCollectionHistory = () => {
               </DetailGrid>
 
               <BillsSection>
-                <DetailLabel>Bills</DetailLabel>
+                <DetailLabel>
+                  {viewGroup.length > 1 ? "Bills Adjusted" : "Bill"}
+                </DetailLabel>
                 {viewGroup.map((c) => (
                   <BillVerifyRow key={c._id}>
-                    <BillVerifyTopLine>
-                      <div>
-                        <strong>#{c.bill?.billNumber}</strong>{" "}
-                        <span>{formatCurrency(c.amountCollected)}</span>
-                        <div>{verificationBadge(c.verificationStatus)}</div>
-                      </div>
-                      <VerifyBtnGroup>
-                        <VerifyBtn
-                          type="button"
-                          $variant="verified"
-                          $active={c.verificationStatus === "verified"}
-                          disabled={
-                            verifyingId === c._id ||
-                            c.verificationStatus !== "pending"
-                          }
-                          onClick={() => handleVerify(c._id, "verified")}
-                        >
-                          <FaCheckCircle /> Verified
-                        </VerifyBtn>
-                        <VerifyBtn
-                          type="button"
-                          $variant="not_verified"
-                          $active={c.verificationStatus === "not_verified"}
-                          disabled={
-                            verifyingId === c._id ||
-                            c.verificationStatus !== "pending"
-                          }
-                          onClick={() => handleVerify(c._id, "not_verified")}
-                        >
-                          <FaTimesCircle /> Not Verified
-                        </VerifyBtn>
-                      </VerifyBtnGroup>
-                    </BillVerifyTopLine>
+                    <BillInfo>
+                      <strong>#{c.bill?.billNumber}</strong>{" "}
+                      <span>{formatCurrency(c.amountCollected)}</span>
+                      <VerifiedBadge>
+                        <FaCheckCircle size={11} /> Verified
+                      </VerifiedBadge>
+                    </BillInfo>
+                    {c.verificationRemarks && (
+                      <SavedRemark>Remark: "{c.verificationRemarks}"</SavedRemark>
+                    )}
                   </BillVerifyRow>
                 ))}
-                <RemarksInput
-                  placeholder="Add a collection remark (optional)..."
-                  value={
-                    verifyRemarks[activeGroupKey] !== undefined
-                      ? verifyRemarks[activeGroupKey]
-                      : viewGroup[0].verificationRemarks || ""
-                  }
-                  onChange={(e) =>
-                    setVerifyRemarks((prev) => ({
-                      ...prev,
-                      [activeGroupKey]: e.target.value,
-                    }))
-                  }
-                  maxLength={300}
-                />
-                {allGroupVerified && viewGroup[0].verificationRemarks && (
-                  <SavedRemark>
-                    Saved remark: "{viewGroup[0].verificationRemarks}"
-                  </SavedRemark>
-                )}
-                {allGroupVerified && (
-                  <DownloadPdfBtn
-                    onClick={() =>
-                      generateCollectionPDF(
-                        viewGroup,
-                        verifyRemarks[activeGroupKey] ||
-                          viewGroup[0].verificationRemarks ||
-                          "",
-                      )
-                    }
-                  >
-                    <FaDownload /> Download PDF
-                  </DownloadPdfBtn>
-                )}
               </BillsSection>
 
               {viewGroup[0].screenshotPath ? (
@@ -660,6 +432,12 @@ const Header = styled.header`
   }
 `;
 
+const TitleRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+`;
+
 const HeaderActions = styled.div`
   display: flex;
   gap: 0.75rem;
@@ -711,7 +489,7 @@ const RefreshBtn = styled.button`
   padding: 0.5rem 1.2rem;
   border: none;
   border-radius: 8px;
-  background: var(--nb-blue);
+  background: #15803d;
   color: var(--nb-white);
   font-size: 0.9rem;
   font-weight: 600;
@@ -767,6 +545,16 @@ const DataTable = styled.table`
   }
 `;
 
+const FilterSelect = styled.select`
+  border: 1px solid var(--nb-border);
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 0.75rem;
+  background: var(--nb-white);
+  color: var(--nb-ink);
+  cursor: pointer;
+`;
+
 const SubRow = styled.tr`
   background-color: #f9fafb;
   font-size: 0.8rem;
@@ -803,20 +591,16 @@ const PaymentMode = styled.span`
   text-transform: capitalize;
 `;
 
-const VERIFY_COLORS = {
-  verified: { bg: "#dcfce7", color: "#15803d" },
-  not_verified: { bg: "#fee2e2", color: "#991b1b" },
-  pending: { bg: "#fef9c3", color: "#92400e" },
-};
-
-const VerifyBadge = styled.span`
-  display: inline-block;
+const VerifiedBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 3px 10px;
   border-radius: 10px;
   font-size: 0.72rem;
   font-weight: 600;
-  background-color: ${(p) => (VERIFY_COLORS[p.status] || VERIFY_COLORS.pending).bg};
-  color: ${(p) => (VERIFY_COLORS[p.status] || VERIFY_COLORS.pending).color};
+  background-color: #dcfce7;
+  color: #15803d;
 `;
 
 const EyeBtn = styled.button`
@@ -848,7 +632,7 @@ const Spinner = styled.div`
   height: 40px;
   border: 4px solid var(--nb-muted);
   border-radius: 50%;
-  border-top-color: var(--nb-blue);
+  border-top-color: #15803d;
   animation: spin 1s ease-in-out infinite;
 
   @keyframes spin {
@@ -968,46 +752,22 @@ const BillsSection = styled.div`
 const BillVerifyRow = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.4rem;
   padding: 0.6rem 0.75rem;
-  border: 1px solid var(--nb-border);
+  border: 1px solid #bbf7d0;
   border-radius: 8px;
+  background: #f0fdf4;
 `;
 
-const BillVerifyTopLine = styled.div`
+const BillInfo = styled.div`
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 0.5rem;
-
-  & > div:first-child {
-    font-size: 0.875rem;
-    color: var(--nb-ink);
-    span {
-      color: #6b7280;
-    }
-  }
-
-  @media (min-width: 480px) {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-`;
-
-const RemarksInput = styled.textarea`
-  width: 100%;
-  min-height: 50px;
-  resize: vertical;
-  padding: 0.5rem 0.6rem;
-  border: 1px solid var(--nb-border);
-  border-radius: 6px;
-  font-size: 0.82rem;
-  font-family: inherit;
+  font-size: 0.875rem;
   color: var(--nb-ink);
 
-  &:focus {
-    outline: none;
-    border-color: var(--nb-blue);
+  span {
+    color: #6b7280;
   }
 `;
 
@@ -1015,51 +775,6 @@ const SavedRemark = styled.div`
   font-size: 0.78rem;
   color: #6b7280;
   font-style: italic;
-`;
-
-const VerifyBtnGroup = styled.div`
-  display: flex;
-  gap: 0.4rem;
-`;
-
-const FilterSelect = styled.select`
-  border: 1px solid var(--nb-border);
-  border-radius: 4px;
-  padding: 3px 6px;
-  font-size: 0.72rem;
-  color: var(--nb-ink);
-  background: var(--nb-white);
-  cursor: pointer;
-  outline: none;
-  width: 100%;
-
-  &:focus {
-    border-color: var(--nb-blue);
-  }
-`;
-
-const VerifyBtn = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.35rem 0.6rem;
-  border-radius: 6px;
-  border: 1px solid
-    ${(p) => (p.$variant === "verified" ? "#15803d" : "#991b1b")};
-  background: var(--nb-white);
-  color: ${(p) => (p.$variant === "verified" ? "#15803d" : "#991b1b")};
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-
-  &:hover:not(:disabled) {
-    background: ${(p) => (p.$variant === "verified" ? "#dcfce7" : "#fee2e2")};
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
 `;
 
 const SSSection = styled.div`
@@ -1153,29 +868,4 @@ const ZoomCloseBtn = styled.button`
   }
 `;
 
-const DownloadPdfBtn = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.85rem;
-  border-radius: 6px;
-  border: 1px solid var(--nb-blue);
-  background: var(--nb-white);
-  color: var(--nb-blue);
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: 0.25rem;
-
-  &:hover {
-    background: var(--nb-muted);
-  }
-`;
-
-const ActionBtns = styled.div`
-  display: flex;
-  gap: 4px;
-  align-items: center;
-`;
-
-export default AdminCollectionHistory;
+export default AdminApprovedCollections;

@@ -15,7 +15,9 @@ import {
   FaSearchPlus,
   FaCheckCircle,
   FaTimesCircle,
+  FaDownload,
 } from "react-icons/fa";
+import { jsPDF } from "jspdf";
 import { useNavigate } from "react-router-dom";
 
 const spin = keyframes`
@@ -29,9 +31,11 @@ const VerifyCollectionsPage = () => {
   const [collections, setCollections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [searchTerm, setSearchTerm] = useState(() => localStorage.getItem("verifyColl_search") || "");
+  const [startDate, setStartDate] = useState(() => localStorage.getItem("verifyColl_startDate") || "");
+  const [endDate, setEndDate] = useState(() => localStorage.getItem("verifyColl_endDate") || "");
+  const [verificationFilter, setVerificationFilter] = useState(() => localStorage.getItem("verifyColl_verifFilter") || "");
+  const [paymentModeFilter, setPaymentModeFilter] = useState(() => localStorage.getItem("verifyColl_paymentFilter") || "");
   const [viewGroup, setViewGroup] = useState(null);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [zoomImage, setZoomImage] = useState(null);
@@ -105,14 +109,77 @@ const VerifyCollectionsPage = () => {
       maximumFractionDigits: 0,
     }).format(amount);
 
+  const generateCollectionPDF = (group, remarkText) => {
+    const doc = new jsPDF();
+    const first = group[0];
+    const totalAmount = group.reduce((sum, c) => sum + c.amountCollected, 0);
+
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("Collection Verification Receipt", 105, 20, { align: "center" });
+    doc.setDrawColor(200, 200, 200);
+    doc.line(20, 26, 190, 26);
+
+    doc.setFontSize(10);
+    let y = 36;
+    const addRow = (label, value) => {
+      doc.setFont("helvetica", "bold");
+      doc.text(`${label}:`, 20, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(String(value || "-"), 75, y);
+      y += 8;
+    };
+    addRow("Retailer", first.bill?.retailer);
+    addRow("Payment Mode", first.paymentMode);
+    addRow("Collected On", formatDate(first.collectedOn));
+    addRow("Collected By", first.collectedBy?.name);
+    addRow("Total Amount", formatCurrency(totalAmount));
+    addRow("Verification Status", "Verified");
+
+    y += 2;
+    doc.line(20, y, 190, y);
+    y += 8;
+    doc.setFont("helvetica", "bold");
+    doc.text("Bills:", 20, y);
+    y += 8;
+    doc.setFont("helvetica", "normal");
+    group.forEach((c) => {
+      doc.text(
+        `  Bill #${c.bill?.billNumber}  –  ${formatCurrency(c.amountCollected)}`,
+        20,
+        y,
+      );
+      y += 7;
+    });
+
+    if (remarkText) {
+      y += 4;
+      doc.line(20, y, 190, y);
+      y += 8;
+      doc.setFont("helvetica", "bold");
+      doc.text("Verification Remarks:", 20, y);
+      y += 7;
+      doc.setFont("helvetica", "normal");
+      doc.text(doc.splitTextToSize(remarkText, 160), 20, y);
+    }
+
+    const fileName =
+      group.length > 1
+        ? `collection-receipt-group-${first.bill?.billNumber}.pdf`
+        : `collection-receipt-${first.bill?.billNumber}.pdf`;
+    doc.save(fileName);
+  };
+
   const filteredCollections = collections.filter((collection) => {
-    if (!searchTerm) return true;
-    return (
+    const matchesSearch =
+      !searchTerm ||
       collection.bill?.billNumber?.toString().includes(searchTerm) ||
-      collection.bill?.retailer
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase())
-    );
+      collection.bill?.retailer?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesVerification =
+      !verificationFilter || collection.verificationStatus === verificationFilter;
+    const matchesPayment =
+      !paymentModeFilter || collection.paymentMode === paymentModeFilter;
+    return matchesSearch && matchesVerification && matchesPayment;
   });
 
   const groupedRows = [];
@@ -140,10 +207,14 @@ const VerifyCollectionsPage = () => {
 
   const handleVerify = async (collectionId, status) => {
     setVerifyingId(collectionId);
+    const groupKey = viewGroup
+      ? viewGroup[0].paymentGroupId || viewGroup[0]._id
+      : collectionId;
+    const remarkText = verifyRemarks[groupKey] || "";
     try {
       const res = await axios.patch(
         `https://backend.laxmilube.in/api/collections/${collectionId}/verify`,
-        { status, remarks: verifyRemarks[collectionId] || "" },
+        { status, remarks: remarkText },
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         },
@@ -151,13 +222,20 @@ const VerifyCollectionsPage = () => {
       setCollections((prev) =>
         prev.map((c) => (c._id === collectionId ? { ...c, ...res.data } : c)),
       );
-      setViewGroup((prev) =>
-        prev
-          ? prev.map((c) =>
-              c._id === collectionId ? { ...c, ...res.data } : c,
-            )
-          : prev,
-      );
+      const updatedGroup = viewGroup
+        ? viewGroup.map((c) =>
+            c._id === collectionId ? { ...c, ...res.data } : c,
+          )
+        : null;
+      setViewGroup(updatedGroup);
+      if (status === "verified" && updatedGroup) {
+        const allVerified = updatedGroup.every(
+          (c) => c.verificationStatus === "verified",
+        );
+        if (allVerified) {
+          generateCollectionPDF(updatedGroup, remarkText);
+        }
+      }
     } catch (err) {
       console.error("Verification update failed:", err);
     } finally {
@@ -172,6 +250,13 @@ const VerifyCollectionsPage = () => {
       return <VerifyBadge status="not_verified">Not Verified</VerifyBadge>;
     return <VerifyBadge status="pending">Pending</VerifyBadge>;
   };
+
+  const activeGroupKey = viewGroup
+    ? viewGroup[0].paymentGroupId || viewGroup[0]._id
+    : null;
+  const allGroupVerified = viewGroup
+    ? viewGroup.every((c) => c.verificationStatus === "verified")
+    : false;
 
   if (loading) {
     return (
@@ -229,7 +314,10 @@ const VerifyCollectionsPage = () => {
                 type="text"
                 placeholder="Search by bill # or retailer..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  localStorage.setItem("verifyColl_search", e.target.value);
+                }}
               />
             </SearchContainer>
             <DateFilterContainer>
@@ -237,7 +325,10 @@ const VerifyCollectionsPage = () => {
               <DateInput
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  localStorage.setItem("verifyColl_startDate", e.target.value);
+                }}
               />
             </DateFilterContainer>
             <DateFilterContainer>
@@ -245,7 +336,10 @@ const VerifyCollectionsPage = () => {
               <DateInput
                 type="date"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  localStorage.setItem("verifyColl_endDate", e.target.value);
+                }}
               />
             </DateFilterContainer>
             <RefreshBtn onClick={fetchCollections}>Apply</RefreshBtn>
@@ -268,6 +362,43 @@ const VerifyCollectionsPage = () => {
                     <th>Collected On</th>
                     <th>Collected By</th>
                     <th>Verification</th>
+                    <th></th>
+                  </tr>
+                  <tr>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th>
+                      <FilterSelect
+                        value={paymentModeFilter}
+                        onChange={(e) => {
+                          setPaymentModeFilter(e.target.value);
+                          localStorage.setItem("verifyColl_paymentFilter", e.target.value);
+                        }}
+                      >
+                        <option value="">All Modes</option>
+                        <option value="Cash">Cash</option>
+                        <option value="upi">UPI</option>
+                        <option value="bank_transfer">Bank Transfer</option>
+                      </FilterSelect>
+                    </th>
+                    <th></th>
+                    <th></th>
+                    <th>
+                      <FilterSelect
+                        value={verificationFilter}
+                        onChange={(e) => {
+                          setVerificationFilter(e.target.value);
+                          localStorage.setItem("verifyColl_verifFilter", e.target.value);
+                        }}
+                      >
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="verified">Verified</option>
+                        <option value="not_verified">Not Verified</option>
+                      </FilterSelect>
+                    </th>
                     <th></th>
                   </tr>
                 </thead>
@@ -308,31 +439,47 @@ const VerifyCollectionsPage = () => {
                           <td>{formatDate(first.collectedOn)}</td>
                           <td>{first.collectedBy?.name || "-"}</td>
                           <td>
-                            {row.isGroup ? (
-                              <span
-                                style={{
-                                  fontSize: "0.75rem",
-                                  color: "#6b7280",
-                                }}
-                              >
-                                {
-                                  row.members.filter(
+                            {verificationBadge(
+                              row.isGroup
+                                ? row.members.every(
                                     (m) => m.verificationStatus === "verified",
-                                  ).length
-                                }
-                                /{row.members.length} verified
-                              </span>
-                            ) : (
-                              verificationBadge(first.verificationStatus)
+                                  )
+                                  ? "verified"
+                                  : row.members.some(
+                                      (m) =>
+                                        m.verificationStatus === "not_verified",
+                                    )
+                                  ? "not_verified"
+                                  : "pending"
+                                : first.verificationStatus,
                             )}
                           </td>
                           <td>
-                            <EyeBtn
-                              title="View details"
-                              onClick={() => setViewGroup(row.members)}
-                            >
-                              <FaEye />
-                            </EyeBtn>
+                            <ActionBtns>
+                              <EyeBtn
+                                title="View details"
+                                onClick={() => setViewGroup(row.members)}
+                              >
+                                <FaEye />
+                              </EyeBtn>
+                              {(row.isGroup
+                                ? row.members.every(
+                                    (m) => m.verificationStatus === "verified",
+                                  )
+                                : first.verificationStatus === "verified") && (
+                                <EyeBtn
+                                  title="Download PDF"
+                                  onClick={() =>
+                                    generateCollectionPDF(
+                                      row.members,
+                                      row.members[0].verificationRemarks || "",
+                                    )
+                                  }
+                                >
+                                  <FaDownload />
+                                </EyeBtn>
+                              )}
+                            </ActionBtns>
                           </td>
                         </tr>
                         {row.isGroup &&
@@ -347,12 +494,27 @@ const VerifyCollectionsPage = () => {
                               <td colSpan={2}></td>
                               <td>{verificationBadge(m.verificationStatus)}</td>
                               <td>
-                                <EyeBtn
-                                  title="View bill"
-                                  onClick={() => setViewGroup([m])}
-                                >
-                                  <FaEye />
-                                </EyeBtn>
+                                <ActionBtns>
+                                  <EyeBtn
+                                    title="View bill"
+                                    onClick={() => setViewGroup([m])}
+                                  >
+                                    <FaEye />
+                                  </EyeBtn>
+                                  {m.verificationStatus === "verified" && (
+                                    <EyeBtn
+                                      title="Download PDF"
+                                      onClick={() =>
+                                        generateCollectionPDF(
+                                          [m],
+                                          m.verificationRemarks || "",
+                                        )
+                                      }
+                                    >
+                                      <FaDownload />
+                                    </EyeBtn>
+                                  )}
+                                </ActionBtns>
                               </td>
                             </SubRow>
                           ))}
@@ -425,9 +587,7 @@ const VerifyCollectionsPage = () => {
               </DetailGrid>
 
               <BillsSection>
-                <DetailLabel>
-                  {viewGroup.length > 1 ? "Bills Adjusted" : "Bill"}
-                </DetailLabel>
+                <DetailLabel>Bills</DetailLabel>
                 {viewGroup.map((c) => (
                   <BillVerifyRow key={c._id}>
                     <BillVerifyTopLine>
@@ -440,7 +600,11 @@ const VerifyCollectionsPage = () => {
                         <VerifyBtn
                           type="button"
                           $variant="verified"
-                          disabled={verifyingId === c._id}
+                          $active={c.verificationStatus === "verified"}
+                          disabled={
+                            verifyingId === c._id ||
+                            c.verificationStatus !== "pending"
+                          }
                           onClick={() => handleVerify(c._id, "verified")}
                         >
                           <FaCheckCircle /> Verified
@@ -448,37 +612,53 @@ const VerifyCollectionsPage = () => {
                         <VerifyBtn
                           type="button"
                           $variant="not_verified"
-                          disabled={verifyingId === c._id}
+                          $active={c.verificationStatus === "not_verified"}
+                          disabled={
+                            verifyingId === c._id ||
+                            c.verificationStatus !== "pending"
+                          }
                           onClick={() => handleVerify(c._id, "not_verified")}
                         >
                           <FaTimesCircle /> Not Verified
                         </VerifyBtn>
                       </VerifyBtnGroup>
                     </BillVerifyTopLine>
-
-                    <RemarksInput
-                      placeholder="Add a remark (optional)..."
-                      value={
-                        verifyRemarks[c._id] !== undefined
-                          ? verifyRemarks[c._id]
-                          : c.verificationRemarks || ""
-                      }
-                      onChange={(e) =>
-                        setVerifyRemarks((prev) => ({
-                          ...prev,
-                          [c._id]: e.target.value,
-                        }))
-                      }
-                      maxLength={300}
-                    />
-                    {c.verificationStatus !== "pending" &&
-                      c.verificationRemarks && (
-                        <SavedRemark>
-                          Saved remark: "{c.verificationRemarks}"
-                        </SavedRemark>
-                      )}
                   </BillVerifyRow>
                 ))}
+                <RemarksInput
+                  placeholder="Add a collection remark (optional)..."
+                  value={
+                    verifyRemarks[activeGroupKey] !== undefined
+                      ? verifyRemarks[activeGroupKey]
+                      : viewGroup[0].verificationRemarks || ""
+                  }
+                  onChange={(e) =>
+                    setVerifyRemarks((prev) => ({
+                      ...prev,
+                      [activeGroupKey]: e.target.value,
+                    }))
+                  }
+                  maxLength={300}
+                />
+                {allGroupVerified && viewGroup[0].verificationRemarks && (
+                  <SavedRemark>
+                    Saved remark: "{viewGroup[0].verificationRemarks}"
+                  </SavedRemark>
+                )}
+                {allGroupVerified && (
+                  <DownloadPdfBtn
+                    onClick={() =>
+                      generateCollectionPDF(
+                        viewGroup,
+                        verifyRemarks[activeGroupKey] ||
+                          viewGroup[0].verificationRemarks ||
+                          "",
+                      )
+                    }
+                  >
+                    <FaDownload /> Download PDF
+                  </DownloadPdfBtn>
+                )}
               </BillsSection>
 
               {viewGroup[0].screenshotPath ? (
@@ -1047,6 +1227,22 @@ const VerifyBtnGroup = styled.div`
   gap: 0.4rem;
 `;
 
+const FilterSelect = styled.select`
+  border: 1px solid var(--nb-border);
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 0.72rem;
+  color: var(--nb-ink);
+  background: var(--nb-white);
+  cursor: pointer;
+  outline: none;
+  width: 100%;
+
+  &:focus {
+    border-color: var(--nb-blue);
+  }
+`;
+
 const VerifyBtn = styled.button`
   display: flex;
   align-items: center;
@@ -1160,6 +1356,31 @@ const ZoomCloseBtn = styled.button`
   &:hover {
     background: rgba(255, 255, 255, 0.25);
   }
+`;
+
+const DownloadPdfBtn = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 6px;
+  border: 1px solid var(--nb-blue);
+  background: var(--nb-white);
+  color: var(--nb-blue);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.25rem;
+
+  &:hover {
+    background: var(--nb-muted);
+  }
+`;
+
+const ActionBtns = styled.div`
+  display: flex;
+  gap: 4px;
+  align-items: center;
 `;
 
 export default VerifyCollectionsPage;

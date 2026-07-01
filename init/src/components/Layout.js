@@ -23,6 +23,7 @@ import {
   FaHome,
   FaWhatsapp,
   FaBalanceScale,
+  FaCheckCircle,
 } from "react-icons/fa";
 import logo from "../image/logo.png";
 const Layout = ({ children }) => {
@@ -177,6 +178,17 @@ const Layout = ({ children }) => {
             </CategoryIcon>
             <span>Collection History</span>
             <Link to="/admin/collections-history" />
+          </NavItem>
+
+          <NavItem
+            active={location.pathname === "/admin/approved-collections"}
+            onClick={closeSidebar}
+          >
+            <CategoryIcon>
+              <FaCheckCircle />
+            </CategoryIcon>
+            <span>Approved Collections</span>
+            <Link to="/admin/approved-collections" />
           </NavItem>
 
           {/* ── COMMUNICATIONS ───────────────────────────── */}
