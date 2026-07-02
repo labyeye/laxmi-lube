@@ -1219,6 +1219,19 @@ router.get("/export/excel", protect, adminOnly, async (req, res) => {
 // TALLY-STYLE REPORT ROUTES
 // ─────────────────────────────────────────────────────────────────────────────
 
+// IST-aware date range helpers for tally routes.
+// "2026-07-02" → start = 2026-07-01T18:30:00.000Z, end = 2026-07-02T18:29:59.999Z
+function istStart(dateStr) {
+  return dateStr
+    ? new Date(dateStr + "T00:00:00+05:30")
+    : new Date(new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }) + "T00:00:00+05:30");
+}
+function istEnd(dateStr) {
+  return dateStr
+    ? new Date(dateStr + "T23:59:59.999+05:30")
+    : new Date(new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }) + "T23:59:59.999+05:30");
+}
+
 // GET /api/reports/tally/retailers  – list all retailers for selector
 router.get("/tally/retailers", protect, adminOnly, async (req, res) => {
   try {
@@ -1252,10 +1265,8 @@ router.get("/tally/retailer-report", protect, adminOnly, async (req, res) => {
         .status(400)
         .json({ success: false, message: "retailerId required" });
 
-    const start = startDate
-      ? startOfDay(new Date(startDate))
-      : startOfDay(new Date());
-    const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(new Date());
+    const start = istStart(startDate);
+    const end = istEnd(endDate);
 
     const retailer = await Retailer.findById(retailerId).lean();
     if (!retailer)
@@ -1301,6 +1312,7 @@ router.get("/tally/retailer-report", protect, adminOnly, async (req, res) => {
           mode: c.paymentMode,
           collectedBy: c.collectedBy?.name || "N/A",
           paymentDetails: c.paymentDetails || {},
+          verificationStatus: c.verificationStatus || "pending",
         })),
       };
     });
@@ -1326,10 +1338,8 @@ router.get("/tally/staff-report", protect, adminOnly, async (req, res) => {
         .status(400)
         .json({ success: false, message: "staffId required" });
 
-    const start = startDate
-      ? startOfDay(new Date(startDate))
-      : startOfDay(new Date());
-    const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(new Date());
+    const start = istStart(startDate);
+    const end = istEnd(endDate);
 
     const staff = await User.findById(staffId).select("name email").lean();
     if (!staff)
@@ -1382,6 +1392,7 @@ router.get("/tally/staff-report", protect, adminOnly, async (req, res) => {
         amount: c.amountCollected,
         mode: c.paymentMode,
         paymentDetails: c.paymentDetails,
+        verificationStatus: c.verificationStatus || "pending",
       };
     });
 
@@ -1418,10 +1429,8 @@ router.get("/tally/staff-report", protect, adminOnly, async (req, res) => {
 router.get("/tally/collection-report", protect, adminOnly, async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    const start = startDate
-      ? startOfDay(new Date(startDate))
-      : startOfDay(new Date());
-    const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(new Date());
+    const start = istStart(startDate);
+    const end = istEnd(endDate);
 
     const collections = await Collection.find({
       collectedOn: { $gte: start, $lte: end },
@@ -1456,6 +1465,7 @@ router.get("/tally/collection-report", protect, adminOnly, async (req, res) => {
         mode: c.paymentMode || "N/A",
         collectedBy: c.collectedBy?.name || "System",
         paymentDetails: c.paymentDetails || {},
+        verificationStatus: c.verificationStatus || "pending",
       };
     });
 

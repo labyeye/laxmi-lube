@@ -205,6 +205,7 @@ const TallyReportPage = () => {
             Mode: c.mode,
             "Payment Detail": paymentDetail(c.mode, c.paymentDetails),
             "Collected By": c.collectedBy,
+            "Verification": c.verificationStatus === "verified" ? "Verified" : "Pending",
           });
         });
       });
@@ -225,6 +226,7 @@ const TallyReportPage = () => {
         Amount: c.amount,
         Mode: c.mode,
         "Payment Detail": paymentDetail(c.mode, c.paymentDetails),
+        Verification: c.verificationStatus === "verified" ? "Verified" : "Pending",
       }));
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(colRows), "Collections");
 
@@ -248,6 +250,7 @@ const TallyReportPage = () => {
         Mode: c.mode,
         "Payment Detail": paymentDetail(c.mode, c.paymentDetails),
         "Collected By": c.collectedBy,
+        Verification: c.verificationStatus === "verified" ? "Verified" : "Pending",
       }));
       rows.push({
         Date: "GRAND TOTAL",
@@ -670,7 +673,10 @@ const RetailerReport = ({ data }) => (
                   <span style={{ color: "#0369a1" }}>
                     {paymentDetail(c.mode, c.paymentDetails)}
                   </span>{" "}
-                  &nbsp;|&nbsp; by {c.collectedBy}
+                  &nbsp;|&nbsp; by {c.collectedBy} &nbsp;|&nbsp;{" "}
+                  <VerifyBadge $status={c.verificationStatus}>
+                    {c.verificationStatus === "verified" ? "Verified" : "Pending"}
+                  </VerifyBadge>
                 </Td>
               </tr>
             ))}
@@ -747,6 +753,7 @@ const StaffReport = ({ data }) => (
           <Th align="right">Amount</Th>
           <Th>Mode</Th>
           <Th>Payment Detail</Th>
+          <Th>Status</Th>
         </tr>
       </thead>
       <tbody>
@@ -762,6 +769,11 @@ const StaffReport = ({ data }) => (
             <Td style={{ fontSize: "0.8rem", color: "#0369a1" }}>
               {paymentDetail(c.mode, c.paymentDetails)}
             </Td>
+            <Td>
+              <VerifyBadge $status={c.verificationStatus}>
+                {c.verificationStatus === "verified" ? "Verified" : "Pending"}
+              </VerifyBadge>
+            </Td>
           </tr>
         ))}
         <tr style={{ background: "#1e293b" }}>
@@ -771,7 +783,7 @@ const StaffReport = ({ data }) => (
           <Td align="right" style={{ color: "#4ade80", fontWeight: 700 }}>
             {INR(data.summary?.totalCollectedAmount)}
           </Td>
-          <Td colSpan={2} />
+          <Td colSpan={3} />
         </tr>
       </tbody>
     </TallyTable>
@@ -860,6 +872,7 @@ const CollectionReport = ({ data }) => (
           <Th>Mode</Th>
           <Th>Payment Detail</Th>
           <Th>Collected By</Th>
+          <Th>Status</Th>
         </tr>
       </thead>
       <tbody>
@@ -876,6 +889,11 @@ const CollectionReport = ({ data }) => (
               {paymentDetail(c.mode, c.paymentDetails)}
             </Td>
             <Td>{c.collectedBy}</Td>
+            <Td>
+              <VerifyBadge $status={c.verificationStatus}>
+                {c.verificationStatus === "verified" ? "Verified" : "Pending"}
+              </VerifyBadge>
+            </Td>
           </tr>
         ))}
         <tr style={{ background: "#1e293b" }}>
@@ -885,7 +903,7 @@ const CollectionReport = ({ data }) => (
           <Td align="right" style={{ color: "#4ade80", fontWeight: 700 }}>
             {INR(data.summary?.totalAmount)}
           </Td>
-          <Td colSpan={3} />
+          <Td colSpan={4} />
         </tr>
       </tbody>
     </TallyTable>
@@ -1411,6 +1429,16 @@ const Td = styled.td`
   border-bottom: 1px solid #f1f5f9;
   text-align: ${(p) => p.align || "left"};
   vertical-align: top;
+`;
+
+const VerifyBadge = styled.span`
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: ${(p) => p.$status === "verified" ? "#dcfce7" : "#fef9c3"};
+  color: ${(p) => p.$status === "verified" ? "#166534" : "#854d0e"};
 `;
 
 const StatusBadge = styled.span`
