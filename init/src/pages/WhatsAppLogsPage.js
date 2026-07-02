@@ -106,14 +106,59 @@ export default function WhatsAppLogsPage() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [selectedRetailer, logs]);
 
-  // Group by retailer
+  // Collapse group collections into one logical message, then group by retailer
   const contacts = (() => {
-    const map = {};
+    // First pass: merge entries that share a paymentGroupId into one message
+    const groupSeen = {};
+    const messages = [];
     logs.forEach((l) => {
-      const key = l.retailerName;
+      if (l.paymentGroupId) {
+        if (groupSeen[l.paymentGroupId]) {
+          // Accumulate into existing group entry
+          const g = groupSeen[l.paymentGroupId];
+          g.amount += l.amount;
+          g.bills.push({ billNumber: l.billNumber, amount: l.amount });
+          // Use the most "informative" status: received > not_received > sent > pending > no_phone
+          const rank = { received: 5, not_received: 4, sent: 3, pending: 2, no_phone: 1 };
+          if ((rank[l.whatsappStatus] || 0) > (rank[g.whatsappStatus] || 0)) {
+            g.whatsappStatus = l.whatsappStatus;
+            g.whatsappSentAt = l.whatsappSentAt;
+            g.whatsappConfirmedAt = l.whatsappConfirmedAt;
+            g.whatsappConfirmedBy = l.whatsappConfirmedBy;
+          }
+        } else {
+          const g = {
+            _id: l._id, // representative id (not used for resend)
+            paymentGroupId: l.paymentGroupId,
+            isGroup: true,
+            bills: [{ billNumber: l.billNumber, amount: l.amount }],
+            billNumber: l.billNumber, // updated after merge
+            retailerName: l.retailerName,
+            retailerPhone: l.retailerPhone,
+            amount: l.amount,
+            paymentMode: l.paymentMode,
+            collectedBy: l.collectedBy,
+            collectedOn: l.collectedOn,
+            whatsappStatus: l.whatsappStatus,
+            whatsappSentAt: l.whatsappSentAt,
+            whatsappConfirmedAt: l.whatsappConfirmedAt,
+            whatsappConfirmedBy: l.whatsappConfirmedBy,
+          };
+          groupSeen[l.paymentGroupId] = g;
+          messages.push(g);
+        }
+      } else {
+        messages.push({ ...l, isGroup: false, bills: [{ billNumber: l.billNumber, amount: l.amount }] });
+      }
+    });
+
+    // Second pass: group by retailer
+    const map = {};
+    messages.forEach((m) => {
+      const key = m.retailerName;
       if (!map[key])
-        map[key] = { retailerName: key, phone: l.retailerPhone, messages: [] };
-      map[key].messages.push(l);
+        map[key] = { retailerName: key, phone: m.retailerPhone, messages: [] };
+      map[key].messages.push(m);
     });
     return Object.values(map).sort(
       (a, b) =>
@@ -135,14 +180,23 @@ export default function WhatsAppLogsPage() {
     ? contacts.find((c) => c.retailerName === selectedRetailer)
     : null;
 
-  const handleResend = async (collectionId) => {
-    setResending(collectionId);
+  const handleResend = async (msg) => {
+    const key = msg.paymentGroupId || msg._id;
+    setResending(key);
     try {
-      await axios.post(
-        `${API}/collections/${collectionId}/send-whatsapp`,
-        {},
-        { headers: getHeaders() },
-      );
+      if (msg.isGroup && msg.paymentGroupId) {
+        await axios.post(
+          `${API}/collections/group/${msg.paymentGroupId}/send-whatsapp`,
+          {},
+          { headers: getHeaders() },
+        );
+      } else {
+        await axios.post(
+          `${API}/collections/${msg._id}/send-whatsapp`,
+          {},
+          { headers: getHeaders() },
+        );
+      }
       await fetchLogs();
     } catch {
       // silent
@@ -216,7 +270,10 @@ export default function WhatsAppLogsPage() {
                       <ContactRow>
                         <ContactPreview>
                           <Ticks color={sm.tickColor}>{sm.ticks}</Ticks>{" "}
-                          {formatINR(last.amount)} · Bill #{last.billNumber}
+                          {formatINR(last.amount)}
+                          {last.isGroup && last.bills?.length > 1
+                            ? ` · ${last.bills.length} bills`
+                            : ` · Bill #${last.billNumber}`}
                         </ContactPreview>
                         <StatusRow>
                           <StatusDot color={sm.dot} />
@@ -268,24 +325,39 @@ export default function WhatsAppLogsPage() {
               <ChatBody>
                 <WaWallpaper />
                 {[...activeContact.messages].reverse().map((msg) => {
-                  const sm =
-                    STATUS_META[msg.whatsappStatus] || STATUS_META.pending;
+                  const sm = STATUS_META[msg.whatsappStatus] || STATUS_META.pending;
+                  const resendKey = msg.paymentGroupId || msg._id;
+                  const isGroup = msg.isGroup && msg.bills?.length > 1;
                   return (
-                    <BubbleWrap key={msg._id}>
+                    <BubbleWrap key={resendKey}>
                       <Bubble>
                         <BubbleHeader>
-                          📄 Receipt — Bill #{msg.billNumber}
+                          {isGroup
+                            ? `📦 Group Receipt — ${msg.bills.length} Bills`
+                            : `📄 Receipt — Bill #${msg.billNumber}`}
                         </BubbleHeader>
                         <BubbleBody>
+                          {isGroup ? (
+                            <>
+                              <BillsList>
+                                {msg.bills.map((b, i) => (
+                                  <BillLine key={i}>
+                                    <span>#{b.billNumber}</span>
+                                    <span>{formatINR(b.amount)}</span>
+                                  </BillLine>
+                                ))}
+                              </BillsList>
+                              <BubbleDivider />
+                            </>
+                          ) : null}
                           <BubbleRow>
-                            <BubbleLabel>Amount</BubbleLabel>
+                            <BubbleLabel>Total Amount</BubbleLabel>
                             <BubbleVal bold>{formatINR(msg.amount)}</BubbleVal>
                           </BubbleRow>
                           <BubbleRow>
                             <BubbleLabel>Mode</BubbleLabel>
                             <BubbleVal>
-                              {PAYMENT_LABELS[msg.paymentMode] ||
-                                msg.paymentMode}
+                              {PAYMENT_LABELS[msg.paymentMode] || msg.paymentMode}
                             </BubbleVal>
                           </BubbleRow>
                           <BubbleRow>
@@ -316,12 +388,13 @@ export default function WhatsAppLogsPage() {
                         </BubbleFooter>
 
                         {(msg.whatsappStatus === "pending" ||
-                          msg.whatsappStatus === "no_phone") && (
+                          msg.whatsappStatus === "no_phone" ||
+                          msg.whatsappStatus === "sent") && (
                           <ResendBtn
-                            disabled={resending === msg._id}
-                            onClick={() => handleResend(msg._id)}
+                            disabled={resending === resendKey}
+                            onClick={() => handleResend(msg)}
                           >
-                            {resending === msg._id ? "Sending…" : "↺ Resend"}
+                            {resending === resendKey ? "Sending…" : "↺ Resend"}
                           </ResendBtn>
                         )}
                       </Bubble>
@@ -697,6 +770,29 @@ const BubbleVal = styled.span`
   font-size: 0.82rem;
   color: #111;
   font-weight: ${(p) => (p.bold ? "700" : "400")};
+`;
+
+const BillsList = styled.div`
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+`;
+
+const BillLine = styled.div`
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: #334155;
+`;
+
+const BubbleDivider = styled.div`
+  height: 1px;
+  background: rgba(0, 0, 0, 0.08);
+  margin: 4px 0 8px;
 `;
 
 const ConfirmedNote = styled.div`

@@ -795,6 +795,7 @@ router.get("/whatsapp-logs", protect, adminOnly, async (req, res) => {
       whatsappSentAt: c.whatsappSentAt || null,
       whatsappConfirmedAt: c.whatsappConfirmedAt || null,
       whatsappConfirmedBy: c.whatsappConfirmedBy || null,
+      paymentGroupId: c.paymentGroupId || null,
     }));
 
     res.json(enriched);
