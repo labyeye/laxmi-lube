@@ -1300,6 +1300,7 @@ router.get("/tally/retailer-report", protect, adminOnly, async (req, res) => {
           amount: c.amountCollected,
           mode: c.paymentMode,
           collectedBy: c.collectedBy?.name || "N/A",
+          paymentDetails: c.paymentDetails || {},
         })),
       };
     });

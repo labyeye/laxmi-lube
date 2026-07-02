@@ -4,6 +4,7 @@ import axios from "axios";
 import { format } from "date-fns";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import * as XLSX from "xlsx";
 import {
   FaStore,
   FaUserTie,
@@ -14,6 +15,7 @@ import {
   FaSpinner,
   FaFilePdf,
   FaMoneyBillWave,
+  FaFileExcel,
 } from "react-icons/fa";
 import Layout from "../components/Layout";
 
@@ -30,6 +32,33 @@ const INR = (n) =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+
+// ─── Payment detail extractor ─────────────────────────────────────────────
+const paymentDetail = (mode, pd) => {
+  if (!pd || !mode) return "—";
+  const m = mode.toLowerCase();
+  if (m === "upi") {
+    const parts = [];
+    if (pd.transactionId || pd.upiTransactionId)
+      parts.push("UTR: " + (pd.transactionId || pd.upiTransactionId));
+    if (pd.upiId) parts.push("ID: " + pd.upiId);
+    return parts.join(" | ") || "—";
+  }
+  if (m === "cheque") {
+    const parts = [];
+    if (pd.chequeNumber) parts.push("Cheque: " + pd.chequeNumber);
+    if (pd.bankName) parts.push(pd.bankName);
+    return parts.join(" | ") || "—";
+  }
+  if (m === "bank_transfer") {
+    const parts = [];
+    if (pd.bankName) parts.push(pd.bankName);
+    if (pd.transactionId) parts.push("Txn: " + pd.transactionId);
+    return parts.join(" | ") || "—";
+  }
+  if (m === "cash" && pd.receiptNumber) return "MR: " + pd.receiptNumber;
+  return "—";
+};
 
 // ─── Report type config ────────────────────────────────────────────────────
 const REPORT_TYPES = [
@@ -143,6 +172,120 @@ const TallyReportPage = () => {
 
   const handlePrint = () => window.print();
 
+  const handleExportXLSX = () => {
+    if (!reportData) return;
+    const wb = XLSX.utils.book_new();
+
+    if (activeType === "retailer") {
+      const rows = [];
+      (reportData.data || []).forEach((bill) => {
+        rows.push({
+          "Invoice No": bill.billNumber,
+          "Bill Date": fmt(bill.billDate),
+          "Assigned To": bill.assignedTo,
+          "Bill Amount": bill.amount,
+          Collected: bill.collected,
+          Due: bill.dueAmount,
+          Status: bill.status,
+          "Payment Date": "",
+          Mode: "",
+          "Payment Detail": "",
+          "Collected By": "",
+        });
+        (bill.collections || []).forEach((c) => {
+          rows.push({
+            "Invoice No": "",
+            "Bill Date": "",
+            "Assigned To": "",
+            "Bill Amount": "",
+            Collected: c.amount,
+            Due: "",
+            Status: "",
+            "Payment Date": fmt(c.date),
+            Mode: c.mode,
+            "Payment Detail": paymentDetail(c.mode, c.paymentDetails),
+            "Collected By": c.collectedBy,
+          });
+        });
+      });
+      rows.push({
+        "Invoice No": "GRAND TOTAL",
+        "Bill Amount": reportData.summary?.totalBillAmount,
+        Collected: reportData.summary?.totalCollected,
+        Due: reportData.summary?.totalDue,
+      });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Retailer Ledger");
+    }
+
+    if (activeType === "staff") {
+      const colRows = (reportData.collections || []).map((c) => ({
+        Date: fmt(c.date),
+        Retailer: c.retailer,
+        "Invoice No": c.billNumber,
+        Amount: c.amount,
+        Mode: c.mode,
+        "Payment Detail": paymentDetail(c.mode, c.paymentDetails),
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(colRows), "Collections");
+
+      const billRows = (reportData.bills || []).map((b) => ({
+        "Invoice No": b.billNumber,
+        Retailer: b.retailer,
+        "Bill Date": fmt(b.billDate),
+        Amount: b.amount,
+        Due: b.dueAmount,
+        Status: b.status,
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(billRows), "Assigned Bills");
+    }
+
+    if (activeType === "collection") {
+      const rows = (reportData.data || []).map((c) => ({
+        Date: fmt(c.date),
+        Retailer: c.retailer,
+        "Invoice No": c.billNumber,
+        Amount: c.amount,
+        Mode: c.mode,
+        "Payment Detail": paymentDetail(c.mode, c.paymentDetails),
+        "Collected By": c.collectedBy,
+      }));
+      rows.push({
+        Date: "GRAND TOTAL",
+        Amount: reportData.summary?.totalAmount,
+      });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Collections");
+    }
+
+    if (activeType === "salary") {
+      const rows = (reportData.data || []).map((s) => ({
+        Staff: s.staffName,
+        Month: `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][(s.month||1)-1]} ${s.year}`,
+        "Basic Salary": s.basicSalary,
+        "Advance Deducted": s.advanceDeducted,
+        "Net Payable": s.netSalaryPayable,
+        "Paid Amount": s.paidAmount,
+        Mode: s.paymentMode || "—",
+        Status: s.paymentStatus,
+        "Paid Date": s.paidDate ? fmt(s.paidDate) : "—",
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Salary Ledger");
+
+      if ((reportData.advances || []).length > 0) {
+        const advRows = reportData.advances.map((a) => ({
+          Staff: a.staffName,
+          Date: fmt(a.date),
+          Amount: a.amount,
+          Reason: a.reason || "—",
+          Status: a.status,
+        }));
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(advRows), "Advance Register");
+      }
+    }
+
+    const typeName = activeType || "report";
+    XLSX.writeFile(wb, `${typeName}-report_${startDate}_to_${endDate}.xlsx`);
+  };
+
   const handleDownloadPDF = async () => {
     const element = document.getElementById("report-print-area");
     if (!element) return;
@@ -234,6 +377,9 @@ const TallyReportPage = () => {
               <PrintBtn onClick={handlePrint}>
                 <FaPrint /> Print
               </PrintBtn>
+              <XlsxBtn onClick={handleExportXLSX}>
+                <FaFileExcel /> Export XLSX
+              </XlsxBtn>
               <DownloadBtn onClick={handleDownloadPDF} disabled={pdfLoading}>
                 {pdfLoading ? (
                   <>
@@ -520,7 +666,11 @@ const RetailerReport = ({ data }) => (
                   }}
                 >
                   ↳ {fmt(c.date)} &nbsp;|&nbsp; {c.mode} &nbsp;|&nbsp;{" "}
-                  {INR(c.amount)} &nbsp;|&nbsp; by {c.collectedBy}
+                  {INR(c.amount)} &nbsp;|&nbsp;{" "}
+                  <span style={{ color: "#0369a1" }}>
+                    {paymentDetail(c.mode, c.paymentDetails)}
+                  </span>{" "}
+                  &nbsp;|&nbsp; by {c.collectedBy}
                 </Td>
               </tr>
             ))}
@@ -596,6 +746,7 @@ const StaffReport = ({ data }) => (
           <Th>Invoice No</Th>
           <Th align="right">Amount</Th>
           <Th>Mode</Th>
+          <Th>Payment Detail</Th>
         </tr>
       </thead>
       <tbody>
@@ -608,6 +759,9 @@ const StaffReport = ({ data }) => (
               {INR(c.amount)}
             </Td>
             <Td>{c.mode}</Td>
+            <Td style={{ fontSize: "0.8rem", color: "#0369a1" }}>
+              {paymentDetail(c.mode, c.paymentDetails)}
+            </Td>
           </tr>
         ))}
         <tr style={{ background: "#1e293b" }}>
@@ -617,7 +771,7 @@ const StaffReport = ({ data }) => (
           <Td align="right" style={{ color: "#4ade80", fontWeight: 700 }}>
             {INR(data.summary?.totalCollectedAmount)}
           </Td>
-          <Td />
+          <Td colSpan={2} />
         </tr>
       </tbody>
     </TallyTable>
@@ -704,6 +858,7 @@ const CollectionReport = ({ data }) => (
           <Th>Invoice No</Th>
           <Th align="right">Amount</Th>
           <Th>Mode</Th>
+          <Th>Payment Detail</Th>
           <Th>Collected By</Th>
         </tr>
       </thead>
@@ -717,6 +872,9 @@ const CollectionReport = ({ data }) => (
               {INR(c.amount)}
             </Td>
             <Td>{c.mode}</Td>
+            <Td style={{ fontSize: "0.8rem", color: "#0369a1" }}>
+              {paymentDetail(c.mode, c.paymentDetails)}
+            </Td>
             <Td>{c.collectedBy}</Td>
           </tr>
         ))}
@@ -727,7 +885,7 @@ const CollectionReport = ({ data }) => (
           <Td align="right" style={{ color: "#4ade80", fontWeight: 700 }}>
             {INR(data.summary?.totalAmount)}
           </Td>
-          <Td colSpan={2} />
+          <Td colSpan={3} />
         </tr>
       </tbody>
     </TallyTable>
@@ -951,6 +1109,23 @@ const PrintBtn = styled.button`
   font-size: 0.9rem;
   &:hover {
     background: #334155;
+  }
+`;
+
+const XlsxBtn = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  &:hover {
+    background: #15803d;
   }
 `;
 
