@@ -10,7 +10,6 @@ import {
   FaChevronRight,
   FaSearchPlus,
   FaCheckCircle,
-  FaTimesCircle,
   FaDownload,
 } from "react-icons/fa";
 import { jsPDF } from "jspdf";
@@ -29,7 +28,9 @@ const AdminCollectionHistory = () => {
   const [expandedGroups, setExpandedGroups] = useState({});
   const [zoomImage, setZoomImage] = useState(null);
   const [verifyingId, setVerifyingId] = useState(null);
-  const [verifyRemarks, setVerifyRemarks] = useState({}); // { [collectionId]: string }
+  const [verifyRemarks, setVerifyRemarks] = useState({}); // { [groupKey]: string }
+  const [lastFiveDigits, setLastFiveDigits] = useState("");
+  const [digitMatchResult, setDigitMatchResult] = useState(null); // "verified" | "not_verified" | null
 
   const fetchCollections = async () => {
     try {
@@ -179,42 +180,55 @@ const AdminCollectionHistory = () => {
     setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handleVerify = async (collectionId, status) => {
+  const handleVerify = async (collectionId, status, digits) => {
     setVerifyingId(collectionId);
     const groupKey = viewGroup
       ? viewGroup[0].paymentGroupId || viewGroup[0]._id
       : collectionId;
     const remarkText = verifyRemarks[groupKey] || "";
     try {
+      const body = { status, remarks: remarkText };
+      if (digits) body.lastFiveDigits = digits;
       const res = await axios.patch(
         `https://backend.laxmilube.in/api/collections/${collectionId}/verify`,
-        { status, remarks: remarkText },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        },
+        body,
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } },
       );
+      const resolved = res.data.matchResult || res.data.verificationStatus;
       setCollections((prev) =>
         prev.map((c) => (c._id === collectionId ? { ...c, ...res.data } : c)),
       );
       const updatedGroup = viewGroup
-        ? viewGroup.map((c) =>
-            c._id === collectionId ? { ...c, ...res.data } : c,
-          )
+        ? viewGroup.map((c) => (c._id === collectionId ? { ...c, ...res.data } : c))
         : null;
       setViewGroup(updatedGroup);
-      if (status === "verified" && updatedGroup) {
-        const allVerified = updatedGroup.every(
-          (c) => c.verificationStatus === "verified",
-        );
-        if (allVerified) {
-          generateCollectionPDF(updatedGroup, remarkText);
-        }
+      if (resolved === "verified" && updatedGroup) {
+        const allVerified = updatedGroup.every((c) => c.verificationStatus === "verified");
+        if (allVerified) generateCollectionPDF(updatedGroup, remarkText);
       }
+      return resolved;
     } catch (err) {
       console.error("Verification update failed:", err);
     } finally {
       setVerifyingId(null);
     }
+  };
+
+  const handleVerifyAll = async () => {
+    if (!viewGroup) return;
+    const pending = viewGroup.filter((c) => c.verificationStatus === "pending");
+    if (pending.length === 0) return;
+    const digits = lastFiveDigits.trim();
+    const mode = (viewGroup[0].paymentMode || "").toLowerCase();
+    if (mode !== "cash" && digits.length === 0) return;
+
+    setVerifyingId("__group__");
+    let lastResult = null;
+    for (const c of pending) {
+      lastResult = await handleVerify(c._id, "verified", digits || undefined);
+    }
+    setDigitMatchResult(lastResult || null);
+    setVerifyingId(null);
   };
 
   const verificationBadge = (status) => {
@@ -393,7 +407,7 @@ const AdminCollectionHistory = () => {
                           <ActionBtns>
                             <EyeBtn
                               title="View details"
-                              onClick={() => setViewGroup(row.members)}
+                              onClick={() => { setViewGroup(row.members); setLastFiveDigits(""); setDigitMatchResult(null); }}
                             >
                               <FaEye />
                             </EyeBtn>
@@ -432,7 +446,7 @@ const AdminCollectionHistory = () => {
                               <ActionBtns>
                                 <EyeBtn
                                   title="View bill"
-                                  onClick={() => setViewGroup([m])}
+                                  onClick={() => { setViewGroup([m]); setLastFiveDigits(""); setDigitMatchResult(null); }}
                                 >
                                   <FaEye />
                                 </EyeBtn>
@@ -487,14 +501,14 @@ const AdminCollectionHistory = () => {
       </PageContainer>
 
       {viewGroup && (
-        <ModalOverlay onClick={() => setViewGroup(null)}>
+        <ModalOverlay onClick={() => { setViewGroup(null); setLastFiveDigits(""); setDigitMatchResult(null); }}>
           <DetailModal onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <h3>
                 Collection Details
                 {viewGroup.length > 1 ? ` (${viewGroup.length} bills)` : ""}
               </h3>
-              <CloseBtn onClick={() => setViewGroup(null)}>×</CloseBtn>
+              <CloseBtn onClick={() => { setViewGroup(null); setLastFiveDigits(""); setDigitMatchResult(null); }}>×</CloseBtn>
             </ModalHeader>
             <ModalBody>
               <DetailGrid>
@@ -549,35 +563,60 @@ const AdminCollectionHistory = () => {
                         <span>{formatCurrency(c.amountCollected)}</span>
                         <div>{verificationBadge(c.verificationStatus)}</div>
                       </div>
-                      <VerifyBtnGroup>
-                        <VerifyBtn
-                          type="button"
-                          $variant="verified"
-                          $active={c.verificationStatus === "verified"}
-                          disabled={
-                            verifyingId === c._id ||
-                            c.verificationStatus !== "pending"
-                          }
-                          onClick={() => handleVerify(c._id, "verified")}
-                        >
-                          <FaCheckCircle /> Verified
-                        </VerifyBtn>
-                        <VerifyBtn
-                          type="button"
-                          $variant="not_verified"
-                          $active={c.verificationStatus === "not_verified"}
-                          disabled={
-                            verifyingId === c._id ||
-                            c.verificationStatus !== "pending"
-                          }
-                          onClick={() => handleVerify(c._id, "not_verified")}
-                        >
-                          <FaTimesCircle /> Not Verified
-                        </VerifyBtn>
-                      </VerifyBtnGroup>
                     </BillVerifyTopLine>
                   </BillVerifyRow>
                 ))}
+
+                {viewGroup.some((c) => c.verificationStatus === "pending") && (
+                  <DigitVerifyBox>
+                    {(viewGroup[0].paymentMode || "").toLowerCase() !== "cash" ? (
+                      <>
+                        <DigitVerifyLabel>
+                          Enter last 5 digits of{" "}
+                          {(viewGroup[0].paymentMode || "").toLowerCase() === "upi"
+                            ? "UTR / Transaction ID"
+                            : (viewGroup[0].paymentMode || "").toLowerCase() === "cheque"
+                            ? "Cheque Number"
+                            : "Transaction ID"}
+                        </DigitVerifyLabel>
+                        <DigitVerifyRow>
+                          <DigitInput
+                            type="text"
+                            maxLength={5}
+                            placeholder="e.g. 43210"
+                            value={lastFiveDigits}
+                            onChange={(e) => {
+                              setLastFiveDigits(e.target.value.replace(/[^a-zA-Z0-9]/g, ""));
+                              setDigitMatchResult(null);
+                            }}
+                          />
+                          <VerifyAllBtn
+                            onClick={handleVerifyAll}
+                            disabled={verifyingId === "__group__" || lastFiveDigits.trim().length === 0}
+                          >
+                            {verifyingId === "__group__" ? "Verifying…" : <><FaCheckCircle /> Verify</>}
+                          </VerifyAllBtn>
+                        </DigitVerifyRow>
+                      </>
+                    ) : (
+                      <DigitVerifyRow>
+                        <VerifyAllBtn
+                          onClick={handleVerifyAll}
+                          disabled={verifyingId === "__group__"}
+                        >
+                          {verifyingId === "__group__" ? "Verifying…" : <><FaCheckCircle /> Mark as Verified</>}
+                        </VerifyAllBtn>
+                      </DigitVerifyRow>
+                    )}
+                    {digitMatchResult && (
+                      <MatchResultBadge $match={digitMatchResult === "verified"}>
+                        {digitMatchResult === "verified"
+                          ? "✓ Digits matched — Verified"
+                          : "✗ Digits did not match — Not Verified"}
+                      </MatchResultBadge>
+                    )}
+                  </DigitVerifyBox>
+                )}
                 <RemarksInput
                   placeholder="Add a collection remark (optional)..."
                   value={
@@ -1015,6 +1054,79 @@ const BillVerifyTopLine = styled.div`
     align-items: center;
     justify-content: space-between;
   }
+`;
+
+const DigitVerifyBox = styled.div`
+  margin-top: 12px;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+`;
+
+const DigitVerifyLabel = styled.div`
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+`;
+
+const DigitVerifyRow = styled.div`
+  display: flex;
+  gap: 8px;
+  align-items: center;
+`;
+
+const DigitInput = styled.input`
+  width: 120px;
+  padding: 8px 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 4px;
+  border: 2px solid #cbd5e1;
+  border-radius: 8px;
+  outline: none;
+  text-align: center;
+  text-transform: uppercase;
+  transition: border-color 0.15s;
+  &:focus {
+    border-color: #3b82f6;
+  }
+`;
+
+const VerifyAllBtn = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px;
+  background: #1e293b;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+  &:hover:not(:disabled) {
+    background: #334155;
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const MatchResultBadge = styled.div`
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  background: ${(p) => (p.$match ? "#dcfce7" : "#fee2e2")};
+  color: ${(p) => (p.$match ? "#15803d" : "#991b1b")};
+  border-left: 4px solid ${(p) => (p.$match ? "#22c55e" : "#ef4444")};
 `;
 
 const RemarksInput = styled.textarea`
