@@ -6,7 +6,6 @@ const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
 const ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
 
 // ── Template names (must match approved Meta templates) ───────────────────────
-// Retailer receipt template: sends PDF + two quick-reply buttons
 const RETAILER_RECEIPT_TEMPLATE =
   process.env.WHATSAPP_RETAILER_TEMPLATE || "collection_receipt";
 // Admin notification template: plain text update for admin
