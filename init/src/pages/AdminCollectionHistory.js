@@ -1152,10 +1152,6 @@ const SavedRemark = styled.div`
   font-style: italic;
 `;
 
-const VerifyBtnGroup = styled.div`
-  display: flex;
-  gap: 0.4rem;
-`;
 
 const FilterSelect = styled.select`
   border: 1px solid var(--nb-border);
@@ -1170,30 +1166,6 @@ const FilterSelect = styled.select`
 
   &:focus {
     border-color: var(--nb-blue);
-  }
-`;
-
-const VerifyBtn = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.35rem 0.6rem;
-  border-radius: 6px;
-  border: 1px solid
-    ${(p) => (p.$variant === "verified" ? "#15803d" : "#991b1b")};
-  background: var(--nb-white);
-  color: ${(p) => (p.$variant === "verified" ? "#15803d" : "#991b1b")};
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-
-  &:hover:not(:disabled) {
-    background: ${(p) => (p.$variant === "verified" ? "#dcfce7" : "#fee2e2")};
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 `;
 
