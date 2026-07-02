@@ -31,6 +31,7 @@ const AdminCollectionHistory = () => {
   const [verifyRemarks, setVerifyRemarks] = useState({}); // { [groupKey]: string }
   const [lastFiveDigits, setLastFiveDigits] = useState("");
   const [digitMatchResult, setDigitMatchResult] = useState(null); // "verified" | "not_verified" | null
+  const [forceVerifyQueue, setForceVerifyQueue] = useState([]); // bills that didn't match, awaiting force-confirm
 
   const fetchCollections = async () => {
     try {
@@ -216,18 +217,38 @@ const AdminCollectionHistory = () => {
 
   const handleVerifyAll = async () => {
     if (!viewGroup) return;
-    const pending = viewGroup.filter((c) => c.verificationStatus === "pending");
+    const pending = viewGroup.filter(
+      (c) => c.verificationStatus === "pending" || c.verificationStatus === "not_verified",
+    );
     if (pending.length === 0) return;
     const digits = lastFiveDigits.trim();
     const mode = (viewGroup[0].paymentMode || "").toLowerCase();
     if (mode !== "cash" && digits.length === 0) return;
 
     setVerifyingId("__group__");
-    let lastResult = null;
+    setForceVerifyQueue([]);
+    const notMatched = [];
     for (const c of pending) {
-      lastResult = await handleVerify(c._id, "verified", digits || undefined);
+      const result = await handleVerify(c._id, "verified", digits || undefined);
+      if (result === "not_verified") notMatched.push(c._id);
     }
-    setDigitMatchResult(lastResult || null);
+    if (notMatched.length > 0) {
+      setForceVerifyQueue(notMatched);
+      setDigitMatchResult("not_verified");
+    } else {
+      setDigitMatchResult("verified");
+    }
+    setVerifyingId(null);
+  };
+
+  const handleForceVerifyAll = async () => {
+    if (forceVerifyQueue.length === 0) return;
+    setVerifyingId("__force__");
+    for (const id of forceVerifyQueue) {
+      await handleVerify(id, "verified", undefined);
+    }
+    setForceVerifyQueue([]);
+    setDigitMatchResult("verified");
     setVerifyingId(null);
   };
 
@@ -407,7 +428,7 @@ const AdminCollectionHistory = () => {
                           <ActionBtns>
                             <EyeBtn
                               title="View details"
-                              onClick={() => { setViewGroup(row.members); setLastFiveDigits(""); setDigitMatchResult(null); }}
+                              onClick={() => { setViewGroup(row.members); setLastFiveDigits(""); setDigitMatchResult(null); setForceVerifyQueue([]); }}
                             >
                               <FaEye />
                             </EyeBtn>
@@ -446,7 +467,7 @@ const AdminCollectionHistory = () => {
                               <ActionBtns>
                                 <EyeBtn
                                   title="View bill"
-                                  onClick={() => { setViewGroup([m]); setLastFiveDigits(""); setDigitMatchResult(null); }}
+                                  onClick={() => { setViewGroup([m]); setLastFiveDigits(""); setDigitMatchResult(null); setForceVerifyQueue([]); }}
                                 >
                                   <FaEye />
                                 </EyeBtn>
@@ -501,14 +522,14 @@ const AdminCollectionHistory = () => {
       </PageContainer>
 
       {viewGroup && (
-        <ModalOverlay onClick={() => { setViewGroup(null); setLastFiveDigits(""); setDigitMatchResult(null); }}>
+        <ModalOverlay onClick={() => { setViewGroup(null); setLastFiveDigits(""); setDigitMatchResult(null); setForceVerifyQueue([]); }}>
           <DetailModal onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <h3>
                 Collection Details
                 {viewGroup.length > 1 ? ` (${viewGroup.length} bills)` : ""}
               </h3>
-              <CloseBtn onClick={() => { setViewGroup(null); setLastFiveDigits(""); setDigitMatchResult(null); }}>×</CloseBtn>
+              <CloseBtn onClick={() => { setViewGroup(null); setLastFiveDigits(""); setDigitMatchResult(null); setForceVerifyQueue([]); }}>×</CloseBtn>
             </ModalHeader>
             <ModalBody>
               <DetailGrid>
@@ -608,12 +629,28 @@ const AdminCollectionHistory = () => {
                         </VerifyAllBtn>
                       </DigitVerifyRow>
                     )}
-                    {digitMatchResult && (
-                      <MatchResultBadge $match={digitMatchResult === "verified"}>
-                        {digitMatchResult === "verified"
-                          ? "✓ Digits matched — Verified"
-                          : "✗ Digits did not match — Not Verified"}
+                    {digitMatchResult === "verified" && forceVerifyQueue.length === 0 && (
+                      <MatchResultBadge $match={true}>
+                        ✓ Digits matched — All Verified
                       </MatchResultBadge>
+                    )}
+                    {forceVerifyQueue.length > 0 && (
+                      <ForceConfirmBox>
+                        <ForceConfirmText>
+                          ⚠️ {forceVerifyQueue.length} bill{forceVerifyQueue.length > 1 ? "s" : ""} did not match the digits. Do you still want to verify {forceVerifyQueue.length > 1 ? "them" : "it"}?
+                        </ForceConfirmText>
+                        <ForceConfirmBtns>
+                          <ForceYesBtn
+                            onClick={handleForceVerifyAll}
+                            disabled={verifyingId === "__force__"}
+                          >
+                            {verifyingId === "__force__" ? "Verifying…" : "Yes, Verify Anyway"}
+                          </ForceYesBtn>
+                          <ForceNoBtn onClick={() => setForceVerifyQueue([])}>
+                            Cancel
+                          </ForceNoBtn>
+                        </ForceConfirmBtns>
+                      </ForceConfirmBox>
                     )}
                   </DigitVerifyBox>
                 )}
@@ -1300,6 +1337,61 @@ const ActionBtns = styled.div`
   display: flex;
   gap: 4px;
   align-items: center;
+`;
+
+const ForceConfirmBox = styled.div`
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: #fffbeb;
+  border: 1px solid #f59e0b;
+  border-left: 4px solid #f59e0b;
+  border-radius: 8px;
+`;
+
+const ForceConfirmText = styled.div`
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #92400e;
+  margin-bottom: 10px;
+`;
+
+const ForceConfirmBtns = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const ForceYesBtn = styled.button`
+  padding: 7px 16px;
+  background: #d97706;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  font-size: 0.83rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+  &:hover:not(:disabled) {
+    background: #b45309;
+  }
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+`;
+
+const ForceNoBtn = styled.button`
+  padding: 7px 16px;
+  background: transparent;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+  font-size: 0.83rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  &:hover {
+    background: #f3f4f6;
+  }
 `;
 
 export default AdminCollectionHistory;
