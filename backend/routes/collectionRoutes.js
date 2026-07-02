@@ -873,28 +873,37 @@ router.patch(
     try {
       const { status, remarks, lastFiveDigits } = req.body;
 
-      // Find the collection first so we can do digit matching
-      const existing = await Collection.findById(req.params.id);
+      // Find the collection first so we can do digit matching (lean = plain JS object)
+      const existing = await Collection.findById(req.params.id).lean();
       if (!existing) return res.status(404).json({ message: "Collection not found" });
 
       let resolvedStatus = status;
 
       // If lastFiveDigits provided, auto-determine status by matching payment reference
       if (lastFiveDigits && lastFiveDigits.trim().length > 0) {
-        const digits = lastFiveDigits.trim().toUpperCase();
+        const digits = lastFiveDigits.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
         const pd = existing.paymentDetails || {};
         const mode = (existing.paymentMode || "").toLowerCase();
 
-        let ref = "";
+        // Collect ALL possible reference fields and pick the first non-empty one
+        let candidates = [];
         if (mode === "upi") {
-          ref = (pd.transactionId || pd.upiTransactionId || "").toString().toUpperCase();
+          candidates = [pd.transactionId, pd.upiTransactionId, pd.upiId];
         } else if (mode === "cheque") {
-          ref = (pd.chequeNumber || "").toString().toUpperCase();
+          candidates = [pd.chequeNumber, pd.chequeNo];
         } else if (mode === "bank_transfer") {
-          ref = (pd.transactionId || "").toString().toUpperCase();
+          candidates = [pd.transactionId, pd.bankTransactionId];
         } else if (mode === "cash") {
-          ref = (pd.receiptNumber || "").toString().toUpperCase();
+          candidates = [pd.receiptNumber];
         }
+
+        const ref = (candidates.find((v) => v && String(v).trim().length > 0) || "")
+          .toString()
+          .trim()
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, "");
+
+        console.log(`[Verify] mode=${mode} digits="${digits}" ref="${ref}" ref_last5="${ref.slice(-digits.length)}" pd=`, JSON.stringify(pd));
 
         const matches = ref.length > 0 && ref.slice(-digits.length) === digits;
         resolvedStatus = matches ? "verified" : "not_verified";
