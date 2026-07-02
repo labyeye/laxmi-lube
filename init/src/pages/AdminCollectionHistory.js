@@ -624,12 +624,14 @@ const AdminCollectionHistory = () => {
                       ? verifyRemarks[activeGroupKey]
                       : viewGroup[0].verificationRemarks || ""
                   }
-                  onChange={(e) =>
-                    setVerifyRemarks((prev) => ({
-                      ...prev,
-                      [activeGroupKey]: e.target.value,
-                    }))
-                  }
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setVerifyRemarks((prev) => ({ ...prev, [activeGroupKey]: val }));
+                    // Auto-fill last 5 alphanumeric chars into digit input
+                    const last5 = val.replace(/[^a-zA-Z0-9]/g, "").slice(-5).toUpperCase();
+                    setLastFiveDigits(last5);
+                    setDigitMatchResult(null);
+                  }}
                   maxLength={300}
                 />
                 {allGroupVerified && viewGroup[0].verificationRemarks && (
