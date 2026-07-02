@@ -4,6 +4,17 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const mongoose = require("mongoose");
+
+// Parse collectedOn: if date-only string, use actual current time (for today) or midnight IST (for past dates)
+function parseCollectedOn(dateStr) {
+  if (!dateStr) return new Date();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const todayIST = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    if (dateStr === todayIST) return new Date(); // actual current time for today
+    return new Date(dateStr + "T00:00:00+05:30"); // midnight IST for past dates
+  }
+  return new Date(dateStr);
+}
 const Collection = require("../models/Collection");
 const Bill = require("../models/Bill");
 const Retailer = require("../models/Retailer");
@@ -505,7 +516,7 @@ router.post(
             : parsedPaymentDetails,
         collectedBy: req.user._id,
         remarks,
-        collectedOn: new Date(collectedOn),
+        collectedOn: parseCollectedOn(collectedOn),
         screenshotPath: req.file ? req.file.path : null,
       });
 
@@ -644,7 +655,7 @@ router.post(
           paymentDetails: finalPaymentDetails,
           collectedBy: req.user._id,
           remarks,
-          collectedOn: new Date(collectedOn),
+          collectedOn: parseCollectedOn(collectedOn),
           screenshotPath: req.file ? req.file.path : null,
           paymentGroupId,
         });
