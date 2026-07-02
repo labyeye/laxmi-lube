@@ -283,9 +283,10 @@ async function generateGroupReceiptPDF(members, retailer) {
     put("NA", POS.chequeNo, 9); put("NA", POS.chequeDt, 9);
   }
 
-  // Combined invoice line: #1042(₹5000), #1043(₹3000), ...
+  // Combined invoice line: #1042(Rs.5000), #1043(Rs.3000), ...
+  // pdf-lib built-in fonts use WinAnsi encoding which cannot encode ₹ (U+20B9)
   const billStr = members
-    .map((m) => `#${m.bill?.billNumber}(₹${Math.round(m.amountCollected)})`)
+    .map((m) => `#${m.bill?.billNumber}(Rs.${Math.round(m.amountCollected)})`)
     .join(", ");
   const fontSize = billStr.length > 70 ? 6.5 : billStr.length > 50 ? 7.5 : 9;
   put(billStr, POS.invoiceNo, fontSize, true);

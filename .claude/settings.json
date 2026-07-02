@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node backend/scripts/migrateCollectedOn.js --dry-run)",
+      "Bash(node backend/scripts/migrateCollectedOn.js)"
+    ]
+  }
+}
