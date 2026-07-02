@@ -871,8 +871,36 @@ router.patch(
   checkPermission("collections", "verify"),
   async (req, res) => {
     try {
-      const { status, remarks } = req.body;
-      if (!["verified", "not_verified"].includes(status)) {
+      const { status, remarks, lastFiveDigits } = req.body;
+
+      // Find the collection first so we can do digit matching
+      const existing = await Collection.findById(req.params.id);
+      if (!existing) return res.status(404).json({ message: "Collection not found" });
+
+      let resolvedStatus = status;
+
+      // If lastFiveDigits provided, auto-determine status by matching payment reference
+      if (lastFiveDigits && lastFiveDigits.trim().length > 0) {
+        const digits = lastFiveDigits.trim().toUpperCase();
+        const pd = existing.paymentDetails || {};
+        const mode = (existing.paymentMode || "").toLowerCase();
+
+        let ref = "";
+        if (mode === "upi") {
+          ref = (pd.transactionId || pd.upiTransactionId || "").toString().toUpperCase();
+        } else if (mode === "cheque") {
+          ref = (pd.chequeNumber || "").toString().toUpperCase();
+        } else if (mode === "bank_transfer") {
+          ref = (pd.transactionId || "").toString().toUpperCase();
+        } else if (mode === "cash") {
+          ref = (pd.receiptNumber || "").toString().toUpperCase();
+        }
+
+        const matches = ref.length > 0 && ref.slice(-digits.length) === digits;
+        resolvedStatus = matches ? "verified" : "not_verified";
+      }
+
+      if (!["verified", "not_verified"].includes(resolvedStatus)) {
         return res.status(400).json({
           message: "Status must be 'verified' or 'not_verified'",
         });
@@ -881,7 +909,7 @@ router.patch(
       const collection = await Collection.findByIdAndUpdate(
         req.params.id,
         {
-          verificationStatus: status,
+          verificationStatus: resolvedStatus,
           verifiedAt: new Date(),
           verifiedBy: req.user._id,
           verificationRemarks: (remarks || "").trim(),
@@ -892,11 +920,7 @@ router.patch(
         .populate("collectedBy", "name")
         .populate("verifiedBy", "name");
 
-      if (!collection) {
-        return res.status(404).json({ message: "Collection not found" });
-      }
-
-      res.json(collection);
+      res.json({ ...collection.toObject(), matchResult: resolvedStatus });
     } catch (err) {
       res.status(500).json({
         message: "Failed to update verification status",
