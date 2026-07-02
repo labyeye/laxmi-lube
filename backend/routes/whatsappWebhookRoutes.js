@@ -35,26 +35,40 @@ router.post("/", async (req, res) => {
             const payload = msg.button?.payload || "";
             const senderPhone = msg.from; // e.g. "919876543210"
 
+            // Payloads are either:
+            //   RECEIVED:<collectionId>         – single collection
+            //   NOT_RECEIVED:<collectionId>     – single collection
+            //   RECEIVED:GROUP:<paymentGroupId> – combined group receipt
+            //   NOT_RECEIVED:GROUP:<paymentGroupId>
+            let status = null;
+            let rest = null;
+
             if (payload.startsWith("RECEIVED:")) {
-              const collectionId = payload.replace("RECEIVED:", "");
-              await Collection.findByIdAndUpdate(collectionId, {
-                whatsappStatus: "received",
-                whatsappConfirmedAt: new Date(),
-                whatsappConfirmedBy: senderPhone,
-              });
-              console.log(
-                `Collection ${collectionId} marked RECEIVED by ${senderPhone}`,
-              );
+              status = "received";
+              rest = payload.slice("RECEIVED:".length);
             } else if (payload.startsWith("NOT_RECEIVED:")) {
-              const collectionId = payload.replace("NOT_RECEIVED:", "");
-              await Collection.findByIdAndUpdate(collectionId, {
-                whatsappStatus: "not_received",
+              status = "not_received";
+              rest = payload.slice("NOT_RECEIVED:".length);
+            }
+
+            if (status && rest) {
+              const update = {
+                whatsappStatus: status,
                 whatsappConfirmedAt: new Date(),
                 whatsappConfirmedBy: senderPhone,
-              });
-              console.log(
-                `Collection ${collectionId} marked NOT_RECEIVED by ${senderPhone}`,
-              );
+              };
+
+              if (rest.startsWith("GROUP:")) {
+                // Group receipt — update every collection in the group
+                const paymentGroupId = rest.slice("GROUP:".length);
+                await Collection.updateMany({ paymentGroupId }, update);
+                console.log(`Group ${paymentGroupId} marked ${status.toUpperCase()} by ${senderPhone}`);
+              } else {
+                // Single collection
+                const collectionId = rest;
+                await Collection.findByIdAndUpdate(collectionId, update);
+                console.log(`Collection ${collectionId} marked ${status.toUpperCase()} by ${senderPhone}`);
+              }
             }
           }
         }

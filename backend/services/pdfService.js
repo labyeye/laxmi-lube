@@ -203,4 +203,95 @@ async function generateReceiptPDF(collection, bill, retailer) {
   return Buffer.from(pdfBytes);
 }
 
-module.exports = { generateReceiptPDF };
+/**
+ * Generate ONE combined receipt PDF for a split-payment group.
+ *
+ * @param {Object[]} members  - populated Collection docs (bill.billNumber, amountCollected, paymentMode, paymentDetails, collectedOn)
+ * @param {Object}   retailer - Retailer doc (name, phone, …)
+ */
+async function generateGroupReceiptPDF(members, retailer) {
+  const templateBytes = fs.readFileSync(RECEIPT_PDF_PATH);
+  const pdfDoc = await PDFDocument.load(templateBytes);
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const page = pdfDoc.getPages()[0];
+
+  const put = (text, pos, size = 10, bold = false) => {
+    if (!text || !pos) return;
+    page.drawText(String(text), {
+      x: pos.x,
+      y: pos.y,
+      size,
+      font: bold ? boldFont : font,
+      color: rgb(0, 0, 0),
+    });
+  };
+
+  const putTick = (pos) => {
+    if (!pos) return;
+    const { x, y } = pos;
+    const g = rgb(0, 0.6, 0);
+    page.drawLine({ start: { x, y: y + 3 }, end: { x: x + 3, y }, thickness: 1.5, color: g });
+    page.drawLine({ start: { x: x + 3, y }, end: { x: x + 9, y: y + 8 }, thickness: 1.5, color: g });
+  };
+
+  const putX = (pos, size = 11) => {
+    page.drawText("X", { x: pos.x, y: pos.y, size, font: boldFont, color: rgb(0.85, 0, 0) });
+  };
+
+  const first = members[0];
+  const totalAmount = members.reduce((sum, m) => sum + m.amountCollected, 0);
+  const pd = first.paymentDetails || {};
+  const mode = first.paymentMode;
+
+  // Receipt number (from first collection)
+  if (pd.receiptNumber) put(pd.receiptNumber, POS.receiptNo, 10, true);
+
+  // Date
+  const dateObj = new Date(first.collectedOn);
+  const dd = String(dateObj.getDate()).padStart(2, "0");
+  const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const yyyy = String(dateObj.getFullYear());
+  put(dd[0], POS.dateD1, 10, true); put(dd[1], POS.dateD2, 10, true);
+  put(mm[0], POS.dateM1, 10, true); put(mm[1], POS.dateM2, 10, true);
+  put(yyyy[0], POS.dateY1, 10, true); put(yyyy[1], POS.dateY2, 10, true);
+  put(yyyy[2], POS.dateY3, 10, true); put(yyyy[3], POS.dateY4, 10, true);
+
+  // Retailer name
+  put(retailer?.name || first.bill?.retailer || "", POS.retailerName, 10, true);
+
+  // Total amount
+  put(toWords(totalAmount), POS.amountWords, 9);
+  put(parseFloat(totalAmount).toFixed(2), POS.amountNum, 10, true);
+
+  // Payment mode marks
+  if (mode === "cheque") {
+    putX(POS.cashMark); putX(POS.upiMark);
+  } else if (mode === "Cash") {
+    putTick(POS.cashMark);
+  } else if (mode === "upi") {
+    putX(POS.upiMark);
+  } else if (mode === "bank_transfer") {
+    putX(POS.bankMark);
+  }
+
+  // Cheque details
+  if (mode === "cheque") {
+    put(pd.chequeNumber || "", POS.chequeNo, 9);
+    put(pd.chequeDate || "", POS.chequeDt, 9);
+  } else {
+    put("NA", POS.chequeNo, 9); put("NA", POS.chequeDt, 9);
+  }
+
+  // Combined invoice line: #1042(₹5000), #1043(₹3000), ...
+  const billStr = members
+    .map((m) => `#${m.bill?.billNumber}(₹${Math.round(m.amountCollected)})`)
+    .join(", ");
+  const fontSize = billStr.length > 70 ? 6.5 : billStr.length > 50 ? 7.5 : 9;
+  put(billStr, POS.invoiceNo, fontSize, true);
+
+  const pdfBytes = await pdfDoc.save();
+  return Buffer.from(pdfBytes);
+}
+
+module.exports = { generateReceiptPDF, generateGroupReceiptPDF };

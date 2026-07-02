@@ -14,7 +14,7 @@ const {
 } = require("../middleware/authMiddleware");
 const { format } = require("date-fns");
 const exceljs = require("exceljs");
-const { generateReceiptPDF } = require("../services/pdfService");
+const { generateReceiptPDF, generateGroupReceiptPDF } = require("../services/pdfService");
 const {
   sendRetailerReceipt,
   sendAdminNotification,
@@ -160,47 +160,77 @@ async function triggerWhatsApp(collectionId) {
   };
 }
 
-// Resends WhatsApp for every collection in a split-payment group: one retailer
-// receipt per bill, but only ONE admin notification for the whole group —
-// avoids spamming the admin with a duplicate message per bill on retry.
+// Sends ONE combined receipt to the retailer for all bills in a split-payment
+// group, and ONE admin notification — never N messages per bill.
 async function triggerGroupWhatsApp(paymentGroupId) {
-  const members = await Collection.find({ paymentGroupId });
+  const members = await Collection.find({ paymentGroupId })
+    .populate("bill", "billNumber retailer amount dueAmount billDate")
+    .populate("collectedBy", "name");
+
   if (members.length === 0) throw new Error("Payment group not found");
 
-  const receiptResults = await Promise.all(
-    members.map((c) => sendRetailerReceiptOnly(c._id).catch(() => null)),
-  );
-  const first = receiptResults.find(Boolean);
-  if (!first) {
-    return { whatsappStatus: "no_phone", retailerPhone: null };
+  const first = members[0];
+  const retailer = await Retailer.findOne({ name: first.bill?.retailer });
+  const staffName = first.collectedBy?.name || "Staff";
+  const collectionDate = format(new Date(first.collectedOn), "dd MMM yyyy");
+  const totalAmount = members.reduce((sum, c) => sum + c.amountCollected, 0).toFixed(2);
+  const paymentModeLabel = PAYMENT_MODE_LABELS[first.paymentMode] || first.paymentMode;
+
+  // Combined bill string for template body: "#1042 (₹5000), #1043 (₹3000)"
+  const combinedBillStr = members
+    .map((m) => `#${m.bill?.billNumber} (₹${Math.round(m.amountCollected)})`)
+    .join(", ");
+
+  // Also keep a plain bill number list for the admin notification
+  const combinedBillNumbers = members.map((m) => m.bill?.billNumber).join(", ");
+
+  let waStatus = "no_phone";
+
+  if (retailer?.phone) {
+    try {
+      // Generate ONE combined PDF for all bills in the group
+      const pdfBuffer = await generateGroupReceiptPDF(members, retailer);
+      const pdfFilename = `receipt_group_${paymentGroupId}_${Date.now()}.pdf`;
+
+      await sendRetailerReceipt(
+        retailer.phone,
+        pdfBuffer,
+        pdfFilename,
+        {
+          retailerName: retailer.name,
+          amount: totalAmount,
+          billNumber: combinedBillStr,
+          date: collectionDate,
+          staffName,
+        },
+        // Button payload references the group so the webhook can mark all members
+        `GROUP:${paymentGroupId}`,
+      );
+      waStatus = "sent";
+    } catch (err) {
+      console.error("Group retailer receipt send failed:", err.message);
+    }
   }
 
-  const totalAmount = members
-    .reduce((sum, c) => sum + c.amountCollected, 0)
-    .toFixed(2);
-  const combinedBillNumbers = receiptResults
-    .filter(Boolean)
-    .map((r) => r.billNumber)
-    .join(", ");
+  // Update whatsappStatus on every member in the group
+  await Collection.updateMany({ paymentGroupId }, {
+    whatsappStatus: waStatus,
+    ...(waStatus === "sent" ? { whatsappSentAt: new Date() } : {}),
+  });
 
   await sendAdminNotifyOnce({
     retailerName: first.bill?.retailer || "N/A",
-    retailerPhone: first.retailer?.phone || "N/A",
+    retailerPhone: retailer?.phone || "N/A",
     retailerAddress:
-      [first.retailer?.address1, first.retailer?.address2]
-        .filter(Boolean)
-        .join(", ") || "N/A",
+      [retailer?.address1, retailer?.address2].filter(Boolean).join(", ") || "N/A",
     amount: totalAmount,
     billNumber: combinedBillNumbers,
-    paymentMode: first.paymentModeLabel,
-    staffName: first.staffName,
-    date: first.collectionDate,
+    paymentMode: paymentModeLabel,
+    staffName,
+    date: collectionDate,
   });
 
-  return {
-    whatsappStatus: first.waStatus,
-    retailerPhone: first.retailer?.phone || null,
-  };
+  return { whatsappStatus: waStatus, retailerPhone: retailer?.phone || null };
 }
 
 // ── Helper function to filter payment details by payment mode ─────────────────
