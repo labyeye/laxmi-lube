@@ -229,7 +229,8 @@ const AdminCollectionHistory = () => {
     setForceVerifyQueue([]);
     const notMatched = [];
     for (const c of pending) {
-      const result = await handleVerify(c._id, "verified", digits || undefined);
+      // Cash: always force-verified with no digit check
+      const result = await handleVerify(c._id, "verified", mode === "cash" ? undefined : digits || undefined);
       if (result === "not_verified") notMatched.push(c._id);
     }
     if (notMatched.length > 0) {
@@ -631,7 +632,9 @@ const AdminCollectionHistory = () => {
                     )}
                     {digitMatchResult === "verified" && forceVerifyQueue.length === 0 && (
                       <MatchResultBadge $match={true}>
-                        ✓ Digits matched — All Verified
+                        {(viewGroup[0].paymentMode || "").toLowerCase() === "cash"
+                          ? "✓ Marked as Verified"
+                          : "✓ Digits matched — All Verified"}
                       </MatchResultBadge>
                     )}
                     {forceVerifyQueue.length > 0 && (
@@ -664,10 +667,12 @@ const AdminCollectionHistory = () => {
                   onChange={(e) => {
                     const val = e.target.value;
                     setVerifyRemarks((prev) => ({ ...prev, [activeGroupKey]: val }));
-                    // Auto-fill last 5 alphanumeric chars into digit input
-                    const last5 = val.replace(/[^a-zA-Z0-9]/g, "").slice(-5).toUpperCase();
-                    setLastFiveDigits(last5);
-                    setDigitMatchResult(null);
+                    // Auto-fill last 5 digits only for non-cash payments
+                    if ((viewGroup[0].paymentMode || "").toLowerCase() !== "cash") {
+                      const last5 = val.replace(/[^a-zA-Z0-9]/g, "").slice(-5).toUpperCase();
+                      setLastFiveDigits(last5);
+                      setDigitMatchResult(null);
+                    }
                   }}
                   maxLength={300}
                 />

@@ -41,7 +41,19 @@ const PermissionManager = ({ userId, currentPermissions, onUpdate }) => {
 
   useEffect(() => {
     if (currentPermissions) {
-      setPermissions(currentPermissions);
+      // Merge stored permissions into defaults so missing modules/actions
+      // always have a valid boolean value and never cause Object.entries crash
+      setPermissions((defaults) => {
+        const merged = {};
+        Object.keys(defaults).forEach((module) => {
+          const stored = currentPermissions[module];
+          merged[module] =
+            stored && typeof stored === "object"
+              ? { ...defaults[module], ...stored }
+              : { ...defaults[module] };
+        });
+        return merged;
+      });
     }
   }, [currentPermissions]);
 
