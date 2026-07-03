@@ -697,6 +697,28 @@ const AdminCollectionHistory = () => {
                 )}
               </BillsSection>
 
+              {viewGroup[0].location?.lat && (
+                <LocationSection>
+                  <DetailLabel>Collection Location</DetailLabel>
+                  <LocationLink
+                    href={`https://www.google.com/maps?q=${viewGroup[0].location.lat},${viewGroup[0].location.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    📍 View on Google Maps
+                    {viewGroup[0].location.accuracy && (
+                      <span> (±{Math.round(viewGroup[0].location.accuracy)}m)</span>
+                    )}
+                  </LocationLink>
+                  <LocationCoords>
+                    {viewGroup[0].location.lat.toFixed(6)}, {viewGroup[0].location.lng.toFixed(6)}
+                    {viewGroup[0].location.recordedAt && (
+                      <> · {new Date(viewGroup[0].location.recordedAt).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata" })}</>
+                    )}
+                  </LocationCoords>
+                </LocationSection>
+              )}
+
               {viewGroup[0].screenshotPath ? (
                 <SSSection>
                   <DetailLabel>Payment Screenshot</DetailLabel>
@@ -1342,6 +1364,36 @@ const ActionBtns = styled.div`
   display: flex;
   gap: 4px;
   align-items: center;
+`;
+
+const LocationSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 1px solid var(--nb-border);
+  padding-top: 0.75rem;
+  margin-bottom: 0.75rem;
+`;
+
+const LocationLink = styled.a`
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1d6ed8;
+  text-decoration: none;
+  span {
+    font-weight: 400;
+    color: #6b7280;
+    font-size: 0.78rem;
+  }
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
+const LocationCoords = styled.div`
+  font-size: 0.75rem;
+  color: #9ca3af;
+  font-family: monospace;
 `;
 
 const ForceConfirmBox = styled.div`

@@ -65,6 +65,12 @@ const collectionSchema = new mongoose.Schema(
       maxlength: [300, "Verification remarks cannot exceed 300 characters"],
       default: "",
     },
+    location: {
+      lat: { type: Number, default: null },
+      lng: { type: Number, default: null },
+      accuracy: { type: Number, default: null },
+      recordedAt: { type: Date, default: null },
+    },
   },
   {
     timestamps: true,

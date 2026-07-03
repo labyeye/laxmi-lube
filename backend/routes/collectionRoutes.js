@@ -502,6 +502,26 @@ router.post(
         return res.status(400).json({ message: validationError });
       }
 
+      // Parse location if provided by client
+      const locationData = req.body.location
+        ? (() => {
+            try {
+              const loc =
+                typeof req.body.location === "string"
+                  ? JSON.parse(req.body.location)
+                  : req.body.location;
+              return {
+                lat: loc.lat ?? null,
+                lng: loc.lng ?? null,
+                accuracy: loc.accuracy ?? null,
+                recordedAt: loc.recordedAt ? new Date(loc.recordedAt) : new Date(),
+              };
+            } catch {
+              return null;
+            }
+          })()
+        : null;
+
       // Create collection with properly structured paymentDetails
       const collection = new Collection({
         bill,
@@ -518,6 +538,7 @@ router.post(
         remarks,
         collectedOn: parseCollectedOn(collectedOn),
         screenshotPath: req.file ? req.file.path : null,
+        ...(locationData && { location: locationData }),
       });
 
       await collection.save();
@@ -646,6 +667,26 @@ router.post(
             }
           : parsedPaymentDetails;
 
+      // Parse location if provided
+      const splitLocationData = req.body.location
+        ? (() => {
+            try {
+              const loc =
+                typeof req.body.location === "string"
+                  ? JSON.parse(req.body.location)
+                  : req.body.location;
+              return {
+                lat: loc.lat ?? null,
+                lng: loc.lng ?? null,
+                accuracy: loc.accuracy ?? null,
+                recordedAt: loc.recordedAt ? new Date(loc.recordedAt) : new Date(),
+              };
+            } catch {
+              return null;
+            }
+          })()
+        : null;
+
       const createdCollections = [];
       for (const { bill, amount } of validatedAllocations) {
         const collection = new Collection({
@@ -658,6 +699,7 @@ router.post(
           collectedOn: parseCollectedOn(collectedOn),
           screenshotPath: req.file ? req.file.path : null,
           paymentGroupId,
+          ...(splitLocationData && { location: splitLocationData }),
         });
         await collection.save();
         createdCollections.push(collection);

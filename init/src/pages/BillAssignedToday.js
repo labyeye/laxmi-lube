@@ -70,6 +70,7 @@ const BillAssignedToday = () => {
   const [totalCollectAmount, setTotalCollectAmount] = useState("");
   const [allocations, setAllocations] = useState([]); // [{ billId, billNumber, dueAmount, amount }]
   const [splitConfirmed, setSplitConfirmed] = useState(false);
+  const [cachedLocation, setCachedLocation] = useState(null);
   const BANK_LIST = [
     "ALLAHABAD BANK",
     "ANDHRA BANK",
@@ -215,6 +216,29 @@ const BillAssignedToday = () => {
     fetchAllAssignedCustomers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDay]);
+
+  // Silently acquire and refresh GPS location in background
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    const captureLocation = () => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setCachedLocation({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+            recordedAt: new Date().toISOString(),
+          });
+        },
+        () => {}, // silently ignore errors
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+      );
+    };
+    captureLocation();
+    // Refresh every 5 minutes so location stays current
+    const interval = setInterval(captureLocation, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
   const imageWidth = window.innerWidth < 768 ? "80%" : "50%";
 
   const dueBillsForCustomer = selectedCustomer
@@ -294,6 +318,7 @@ const BillAssignedToday = () => {
             };
 
       const formData = new FormData();
+      if (cachedLocation) formData.append("location", JSON.stringify(cachedLocation));
       formData.append(
         "allocations",
         JSON.stringify(
@@ -402,6 +427,7 @@ const BillAssignedToday = () => {
             };
 
       const formData = new FormData();
+      if (cachedLocation) formData.append("location", JSON.stringify(cachedLocation));
       formData.append("bill", selectedBill._id);
       formData.append("amountCollected", roundedAmount);
       formData.append("paymentMode", paymentMode);
