@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import styled, { keyframes } from "styled-components";
+import { fmtDate } from "../utils/dateFormat";
 import {
   FaMoneyBillWave,
   FaClipboardList,
@@ -125,10 +126,7 @@ const StaffDashboard = () => {
     navigate("/login"); // Redirect to the login page
   };
 
-  const formatDate = (dateString) => {
-    const options = { day: "numeric", month: "short", year: "numeric" };
-    return new Date(dateString).toLocaleDateString("en-US", options);
-  };
+  const formatDate = fmtDate;
 
   if (loading)
     return (

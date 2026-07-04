@@ -3,6 +3,7 @@ import styled from "styled-components";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
+import { fmtDate } from "../utils/dateFormat";
 import { FaCheck, FaTimes, FaClock, FaStore } from "react-icons/fa";
 
 const RetailerApproval = () => {
@@ -179,7 +180,7 @@ const RetailerApproval = () => {
                   <InfoRow>
                     <Label>Registered On:</Label>
                     <Value>
-                      {new Date(retailer.createdAt).toLocaleDateString("en-IN")}
+                      {fmtDate(retailer.createdAt)}
                     </Value>
                   </InfoRow>
                 </CardBody>

@@ -3,6 +3,7 @@ import styled from "styled-components";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import RetailerLayout from "../components/RetailerLayout";
+import { fmtDate } from "../utils/dateFormat";
 
 const RetailerBilling = () => {
   const [bills, setBills] = useState([]);
@@ -158,7 +159,7 @@ const RetailerBilling = () => {
                       <tr key={bill.id}>
                         <td data-label="Bill No.">{bill.billNumber}</td>
                         <td data-label="Bill Date">
-                          {new Date(bill.billDate).toLocaleDateString("en-IN")}
+                          {fmtDate(bill.billDate)}
                         </td>
                         <td data-label="Amount">
                           ₹{bill.amount.toLocaleString()}
@@ -178,11 +179,7 @@ const RetailerBilling = () => {
                           {bill.collectionDay}
                         </td>
                         <td data-label="Payment Date">
-                          {bill.paymentDate
-                            ? new Date(bill.paymentDate).toLocaleDateString(
-                                "en-IN",
-                              )
-                            : "-"}
+                          {bill.paymentDate ? fmtDate(bill.paymentDate) : "-"}
                         </td>
                       </tr>
                     ))

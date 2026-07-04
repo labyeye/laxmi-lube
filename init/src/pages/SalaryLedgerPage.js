@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import styled from "styled-components";
 import axios from "axios";
 import Layout from "../components/Layout";
+import { fmtDate } from "../utils/dateFormat";
 
 const SalaryLedgerPage = () => {
   const [users, setUsers] = useState([]);
@@ -262,9 +263,7 @@ const SalaryLedgerPage = () => {
                                 <strong>Advance Taken</strong>
                                 <Details>
                                   Date:{" "}
-                                  {new Date(
-                                    adv.advanceDate,
-                                  ).toLocaleDateString()}{" "}
+                                  {fmtDate(adv.advanceDate)}{" "}
                                   | Reason: {adv.reason || "N/A"} | Status:{" "}
                                   {adv.status}
                                 </Details>
@@ -288,9 +287,7 @@ const SalaryLedgerPage = () => {
                                 <Details>
                                   Mode: {item.salary.paymentMode} | Date:{" "}
                                   {item.salary.paidDate
-                                    ? new Date(
-                                        item.salary.paidDate,
-                                      ).toLocaleDateString()
+                                    ? fmtDate(item.salary.paidDate)
                                     : "N/A"}{" "}
                                   | Status: {item.salary.paymentStatus}
                                 </Details>

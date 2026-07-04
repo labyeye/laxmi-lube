@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import styled from "styled-components";
+import { fmtDate } from "../utils/dateFormat";
 import {
   FaPlus,
   FaSearch,
@@ -66,12 +67,7 @@ const CashAndSalePage = () => {
       maximumFractionDigits: 0,
     }).format(amount);
 
-  const formatDate = (d) =>
-    new Date(d).toLocaleDateString("en-IN", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
+  const formatDate = fmtDate;
 
   const filtered = entries.filter((e) => {
     const matchSearch =

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import styled from "styled-components";
+import { fmtDate } from "../utils/dateFormat";
 import {
   FaUserPlus,
   FaUserEdit,
@@ -578,7 +579,7 @@ const Users = () => {
                           <td>
                             <small>
                               {user.createdAt
-                                ? new Date(user.createdAt).toLocaleDateString()
+                                ? fmtDate(user.createdAt)
                                 : "—"}
                             </small>
                           </td>
@@ -587,7 +588,7 @@ const Users = () => {
                           <td>
                             <small>
                               {user.lastLogin
-                                ? new Date(user.lastLogin).toLocaleDateString()
+                                ? fmtDate(user.lastLogin)
                                 : "Never"}
                             </small>
                           </td>
@@ -668,7 +669,7 @@ const Users = () => {
                     {user.createdAt && (
                       <CardJoined>
                         <FaClock size={10} /> Joined{" "}
-                        {new Date(user.createdAt).toLocaleDateString()}
+                        {fmtDate(user.createdAt)}
                       </CardJoined>
                     )}
                     <CardActions>

@@ -3,6 +3,7 @@ import styled from "styled-components";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import RetailerLayout from "../components/RetailerLayout";
+import { fmtDate } from "../utils/dateFormat";
 import { FaPlus, FaBox, FaShoppingCart, FaTrash } from "react-icons/fa";
 
 const RetailerOrders = () => {
@@ -296,13 +297,7 @@ const RetailerOrders = () => {
                     <div>
                       <OrderTitle>Order #{order.id.slice(-6)}</OrderTitle>
                       <OrderDate>
-                        {new Date(order.createdAt).toLocaleDateString("en-IN", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        {fmtDate(order.createdAt)}
                       </OrderDate>
                     </div>
                     <StatusBadge status={order.status}>

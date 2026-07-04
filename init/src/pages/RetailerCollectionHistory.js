@@ -3,6 +3,7 @@ import styled from "styled-components";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import RetailerLayout from "../components/RetailerLayout";
+import { fmtDate } from "../utils/dateFormat";
 import { FaMoneyBillWave, FaCalendarAlt, FaUser } from "react-icons/fa";
 
 const RetailerCollectionHistory = () => {
@@ -167,9 +168,7 @@ const RetailerCollectionHistory = () => {
                     filteredCollections.map((collection, index) => (
                       <tr key={collection._id || index}>
                         <td data-label="Collection Date">
-                          {new Date(
-                            collection.collectionDate,
-                          ).toLocaleDateString("en-IN")}
+                          {fmtDate(collection.collectionDate)}
                           <TimeText>
                             {new Date(
                               collection.collectionDate,

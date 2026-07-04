@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import { fmtDate } from "../utils/dateFormat";
 import styled, { keyframes } from "styled-components";
 import {
   FaMoneyBillWave,
@@ -611,10 +612,7 @@ const BillAssignedToday = () => {
     }
   };
 
-  const formatDate = (dateString) => {
-    const options = { day: "numeric", month: "short", year: "numeric" };
-    return new Date(dateString).toLocaleDateString("en-US", options);
-  };
+  const formatDate = fmtDate;
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {

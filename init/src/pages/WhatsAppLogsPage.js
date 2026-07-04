@@ -51,19 +51,21 @@ function fmt(date) {
     });
   }
   if (diff < 172800000) return "Yesterday";
-  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
 }
 
 function fmtFull(date) {
   if (!date) return "";
-  return new Date(date).toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
+  const d = new Date(date);
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  const hh = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
 }
 
 function formatINR(n) {

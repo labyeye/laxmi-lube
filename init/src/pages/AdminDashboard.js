@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
+import { fmtDate } from "../utils/dateFormat";
 import {
   FaFileInvoiceDollar,
   FaUserTie,
@@ -572,14 +573,7 @@ const AdminDashboard = () => {
                           </PaymentBadge>
                         </td>
                         <td data-label="Date">
-                          {new Date(collection.collectedOn).toLocaleDateString(
-                            "en-IN",
-                            {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            },
-                          )}
+                          {fmtDate(collection.collectedOn)}
                         </td>
                         <td data-label="WhatsApp">
                           <WaBadge status={collection.whatsappStatus}>

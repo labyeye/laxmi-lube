@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import axios from "axios";
 import Layout from "../components/Layout";
+import { fmtDate } from "../utils/dateFormat";
 
 const AdvancePage = () => {
   const [advances, setAdvances] = useState([]);
@@ -376,7 +377,7 @@ const AdvancePage = () => {
                 getFilteredAdvances().map((advance) => (
                   <tr key={advance._id}>
                     <Td>
-                      {new Date(advance.advanceDate).toLocaleDateString()}
+                      {fmtDate(advance.advanceDate)}
                     </Td>
                     <Td>{advance.staffName}</Td>
                     <Td

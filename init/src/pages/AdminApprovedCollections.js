@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import styled from "styled-components";
+import { fmtDate } from "../utils/dateFormat";
 import {
   FaSearch,
   FaCalendarAlt,
@@ -62,17 +63,7 @@ const AdminApprovedCollections = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const formatDate = (dateString) => {
-    const options = {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "Asia/Kolkata",
-    };
-    return new Date(dateString).toLocaleDateString("en-IN", options);
-  };
+  const formatDate = fmtDate;
 
   const formatCurrency = (amount) =>
     new Intl.NumberFormat("en-IN", {

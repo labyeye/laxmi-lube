@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import axios from "axios";
 import Layout from "../components/Layout";
+import { fmtDate } from "../utils/dateFormat";
 
 const SalaryPage = () => {
   const [salaries, setSalaries] = useState([]);
@@ -353,7 +354,7 @@ const SalaryPage = () => {
                   {openAdvances.map((adv) => (
                     <AdvanceItem key={adv._id}>
                       <span>
-                        {new Date(adv.advanceDate).toLocaleDateString()}
+                        {fmtDate(adv.advanceDate)}
                       </span>
                       <span>{adv.reason || "No reason"}</span>
                       <AdvanceAmount>
@@ -492,7 +493,7 @@ const SalaryPage = () => {
                     <Td>{salary.paymentMode}</Td>
                     <Td>
                       {salary.paidDate
-                        ? new Date(salary.paidDate).toLocaleDateString()
+                        ? fmtDate(salary.paidDate)
                         : "-"}
                     </Td>
                     <Td>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import styled from "styled-components";
 import * as xlsx from "xlsx";
+import { fmtDate } from "../utils/dateFormat";
 import {
   FaEdit,
   FaTrash,
@@ -460,9 +461,7 @@ const BillsPage = () => {
       Retailer: bill.retailer || "",
       Amount: bill.amount || 0,
       "Due Amount": bill.dueAmount || 0,
-      "Bill Date": bill.billDate
-        ? new Date(bill.billDate).toLocaleDateString()
-        : "",
+      "Bill Date": bill.billDate ? fmtDate(bill.billDate) : "",
       "Collection Day": bill.collectionDay || "",
       Status: bill.status || "",
       "Assigned To": bill.assignedToName || "Not Assigned",
@@ -572,7 +571,7 @@ const BillsPage = () => {
                         <td>{bill.retailer}</td>
                         <td>{formatCurrency(bill.amount)}</td>
                         <td>
-                          {new Date(bill.billDate).toLocaleDateString()}
+                          {fmtDate(bill.billDate)}
                         </td>{" "}
                         {/* Changed from dueDate to billDate */}
                         <td>

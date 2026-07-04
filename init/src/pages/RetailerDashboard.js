@@ -3,6 +3,7 @@ import styled from "styled-components";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import RetailerLayout from "../components/RetailerLayout";
+import { fmtDate } from "../utils/dateFormat";
 import {
   FaFileInvoiceDollar,
   FaMoneyBillWave,
@@ -173,9 +174,7 @@ const RetailerDashboard = () => {
                   <h3>Last Payment</h3>
                   <p>
                     {dashboardData?.financialSummary?.lastPaymentDate
-                      ? new Date(
-                          dashboardData.financialSummary.lastPaymentDate,
-                        ).toLocaleDateString("en-IN")
+                      ? fmtDate(dashboardData.financialSummary.lastPaymentDate)
                       : "No payments yet"}
                   </p>
                 </div>
@@ -217,9 +216,7 @@ const RetailerDashboard = () => {
                             </StatusBadge>
                           </td>
                           <td data-label="Bill Date">
-                            {new Date(bill.billDate).toLocaleDateString(
-                              "en-IN",
-                            )}
+                            {fmtDate(bill.billDate)}
                           </td>
                           <td data-label="Collection Day">
                             {bill.collectionDay}
