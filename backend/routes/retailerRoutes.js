@@ -330,7 +330,7 @@ router.post(
   },
 );
 
-// Fast batch import: accepts parsed rows as JSON, uses bulkWrite for speed
+// Fast batch import: accepts parsed rows as JSON
 router.post("/import-batch", protect, adminOnly, async (req, res) => {
   try {
     const { rows, updateFields } = req.body;
@@ -339,10 +339,10 @@ router.post("/import-batch", protect, adminOnly, async (req, res) => {
         insertedCount: 0,
         updatedCount: 0,
         updatedDetails: [],
+        attempted: 0,
       });
     }
 
-    const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const ALL_FIELDS = [
       "phone",
       "address1",
@@ -355,28 +355,22 @@ router.post("/import-batch", protect, adminOnly, async (req, res) => {
         ? updateFields
         : ALL_FIELDS;
 
-    // Load staff map once
+    // Load staff map
     const staffMembers = await User.find({ role: { $in: ["staff", "admin"] } })
       .select("name")
       .lean();
     const staffByName = new Map(
-      staffMembers.map((s) => [s.name.toUpperCase(), s._id]),
+      staffMembers.map((s) => [s.name.trim().toUpperCase(), s._id]),
     );
 
-    // Find which names already exist (one query)
-    const names = rows.map((r) => r.name).filter(Boolean);
-    const existing = await Retailer.find({
-      name: { $in: names.map((n) => new RegExp(`^${escapeRegex(n)}$`, "i")) },
-    })
-      .select("name _id")
-      .lean();
+    // Load ALL existing retailer names in one query — simple string check, no regex
+    const allExisting = await Retailer.find({}).select("name _id").lean();
     const existingMap = new Map(
-      existing.map((r) => [r.name.toUpperCase(), r._id]),
+      allExisting.map((r) => [r.name.trim().toUpperCase(), r._id]),
     );
 
     const toInsert = [];
-    const bulkOps = [];
-    let insertedCount = 0;
+    const updateOps = [];
     let updatedCount = 0;
     const updatedDetails = [];
 
@@ -385,18 +379,18 @@ router.post("/import-batch", protect, adminOnly, async (req, res) => {
       if (!name) continue;
 
       const assignedToId = row.assignedTo
-        ? staffByName.get(row.assignedTo.toUpperCase()) || undefined
+        ? staffByName.get(row.assignedTo.trim().toUpperCase()) || undefined
         : undefined;
 
       const existingId = existingMap.get(name.toUpperCase());
 
       if (existingId) {
-        // Existing: update only selected fields
+        // Existing retailer: update only the fields the user selected
         const updateData = {};
         const fieldLabels = [];
         for (const f of fieldsToUpdate) {
           if (f === "phone" && row.phone != null) {
-            updateData.phone = row.phone;
+            updateData.phone = String(row.phone);
             fieldLabels.push("Phone");
           }
           if (f === "address1" && row.address1) {
@@ -417,7 +411,7 @@ router.post("/import-batch", protect, adminOnly, async (req, res) => {
           }
         }
         if (Object.keys(updateData).length > 0) {
-          bulkOps.push({
+          updateOps.push({
             updateOne: {
               filter: { _id: existingId },
               update: { $set: updateData },
@@ -427,37 +421,51 @@ router.post("/import-batch", protect, adminOnly, async (req, res) => {
           updatedDetails.push({ name, fields: fieldLabels });
         }
       } else {
-        // New retailer: insert all available data
+        // New retailer: insert with all available data
         toInsert.push({
           name,
           address1: row.address1 || "",
           address2: row.address2 || "",
-          phone: row.phone || undefined,
+          phone: row.phone ? String(row.phone) : undefined,
           dayAssigned: row.dayAssigned || "",
-          assignedTo: assignedToId,
+          assignedTo: assignedToId || undefined,
           createdBy: req.user._id,
           status: "ACTIVE",
+          createdAt: new Date(),
+          updatedAt: new Date(),
         });
       }
     }
 
-    // Add insertOne ops for new retailers — bulkWrite bypasses Mongoose validators
-    // so phone numbers from Excel (e.g. with country code or spaces) won't silently fail
-    for (const doc of toInsert) {
-      bulkOps.push({ insertOne: { document: doc } });
+    // Run updates via bulkWrite
+    if (updateOps.length > 0) {
+      await Retailer.bulkWrite(updateOps, { ordered: false });
     }
 
-    if (bulkOps.length > 0) {
-      const result = await Retailer.bulkWrite(bulkOps, { ordered: false });
-      insertedCount = result.insertedCount || 0;
-      if (result.hasWriteErrors && result.hasWriteErrors()) {
-        console.error("Bulk import write errors:", result.getWriteErrors().slice(0, 5));
+    // Insert new retailers via native driver — bypasses ALL Mongoose validators/middleware
+    let insertedCount = 0;
+    if (toInsert.length > 0) {
+      try {
+        const result = await Retailer.collection.insertMany(toInsert, {
+          ordered: false,
+        });
+        insertedCount =
+          result.insertedCount || Object.keys(result.insertedIds || {}).length;
+      } catch (insertErr) {
+        // ordered:false — some may succeed even if others fail (e.g. duplicate key)
+        insertedCount = insertErr.result?.insertedCount || 0;
+        console.error("Insert errors:", insertErr.message?.slice(0, 200));
       }
     }
 
-    res.json({ insertedCount, updatedCount, updatedDetails, attempted: toInsert.length });
+    res.json({
+      insertedCount,
+      updatedCount,
+      updatedDetails,
+      attempted: toInsert.length,
+    });
   } catch (err) {
-    console.error("Batch import error:", err);
+    console.error("Batch import error:", err.message);
     res.status(500).json({ message: err.message });
   }
 });

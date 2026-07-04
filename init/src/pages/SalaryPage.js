@@ -353,9 +353,7 @@ const SalaryPage = () => {
                   </AdvanceTitle>
                   {openAdvances.map((adv) => (
                     <AdvanceItem key={adv._id}>
-                      <span>
-                        {fmtDate(adv.advanceDate)}
-                      </span>
+                      <span>{fmtDate(adv.advanceDate)}</span>
                       <span>{adv.reason || "No reason"}</span>
                       <AdvanceAmount>
                         ₹ {adv.advanceAmount.toFixed(2)}
@@ -491,11 +489,7 @@ const SalaryPage = () => {
                       </StatusBadge>
                     </Td>
                     <Td>{salary.paymentMode}</Td>
-                    <Td>
-                      {salary.paidDate
-                        ? fmtDate(salary.paidDate)
-                        : "-"}
-                    </Td>
+                    <Td>{salary.paidDate ? fmtDate(salary.paidDate) : "-"}</Td>
                     <Td>
                       <ActionButton onClick={() => handleEdit(salary)}>
                         Edit

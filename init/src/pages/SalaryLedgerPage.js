@@ -262,10 +262,8 @@ const SalaryLedgerPage = () => {
                               <Particulars>
                                 <strong>Advance Taken</strong>
                                 <Details>
-                                  Date:{" "}
-                                  {fmtDate(adv.advanceDate)}{" "}
-                                  | Reason: {adv.reason || "N/A"} | Status:{" "}
-                                  {adv.status}
+                                  Date: {fmtDate(adv.advanceDate)} | Reason:{" "}
+                                  {adv.reason || "N/A"} | Status: {adv.status}
                                 </Details>
                               </Particulars>
                             </Td>

@@ -179,9 +179,7 @@ const RetailerApproval = () => {
 
                   <InfoRow>
                     <Label>Registered On:</Label>
-                    <Value>
-                      {fmtDate(retailer.createdAt)}
-                    </Value>
+                    <Value>{fmtDate(retailer.createdAt)}</Value>
                   </InfoRow>
                 </CardBody>
 

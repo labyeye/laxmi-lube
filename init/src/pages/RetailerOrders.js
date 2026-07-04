@@ -296,9 +296,7 @@ const RetailerOrders = () => {
                   <OrderHeader>
                     <div>
                       <OrderTitle>Order #{order.id.slice(-6)}</OrderTitle>
-                      <OrderDate>
-                        {fmtDate(order.createdAt)}
-                      </OrderDate>
+                      <OrderDate>{fmtDate(order.createdAt)}</OrderDate>
                     </div>
                     <StatusBadge status={order.status}>
                       {order.status}

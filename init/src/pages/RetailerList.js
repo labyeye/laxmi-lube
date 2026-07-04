@@ -511,7 +511,10 @@ const RetailerList = () => {
         totalUpdated += data.updatedCount || 0;
         // attempted - insertedCount = how many new rows silently failed (e.g. unique index)
         const failed = (data.attempted || 0) - (data.insertedCount || 0);
-        if (failed > 0) console.warn(`${failed} rows attempted but not inserted (possible duplicate names or DB constraint)`);
+        if (failed > 0)
+          console.warn(
+            `${failed} rows attempted but not inserted (possible duplicate names or DB constraint)`,
+          );
         if (data.updatedDetails) allUpdatedDetails.push(...data.updatedDetails);
 
         done = Math.min(i + BATCH_SIZE, total);

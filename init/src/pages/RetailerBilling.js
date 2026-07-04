@@ -158,9 +158,7 @@ const RetailerBilling = () => {
                     filteredBills.map((bill) => (
                       <tr key={bill.id}>
                         <td data-label="Bill No.">{bill.billNumber}</td>
-                        <td data-label="Bill Date">
-                          {fmtDate(bill.billDate)}
-                        </td>
+                        <td data-label="Bill Date">{fmtDate(bill.billDate)}</td>
                         <td data-label="Amount">
                           ₹{bill.amount.toLocaleString()}
                         </td>

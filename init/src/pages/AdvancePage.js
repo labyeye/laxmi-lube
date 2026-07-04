@@ -376,9 +376,7 @@ const AdvancePage = () => {
               ) : (
                 getFilteredAdvances().map((advance) => (
                   <tr key={advance._id}>
-                    <Td>
-                      {fmtDate(advance.advanceDate)}
-                    </Td>
+                    <Td>{fmtDate(advance.advanceDate)}</Td>
                     <Td>{advance.staffName}</Td>
                     <Td
                       style={{ fontWeight: "600", color: "var(--nb-orange)" }}

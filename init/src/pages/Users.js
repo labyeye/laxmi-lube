@@ -578,9 +578,7 @@ const Users = () => {
                         {visibleColumns.createdAt && (
                           <td>
                             <small>
-                              {user.createdAt
-                                ? fmtDate(user.createdAt)
-                                : "—"}
+                              {user.createdAt ? fmtDate(user.createdAt) : "—"}
                             </small>
                           </td>
                         )}
@@ -668,8 +666,7 @@ const Users = () => {
                     </CardMeta>
                     {user.createdAt && (
                       <CardJoined>
-                        <FaClock size={10} /> Joined{" "}
-                        {fmtDate(user.createdAt)}
+                        <FaClock size={10} /> Joined {fmtDate(user.createdAt)}
                       </CardJoined>
                     )}
                     <CardActions>

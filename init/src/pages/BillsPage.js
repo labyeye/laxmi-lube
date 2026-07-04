@@ -45,6 +45,7 @@ const BillsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [retailerFilter, setRetailerFilter] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
+  const [totalCollected, setTotalCollected] = useState(0);
 
   const fetchData = async () => {
     setLoading(true);
@@ -54,23 +55,29 @@ const BillsPage = () => {
         throw new Error("Authentication token not found.");
       }
 
-      const [billsResponse, staffResponse] = await Promise.all([
-        axios.get("https://backend.laxmilube.in/api/bills", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }),
-        axios.get("https://backend.laxmilube.in/api/users/staff", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }),
-      ]);
+      const [billsResponse, staffResponse, collectionsResponse] =
+        await Promise.all([
+          axios.get("https://backend.laxmilube.in/api/bills", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          axios.get("https://backend.laxmilube.in/api/users/staff", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          axios.get("https://backend.laxmilube.in/api/collections", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
 
       setBills(billsResponse.data);
       setStaff(staffResponse.data);
+
+      // Sum all amountCollected from collection history
+      const collections = collectionsResponse.data || [];
+      const total = collections.reduce(
+        (sum, c) => sum + (Number(c.amountCollected) || 0),
+        0,
+      );
+      setTotalCollected(total);
     } catch (err) {
       setError("Failed to load bills. Please try again later.");
       setTimeout(() => setError(""), 5000);
@@ -391,20 +398,31 @@ const BillsPage = () => {
 
   const uniqueRetailers = [...new Set(bills.map((b) => b.retailer))].sort();
 
-  // Stats across ALL bills (not filtered), so cards always show full picture
-  const stats = {
-    totalBills: bills.length,
-    totalAmount: bills.reduce((s, b) => s + (Number(b.amount) || 0), 0),
-    totalDue: bills.reduce((s, b) => s + (Number(b.dueAmount) || 0), 0),
-    totalSettled: bills.reduce(
-      (s, b) => s + ((Number(b.amount) || 0) - (Number(b.dueAmount) || 0)),
-      0,
-    ),
-    settledCount: bills.filter(
-      (b) => (Number(b.dueAmount) || 0) === 0 && (Number(b.amount) || 0) > 0,
-    ).length,
-    pendingCount: bills.filter((b) => (Number(b.dueAmount) || 0) > 0).length,
-  };
+  // Stats across ALL bills (not filtered)
+  const stats = (() => {
+    let totalAmount = 0,
+      totalDue = 0;
+    let fullyPaid = 0,
+      partial = 0,
+      unpaid = 0;
+    for (const b of bills) {
+      const amt = Number(b.amount) || 0;
+      const due = Number(b.dueAmount) || 0;
+      totalAmount += amt;
+      totalDue += due;
+      if (due === 0 && amt > 0) fullyPaid++;
+      else if (due > 0 && due < amt) partial++;
+      else if (due >= amt && amt > 0) unpaid++;
+    }
+    return {
+      totalBills: bills.length,
+      totalAmount,
+      totalDue,
+      fullyPaid,
+      partial,
+      unpaid,
+    };
+  })();
 
   const filteredBills = bills.filter((bill) => {
     const matchesSearch =
@@ -551,23 +569,27 @@ const BillsPage = () => {
           </StatCard>
           <StatCard color="#f0fdf4" border="#bbf7d0">
             <StatValue>{formatCurrency(stats.totalAmount)}</StatValue>
-            <StatLabel>Total Amount</StatLabel>
+            <StatLabel>Total Bill Amount</StatLabel>
+          </StatCard>
+          <StatCard color="#ecfdf5" border="#6ee7b7">
+            <StatValue>{formatCurrency(totalCollected)}</StatValue>
+            <StatLabel>Total Collected (All Time)</StatLabel>
           </StatCard>
           <StatCard color="#fef9c3" border="#fde047">
             <StatValue>{formatCurrency(stats.totalDue)}</StatValue>
-            <StatLabel>Total Due (Pending)</StatLabel>
-          </StatCard>
-          <StatCard color="#ecfdf5" border="#6ee7b7">
-            <StatValue>{formatCurrency(stats.totalSettled)}</StatValue>
-            <StatLabel>Total Collected</StatLabel>
+            <StatLabel>Total Remaining Due</StatLabel>
           </StatCard>
           <StatCard color="#f0fdf4" border="#86efac">
-            <StatValue>{stats.settledCount}</StatValue>
-            <StatLabel>Fully Settled Bills</StatLabel>
+            <StatValue>{stats.fullyPaid}</StatValue>
+            <StatLabel>Fully Paid Bills</StatLabel>
           </StatCard>
           <StatCard color="#fff7ed" border="#fdba74">
-            <StatValue>{stats.pendingCount}</StatValue>
-            <StatLabel>Bills with Due Amount</StatLabel>
+            <StatValue>{stats.partial}</StatValue>
+            <StatLabel>Partially Collected</StatLabel>
+          </StatCard>
+          <StatCard color="#fef2f2" border="#fca5a5">
+            <StatValue>{stats.unpaid}</StatValue>
+            <StatLabel>Unpaid Bills</StatLabel>
           </StatCard>
         </StatsRow>
 
@@ -612,9 +634,7 @@ const BillsPage = () => {
                         <td>{bill.billNumber}</td>
                         <td>{bill.retailer}</td>
                         <td>{formatCurrency(bill.amount)}</td>
-                        <td>
-                          {fmtDate(bill.billDate)}
-                        </td>{" "}
+                        <td>{fmtDate(bill.billDate)}</td>{" "}
                         {/* Changed from dueDate to billDate */}
                         <td>
                           <StatusBadge status={bill.status}>
