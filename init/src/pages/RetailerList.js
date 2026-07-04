@@ -354,8 +354,13 @@ const RetailerList = () => {
     if (!file) return;
 
     const dayAbbreviations = {
-      MON: "Monday", TUE: "Tuesday", WED: "Wednesday", THU: "Thursday",
-      FRI: "Friday", SAT: "Saturday", SUN: "Sunday",
+      MON: "Monday",
+      TUE: "Tuesday",
+      WED: "Wednesday",
+      THU: "Thursday",
+      FRI: "Friday",
+      SAT: "Saturday",
+      SUN: "Sunday",
     };
 
     const reader = new FileReader();
@@ -364,17 +369,29 @@ const RetailerList = () => {
         const wb = xlsx.read(evt.target.result, { type: "array" });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rawRows = xlsx.utils.sheet_to_json(ws, { header: 1 });
-        const headers = (rawRows[0] || []).map((h) => String(h).toLowerCase().trim());
+        const headers = (rawRows[0] || []).map((h) =>
+          String(h).toLowerCase().trim(),
+        );
 
         // Detect which updatable columns are present
         const found = [];
-        const phoneIdx = headers.findIndex((h) =>
-          h.includes("phone") || h.includes("mobile") || h.includes("whatsapp") || h.includes("contact"),
+        const phoneIdx = headers.findIndex(
+          (h) =>
+            h.includes("phone") ||
+            h.includes("mobile") ||
+            h.includes("whatsapp") ||
+            h.includes("contact"),
         );
-        const addr1Idx = headers.findIndex((h) => h.includes("address 1") || h.includes("address1"));
-        const addr2Idx = headers.findIndex((h) => h.includes("address 2") || h.includes("address2"));
+        const addr1Idx = headers.findIndex(
+          (h) => h.includes("address 1") || h.includes("address1"),
+        );
+        const addr2Idx = headers.findIndex(
+          (h) => h.includes("address 2") || h.includes("address2"),
+        );
         const dayIdx = headers.findIndex((h) => h.includes("day"));
-        const staffIdx = headers.findIndex((h) => h.includes("assigned to") || h.includes("assignedto"));
+        const staffIdx = headers.findIndex(
+          (h) => h.includes("assigned to") || h.includes("assignedto"),
+        );
         const nameIdx = headers.findIndex((h) => h.includes("name"));
 
         if (phoneIdx >= 0) found.push("phone");
@@ -385,20 +402,28 @@ const RetailerList = () => {
         setDetectedFields(found);
 
         // Parse all data rows now; skip rows with no name
-        const dataRows = rawRows.slice(1).map((row) => {
-          const name = nameIdx >= 0 ? String(row[nameIdx] || "").trim() : "";
-          if (!name) return null;
-          const dayRaw = dayIdx >= 0 ? String(row[dayIdx] || "").trim() : "";
-          const dayProcessed = dayAbbreviations[dayRaw.toUpperCase()] || dayRaw;
-          return {
-            name,
-            phone: phoneIdx >= 0 ? String(row[phoneIdx] || "").trim() || undefined : undefined,
-            address1: addr1Idx >= 0 ? String(row[addr1Idx] || "").trim() : "",
-            address2: addr2Idx >= 0 ? String(row[addr2Idx] || "").trim() : "",
-            dayAssigned: dayProcessed,
-            assignedTo: staffIdx >= 0 ? String(row[staffIdx] || "").trim() : "",
-          };
-        }).filter(Boolean);
+        const dataRows = rawRows
+          .slice(1)
+          .map((row) => {
+            const name = nameIdx >= 0 ? String(row[nameIdx] || "").trim() : "";
+            if (!name) return null;
+            const dayRaw = dayIdx >= 0 ? String(row[dayIdx] || "").trim() : "";
+            const dayProcessed =
+              dayAbbreviations[dayRaw.toUpperCase()] || dayRaw;
+            return {
+              name,
+              phone:
+                phoneIdx >= 0
+                  ? String(row[phoneIdx] || "").trim() || undefined
+                  : undefined,
+              address1: addr1Idx >= 0 ? String(row[addr1Idx] || "").trim() : "",
+              address2: addr2Idx >= 0 ? String(row[addr2Idx] || "").trim() : "",
+              dayAssigned: dayProcessed,
+              assignedTo:
+                staffIdx >= 0 ? String(row[staffIdx] || "").trim() : "",
+            };
+          })
+          .filter(Boolean);
 
         setParsedRows(dataRows);
       } catch {
@@ -424,7 +449,9 @@ const RetailerList = () => {
     }
 
     if (parsedRows.length === 0) {
-      setModalError("No valid rows found in the file (all rows may be missing a retailer name).");
+      setModalError(
+        "No valid rows found in the file (all rows may be missing a retailer name).",
+      );
       return;
     }
 
@@ -472,7 +499,9 @@ const RetailerList = () => {
 
         const data = await response.json();
         if (!response.ok)
-          throw new Error(data?.message || `Import failed (status ${response.status})`);
+          throw new Error(
+            data?.message || `Import failed (status ${response.status})`,
+          );
 
         totalInserted += data.insertedCount || 0;
         totalUpdated += data.updatedCount || 0;
@@ -1182,7 +1211,8 @@ const RetailerList = () => {
                         {importProgress && (
                           <ImportProgressBox>
                             <ImportProgressText>
-                              Importing… {importProgress.current} of {importProgress.total} rows
+                              Importing… {importProgress.current} of{" "}
+                              {importProgress.total} rows
                             </ImportProgressText>
                             <ImportProgressTrack>
                               <ImportProgressFill
