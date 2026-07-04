@@ -391,6 +391,21 @@ const BillsPage = () => {
 
   const uniqueRetailers = [...new Set(bills.map((b) => b.retailer))].sort();
 
+  // Stats across ALL bills (not filtered), so cards always show full picture
+  const stats = {
+    totalBills: bills.length,
+    totalAmount: bills.reduce((s, b) => s + (Number(b.amount) || 0), 0),
+    totalDue: bills.reduce((s, b) => s + (Number(b.dueAmount) || 0), 0),
+    totalSettled: bills.reduce(
+      (s, b) => s + ((Number(b.amount) || 0) - (Number(b.dueAmount) || 0)),
+      0,
+    ),
+    settledCount: bills.filter(
+      (b) => (Number(b.dueAmount) || 0) === 0 && (Number(b.amount) || 0) > 0,
+    ).length,
+    pendingCount: bills.filter((b) => (Number(b.dueAmount) || 0) > 0).length,
+  };
+
   const filteredBills = bills.filter((bill) => {
     const matchesSearch =
       bill.billNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -528,6 +543,33 @@ const BillsPage = () => {
 
         {message && <Message type="success">{message}</Message>}
         {error && <Message type="error">{error}</Message>}
+
+        <StatsRow>
+          <StatCard color="#eff6ff" border="#bfdbfe">
+            <StatValue>{stats.totalBills}</StatValue>
+            <StatLabel>Total Bills</StatLabel>
+          </StatCard>
+          <StatCard color="#f0fdf4" border="#bbf7d0">
+            <StatValue>{formatCurrency(stats.totalAmount)}</StatValue>
+            <StatLabel>Total Amount</StatLabel>
+          </StatCard>
+          <StatCard color="#fef9c3" border="#fde047">
+            <StatValue>{formatCurrency(stats.totalDue)}</StatValue>
+            <StatLabel>Total Due (Pending)</StatLabel>
+          </StatCard>
+          <StatCard color="#ecfdf5" border="#6ee7b7">
+            <StatValue>{formatCurrency(stats.totalSettled)}</StatValue>
+            <StatLabel>Total Collected</StatLabel>
+          </StatCard>
+          <StatCard color="#f0fdf4" border="#86efac">
+            <StatValue>{stats.settledCount}</StatValue>
+            <StatLabel>Fully Settled Bills</StatLabel>
+          </StatCard>
+          <StatCard color="#fff7ed" border="#fdba74">
+            <StatValue>{stats.pendingCount}</StatValue>
+            <StatLabel>Bills with Due Amount</StatLabel>
+          </StatCard>
+        </StatsRow>
 
         {loading ? (
           <LoadingIndicator>
@@ -1398,6 +1440,38 @@ const SecondaryButton = styled.button`
     font-size: 1rem;
     flex: 1;
   }
+`;
+
+const StatsRow = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+`;
+
+const StatCard = styled.div`
+  background: ${(p) => p.color || "#f9fafb"};
+  border: 1.5px solid ${(p) => p.border || "#e5e7eb"};
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+`;
+
+const StatValue = styled.div`
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111827;
+  word-break: break-word;
+`;
+
+const StatLabel = styled.div`
+  font-size: 0.72rem;
+  color: #6b7280;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 `;
 
 export default BillsPage;

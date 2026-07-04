@@ -446,13 +446,16 @@ router.post("/import-batch", protect, adminOnly, async (req, res) => {
     for (const doc of toInsert) {
       bulkOps.push({ insertOne: { document: doc } });
     }
-    insertedCount = toInsert.length;
 
     if (bulkOps.length > 0) {
-      await Retailer.bulkWrite(bulkOps, { ordered: false });
+      const result = await Retailer.bulkWrite(bulkOps, { ordered: false });
+      insertedCount = result.insertedCount || 0;
+      if (result.hasWriteErrors && result.hasWriteErrors()) {
+        console.error("Bulk import write errors:", result.getWriteErrors().slice(0, 5));
+      }
     }
 
-    res.json({ insertedCount, updatedCount, updatedDetails });
+    res.json({ insertedCount, updatedCount, updatedDetails, attempted: toInsert.length });
   } catch (err) {
     console.error("Batch import error:", err);
     res.status(500).json({ message: err.message });
