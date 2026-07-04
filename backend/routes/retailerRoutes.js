@@ -441,17 +441,16 @@ router.post("/import-batch", protect, adminOnly, async (req, res) => {
       }
     }
 
-    // Bulk write in parallel for max speed
-    await Promise.all([
-      bulkOps.length > 0
-        ? Retailer.bulkWrite(bulkOps, { ordered: false })
-        : Promise.resolve(),
-      toInsert.length > 0
-        ? Retailer.insertMany(toInsert, { ordered: false }).then((r) => {
-            insertedCount = r.length;
-          })
-        : Promise.resolve(),
-    ]);
+    // Add insertOne ops for new retailers — bulkWrite bypasses Mongoose validators
+    // so phone numbers from Excel (e.g. with country code or spaces) won't silently fail
+    for (const doc of toInsert) {
+      bulkOps.push({ insertOne: { document: doc } });
+    }
+    insertedCount = toInsert.length;
+
+    if (bulkOps.length > 0) {
+      await Retailer.bulkWrite(bulkOps, { ordered: false });
+    }
 
     res.json({ insertedCount, updatedCount, updatedDetails });
   } catch (err) {

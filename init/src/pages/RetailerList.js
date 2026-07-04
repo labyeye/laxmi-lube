@@ -410,12 +410,16 @@ const RetailerList = () => {
             const dayRaw = dayIdx >= 0 ? String(row[dayIdx] || "").trim() : "";
             const dayProcessed =
               dayAbbreviations[dayRaw.toUpperCase()] || dayRaw;
+            // Sanitize phone: strip country code (91/+91), spaces, dashes → keep last 10 digits
+            let phone = undefined;
+            if (phoneIdx >= 0) {
+              const raw = String(row[phoneIdx] || "").replace(/\D/g, "");
+              const digits = raw.length > 10 ? raw.slice(-10) : raw;
+              phone = digits.length === 10 ? digits : undefined;
+            }
             return {
               name,
-              phone:
-                phoneIdx >= 0
-                  ? String(row[phoneIdx] || "").trim() || undefined
-                  : undefined,
+              phone,
               address1: addr1Idx >= 0 ? String(row[addr1Idx] || "").trim() : "",
               address2: addr2Idx >= 0 ? String(row[addr2Idx] || "").trim() : "",
               dayAssigned: dayProcessed,
