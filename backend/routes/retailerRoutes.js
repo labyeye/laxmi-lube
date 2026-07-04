@@ -234,16 +234,16 @@ router.post(
         });
       }
 
-      // ── Parse updateFields param (array of field keys to replace) ───────────
+      // ── Parse updateFields: which fields to replace for EXISTING retailers ──
       let updateFields = [];
       if (req.body.updateFields) {
         try {
           updateFields = JSON.parse(req.body.updateFields);
-        } catch {
-          updateFields = [];
-        }
+        } catch { updateFields = []; }
       }
-      const isUpdateMode = Array.isArray(updateFields) && updateFields.length > 0;
+      // If no fields selected, default to updating all available fields
+      const ALL_FIELDS = ["phone", "address1", "address2", "dayAssigned", "assignedTo"];
+      const fieldsToUpdate = updateFields.length > 0 ? updateFields : ALL_FIELDS;
 
       // ── Pass 2: find existing retailers by name ────────────────────────────
       const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -257,32 +257,38 @@ router.post(
         existingRetailers.map((r) => [r.name.toUpperCase(), r._id]),
       );
 
-      // ── Pass 3: update existing / insert new ──────────────────────────────
+      // ── Pass 3: upsert — new retailers get ALL data, existing get selected fields ──
       let insertedCount = 0;
       let updatedCount = 0;
       const toInsert = [];
+      const updatedDetails = []; // [{ name, fields: [...] }]
 
       for (const r of validRetailers) {
         const existingId = existingMap.get(r.name.toUpperCase());
         if (existingId) {
-          if (isUpdateMode) {
-            // Build update object with only the selected fields
-            const updateData = {};
-            for (const field of updateFields) {
-              if (field === "phone" && r.phone !== undefined) updateData.phone = r.phone;
-              if (field === "address1") updateData.address1 = r.address1;
-              if (field === "address2") updateData.address2 = r.address2;
-              if (field === "dayAssigned") updateData.dayAssigned = r.dayAssigned;
-              if (field === "assignedTo" && r.assignedTo !== undefined) updateData.assignedTo = r.assignedTo;
+          // Existing: update only selected fields (skip empty/undefined values)
+          const updateData = {};
+          const updatedFields = [];
+          for (const field of fieldsToUpdate) {
+            if (field === "phone") {
+              if (r.phone !== undefined) { updateData.phone = r.phone; updatedFields.push("Phone"); }
+            } else if (field === "address1") {
+              if (r.address1) { updateData.address1 = r.address1; updatedFields.push("Address 1"); }
+            } else if (field === "address2") {
+              if (r.address2 !== undefined) { updateData.address2 = r.address2; updatedFields.push("Address 2"); }
+            } else if (field === "dayAssigned") {
+              if (r.dayAssigned) { updateData.dayAssigned = r.dayAssigned; updatedFields.push("Collection Day"); }
+            } else if (field === "assignedTo") {
+              if (r.assignedTo !== undefined) { updateData.assignedTo = r.assignedTo; updatedFields.push("Assigned To"); }
             }
-            if (Object.keys(updateData).length > 0) {
-              await Retailer.findByIdAndUpdate(existingId, { $set: updateData });
-              updatedCount++;
-            }
-          } else {
-            errors.push(`Retailer with name "${r.name}" already exists`);
+          }
+          if (Object.keys(updateData).length > 0) {
+            await Retailer.findByIdAndUpdate(existingId, { $set: updateData });
+            updatedCount++;
+            updatedDetails.push({ name: r.name, fields: updatedFields });
           }
         } else {
+          // New retailer: insert with all available data from Excel
           toInsert.push(r);
         }
       }
@@ -295,6 +301,7 @@ router.post(
       res.json({
         importedCount: insertedCount,
         updatedCount,
+        updatedDetails,
         errorCount: errors.length,
         errors: errors.slice(0, 10),
       });
@@ -336,6 +343,21 @@ router.put("/:id", protect, adminOnly, async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 });
+router.get("/:id/due-bills", protect, adminOnly, async (req, res) => {
+  try {
+    const Bill = require("../models/Bill");
+    const bills = await Bill.find({
+      retailer: req.params.id,
+      dueAmount: { $gt: 0 },
+    })
+      .select("billNumber dueAmount amount status billDate")
+      .lean();
+    res.json(bills);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch due bills" });
+  }
+});
+
 router.delete("/:id", protect, adminOnly, async (req, res) => {
   try {
     const retailer = await Retailer.findById(req.params.id);

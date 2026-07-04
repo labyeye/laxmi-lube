@@ -72,11 +72,13 @@ const RetailerList = () => {
   const [modalError, setModalError] = useState("");
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
-  const [importStep, setImportStep] = useState(1); // 1=upload, 2=field select
+  const [importStep, setImportStep] = useState(1); // 1=upload, 2=field select, 3=results
   const [detectedFields, setDetectedFields] = useState([]); // fields found in Excel
   const [updateFields, setUpdateFields] = useState([]); // fields user chose to update
+  const [importResult, setImportResult] = useState(null); // { importedCount, updatedCount, updatedDetails }
   const [editingRetailerId, setEditingRetailerId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, name, dueBills[] }
   const fileInputRef = useRef(null);
 
   const UPDATABLE_FIELDS = [
@@ -196,6 +198,7 @@ const RetailerList = () => {
     setImportStep(1);
     setDetectedFields([]);
     setUpdateFields([]);
+    setImportResult(null);
     setEditingRetailerId(null);
   };
 
@@ -306,8 +309,24 @@ const RetailerList = () => {
   };
 
   const handleDeleteRetailer = async (id, name) => {
-    if (!window.confirm(`Delete retailer "${name}"? This cannot be undone.`)) return;
     setDeletingId(id);
+    try {
+      const res = await axios.get(`${API_BASE}/retailers/${id}/due-bills`, {
+        headers: getAuthHeaders(),
+      });
+      setDeleteConfirm({ id, name, dueBills: res.data || [] });
+    } catch {
+      setDeleteConfirm({ id, name, dueBills: [] });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirm) return;
+    const { id } = deleteConfirm;
+    setDeletingId(id);
+    setDeleteConfirm(null);
     try {
       await axios.delete(`${API_BASE}/retailers/${id}`, { headers: getAuthHeaders() });
       setRecords((prev) => prev.filter((r) => r._id !== id));
@@ -398,15 +417,16 @@ const RetailerList = () => {
       const data = await response.json();
       if (!response.ok) throw new Error(data?.message || `Import failed (status ${response.status})`);
 
-      const parts = [];
-      if (data.importedCount > 0) parts.push(`${data.importedCount} new retailers added`);
-      if (data.updatedCount > 0) parts.push(`${data.updatedCount} retailers updated`);
-      setModalMessage(parts.join(", ") + (data.errorCount > 0 ? `. ${data.errorCount} rows had errors.` : "."));
-      if (data.errorCount > 0) setModalError(data.errors?.join("; ") || "Some rows had errors");
-
       await fetchRetailers();
+      setImportResult({
+        importedCount: data.importedCount || 0,
+        updatedCount: data.updatedCount || 0,
+        updatedDetails: data.updatedDetails || [],
+        errorCount: data.errorCount || 0,
+        errors: data.errors || [],
+      });
+      setImportStep(3);
       setImportFile(null);
-      setImportStep(1);
       setUpdateFields([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err) {
@@ -1013,9 +1033,11 @@ const RetailerList = () => {
                   <ModalBody>
                     {/* Step indicators */}
                     <ImportStepRow>
-                      <ImportStepDot active={importStep >= 1}>1. Upload File</ImportStepDot>
+                      <ImportStepDot active={importStep >= 1}>1. Upload</ImportStepDot>
                       <ImportStepLine />
-                      <ImportStepDot active={importStep >= 2}>2. Choose Fields</ImportStepDot>
+                      <ImportStepDot active={importStep >= 2}>2. Update Fields</ImportStepDot>
+                      <ImportStepLine />
+                      <ImportStepDot active={importStep >= 3}>3. Results</ImportStepDot>
                     </ImportStepRow>
 
                     {importStep === 1 && (
@@ -1031,8 +1053,8 @@ const RetailerList = () => {
                         </Field>
                         {importFile && <FileText>Selected: {importFile.name}</FileText>}
                         <Hint>
-                          <strong>Name</strong> column is required (used as master key to match retailers).
-                          Optional columns: Address 1, Address 2, Phone, Day Assigned, Assigned To.
+                          <strong>Name</strong> column is required (master key).
+                          New retailers get all columns imported. Existing retailers get selected fields updated.
                         </Hint>
                       </>
                     )}
@@ -1040,8 +1062,8 @@ const RetailerList = () => {
                     {importStep === 2 && (
                       <>
                         <ImportSectionTitle>
-                          Retailer Name will be used to match existing records.
-                          Choose which fields to <strong>replace</strong> for matched retailers:
+                          <strong>New retailers</strong> will be fully created with all columns.
+                          For <strong>existing retailers</strong> (matched by Name), choose which fields to update:
                         </ImportSectionTitle>
 
                         <FieldCheckboxGrid>
@@ -1055,13 +1077,13 @@ const RetailerList = () => {
                                   id={`uf_${f.key}`}
                                   checked={checked}
                                   disabled={!inExcel}
-                                  onChange={(e) => {
+                                  onChange={(e) =>
                                     setUpdateFields((prev) =>
                                       e.target.checked
                                         ? [...prev, f.key]
-                                        : prev.filter((x) => x !== f.key)
-                                    );
-                                  }}
+                                        : prev.filter((x) => x !== f.key),
+                                    )
+                                  }
                                 />
                                 <label htmlFor={`uf_${f.key}`}>
                                   {f.label}
@@ -1074,39 +1096,102 @@ const RetailerList = () => {
 
                         <Hint style={{ marginTop: "0.75rem" }}>
                           {updateFields.length === 0
-                            ? "No fields selected → only NEW retailers will be added (existing ones unchanged)."
-                            : `Selected fields will be updated for existing retailers. New retailers will be created automatically.`}
+                            ? "No fields selected → all available fields in Excel will be updated for existing retailers."
+                            : `Only selected fields will be updated for existing retailers.`}
                         </Hint>
                         {importLoading && <FileText>Importing…</FileText>}
+                      </>
+                    )}
+
+                    {importStep === 3 && importResult && (
+                      <>
+                        <ImportResultGrid>
+                          <ImportResultCard color="#dcfce7" border="#86efac">
+                            <ImportResultCount>{importResult.importedCount}</ImportResultCount>
+                            <ImportResultLabel>New Retailers Added</ImportResultLabel>
+                          </ImportResultCard>
+                          <ImportResultCard color="#dbeafe" border="#93c5fd">
+                            <ImportResultCount>{importResult.updatedCount}</ImportResultCount>
+                            <ImportResultLabel>Existing Retailers Updated</ImportResultLabel>
+                          </ImportResultCard>
+                          {importResult.errorCount > 0 && (
+                            <ImportResultCard color="#fee2e2" border="#fca5a5">
+                              <ImportResultCount>{importResult.errorCount}</ImportResultCount>
+                              <ImportResultLabel>Rows with Errors</ImportResultLabel>
+                            </ImportResultCard>
+                          )}
+                        </ImportResultGrid>
+
+                        {importResult.updatedDetails.length > 0 && (
+                          <>
+                            <ImportSectionTitle style={{ marginTop: "1rem" }}>
+                              Updated Retailers:
+                            </ImportSectionTitle>
+                            <UpdatedDetailsList>
+                              {importResult.updatedDetails.map((d, i) => (
+                                <UpdatedDetailItem key={i}>
+                                  <UpdatedDetailName>{d.name}</UpdatedDetailName>
+                                  <UpdatedDetailFields>
+                                    {d.fields.join(" · ")}
+                                  </UpdatedDetailFields>
+                                </UpdatedDetailItem>
+                              ))}
+                            </UpdatedDetailsList>
+                          </>
+                        )}
+
+                        {importResult.errors.length > 0 && (
+                          <ErrorMsg style={{ marginTop: "0.75rem" }}>
+                            {importResult.errors.join("; ")}
+                          </ErrorMsg>
+                        )}
                       </>
                     )}
                   </ModalBody>
 
                   <ModalFooter>
-                    {importStep === 2 ? (
-                      <SecondaryBtn type="button" onClick={() => setImportStep(1)}>
-                        ← Back
-                      </SecondaryBtn>
-                    ) : (
-                      <SecondaryBtn
+                    {importStep === 3 ? (
+                      <PrimaryBtn
                         type="button"
                         onClick={() => {
-                          setImportFile(null);
-                          setImportStep(1);
-                          setDetectedFields([]);
-                          setUpdateFields([]);
-                          if (fileInputRef.current) fileInputRef.current.value = "";
-                          setModalError("");
-                          setModalMessage("");
+                          resetModalState();
+                          setModalTab("manual");
                         }}
                       >
-                        Clear
-                      </SecondaryBtn>
+                        Done
+                      </PrimaryBtn>
+                    ) : (
+                      <>
+                        {importStep === 2 ? (
+                          <SecondaryBtn type="button" onClick={() => setImportStep(1)}>
+                            ← Back
+                          </SecondaryBtn>
+                        ) : (
+                          <SecondaryBtn
+                            type="button"
+                            onClick={() => {
+                              setImportFile(null);
+                              setImportStep(1);
+                              setDetectedFields([]);
+                              setUpdateFields([]);
+                              if (fileInputRef.current) fileInputRef.current.value = "";
+                              setModalError("");
+                              setModalMessage("");
+                            }}
+                          >
+                            Clear
+                          </SecondaryBtn>
+                        )}
+                        <PrimaryBtn type="submit" disabled={importLoading || !importFile}>
+                          <FaUpload />{" "}
+                          {importLoading
+                            ? "Importing…"
+                            : importStep === 1
+                              ? "Next →"
+                              : "Import Now"}
+                        </PrimaryBtn>
+                      </>
                     )}
-                    <PrimaryBtn type="submit" disabled={importLoading || !importFile}>
-                      <FaUpload />{" "}
-                      {importLoading ? "Importing…" : importStep === 1 ? "Next →" : "Import Now"}
-                    </PrimaryBtn>
                   </ModalFooter>
                 </form>
               )}
@@ -1114,6 +1199,56 @@ const RetailerList = () => {
           </ModalOverlay>
         )}
       </PageWrapper>
+
+      {deleteConfirm && (
+        <ModalOverlay onClick={() => setDeleteConfirm(null)}>
+          <DeleteConfirmCard onClick={(e) => e.stopPropagation()}>
+            <DeleteConfirmHeader>
+              <FaTrash style={{ color: "#dc2626" }} />
+              Delete Retailer
+            </DeleteConfirmHeader>
+            <DeleteConfirmBody>
+              {deleteConfirm.dueBills.length > 0 ? (
+                <>
+                  <DueBillsWarning>
+                    ⚠️ <strong>{deleteConfirm.name}</strong> has{" "}
+                    <strong>{deleteConfirm.dueBills.length}</strong> bill
+                    {deleteConfirm.dueBills.length > 1 ? "s" : ""} with
+                    outstanding dues:
+                  </DueBillsWarning>
+                  <DueBillsList>
+                    {deleteConfirm.dueBills.map((b) => (
+                      <DueBillItem key={b._id}>
+                        <span>Bill #{b.billNumber}</span>
+                        <DueBillAmount>
+                          ₹{b.dueAmount.toLocaleString("en-IN")} due
+                        </DueBillAmount>
+                      </DueBillItem>
+                    ))}
+                  </DueBillsList>
+                  <DeleteWarningText>
+                    Deleting this retailer will not clear these dues. Are you
+                    sure you want to continue?
+                  </DeleteWarningText>
+                </>
+              ) : (
+                <DeleteWarningText>
+                  Are you sure you want to delete{" "}
+                  <strong>{deleteConfirm.name}</strong>? This cannot be undone.
+                </DeleteWarningText>
+              )}
+            </DeleteConfirmBody>
+            <DeleteConfirmFooter>
+              <SecondaryBtn onClick={() => setDeleteConfirm(null)}>
+                Cancel
+              </SecondaryBtn>
+              <DangerBtn onClick={handleConfirmDelete} disabled={!!deletingId}>
+                {deletingId ? "Deleting…" : "Yes, Delete"}
+              </DangerBtn>
+            </DeleteConfirmFooter>
+          </DeleteConfirmCard>
+        </ModalOverlay>
+      )}
     </Layout>
   );
 };
@@ -1719,6 +1854,96 @@ const Hint = styled.div`
   border-radius: 8px;
 `;
 
+const DeleteConfirmCard = styled.div`
+  background: var(--nb-white);
+  border-radius: var(--nb-radius);
+  border: 1px solid var(--nb-border);
+  box-shadow: var(--nb-shadow-lg);
+  width: 100%;
+  max-width: 440px;
+  overflow: hidden;
+`;
+
+const DeleteConfirmHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--nb-border);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--nb-ink);
+  background: var(--nb-muted);
+`;
+
+const DeleteConfirmBody = styled.div`
+  padding: 1.1rem 1.25rem;
+`;
+
+const DueBillsWarning = styled.div`
+  font-size: 0.88rem;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  margin-bottom: 0.75rem;
+`;
+
+const DueBillsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+  max-height: 180px;
+  overflow-y: auto;
+`;
+
+const DueBillItem = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0.7rem;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  font-size: 0.83rem;
+  color: var(--nb-ink);
+`;
+
+const DueBillAmount = styled.span`
+  font-weight: 700;
+  color: #dc2626;
+`;
+
+const DeleteWarningText = styled.p`
+  font-size: 0.88rem;
+  color: var(--nb-ink);
+  margin: 0;
+  line-height: 1.5;
+`;
+
+const DeleteConfirmFooter = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding: 0.85rem 1.25rem;
+  border-top: 1px solid var(--nb-border);
+`;
+
+const DangerBtn = styled.button`
+  border: 1px solid #dc2626;
+  background: #dc2626;
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.88rem;
+  &:hover:not(:disabled) { background: #b91c1c; }
+  &:disabled { opacity: 0.55; cursor: not-allowed; }
+`;
+
 const CardActionBtns = styled.div`
   position: absolute;
   top: 0.6rem;
@@ -1821,6 +2046,65 @@ const NotInExcel = styled.span`
   font-size: 0.75rem;
   color: var(--nb-blue-medium);
   font-weight: 400;
+`;
+
+const ImportResultGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+`;
+
+const ImportResultCard = styled.div`
+  background: ${(p) => p.color};
+  border: 1px solid ${(p) => p.border};
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+`;
+
+const ImportResultCount = styled.div`
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--nb-ink);
+  line-height: 1;
+`;
+
+const ImportResultLabel = styled.div`
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #374151;
+  margin-top: 0.35rem;
+`;
+
+const UpdatedDetailsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 200px;
+  overflow-y: auto;
+`;
+
+const UpdatedDetailItem = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0.75rem;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  font-size: 0.83rem;
+`;
+
+const UpdatedDetailName = styled.span`
+  font-weight: 600;
+  color: var(--nb-ink);
+`;
+
+const UpdatedDetailFields = styled.span`
+  font-size: 0.75rem;
+  color: #0369a1;
+  font-weight: 500;
 `;
 
 export default RetailerList;
