@@ -119,7 +119,13 @@ export default function WhatsAppLogsPage() {
           g.amount += l.amount;
           g.bills.push({ billNumber: l.billNumber, amount: l.amount });
           // Use the most "informative" status: received > not_received > sent > pending > no_phone
-          const rank = { received: 5, not_received: 4, sent: 3, pending: 2, no_phone: 1 };
+          const rank = {
+            received: 5,
+            not_received: 4,
+            sent: 3,
+            pending: 2,
+            no_phone: 1,
+          };
           if ((rank[l.whatsappStatus] || 0) > (rank[g.whatsappStatus] || 0)) {
             g.whatsappStatus = l.whatsappStatus;
             g.whatsappSentAt = l.whatsappSentAt;
@@ -148,7 +154,11 @@ export default function WhatsAppLogsPage() {
           messages.push(g);
         }
       } else {
-        messages.push({ ...l, isGroup: false, bills: [{ billNumber: l.billNumber, amount: l.amount }] });
+        messages.push({
+          ...l,
+          isGroup: false,
+          bills: [{ billNumber: l.billNumber, amount: l.amount }],
+        });
       }
     });
 
@@ -325,7 +335,8 @@ export default function WhatsAppLogsPage() {
               <ChatBody>
                 <WaWallpaper />
                 {[...activeContact.messages].reverse().map((msg) => {
-                  const sm = STATUS_META[msg.whatsappStatus] || STATUS_META.pending;
+                  const sm =
+                    STATUS_META[msg.whatsappStatus] || STATUS_META.pending;
                   const resendKey = msg.paymentGroupId || msg._id;
                   const isGroup = msg.isGroup && msg.bills?.length > 1;
                   return (
@@ -357,7 +368,8 @@ export default function WhatsAppLogsPage() {
                           <BubbleRow>
                             <BubbleLabel>Mode</BubbleLabel>
                             <BubbleVal>
-                              {PAYMENT_LABELS[msg.paymentMode] || msg.paymentMode}
+                              {PAYMENT_LABELS[msg.paymentMode] ||
+                                msg.paymentMode}
                             </BubbleVal>
                           </BubbleRow>
                           <BubbleRow>

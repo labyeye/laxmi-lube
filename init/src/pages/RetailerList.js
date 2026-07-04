@@ -76,6 +76,8 @@ const RetailerList = () => {
   const [detectedFields, setDetectedFields] = useState([]); // fields found in Excel
   const [updateFields, setUpdateFields] = useState([]); // fields user chose to update
   const [importResult, setImportResult] = useState(null); // { importedCount, updatedCount, updatedDetails }
+  const [importProgress, setImportProgress] = useState(null); // { current, total } during import
+  const [parsedRows, setParsedRows] = useState([]); // parsed Excel rows (stored after file select)
   const [editingRetailerId, setEditingRetailerId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, name, dueBills[] }
@@ -328,7 +330,9 @@ const RetailerList = () => {
     setDeletingId(id);
     setDeleteConfirm(null);
     try {
-      await axios.delete(`${API_BASE}/retailers/${id}`, { headers: getAuthHeaders() });
+      await axios.delete(`${API_BASE}/retailers/${id}`, {
+        headers: getAuthHeaders(),
+      });
       setRecords((prev) => prev.filter((r) => r._id !== id));
     } catch (err) {
       setError(err.response?.data?.message || "Failed to delete retailer");
@@ -345,25 +349,58 @@ const RetailerList = () => {
     setImportStep(1);
     setDetectedFields([]);
     setUpdateFields([]);
+    setParsedRows([]);
 
     if (!file) return;
 
-    // Parse the Excel client-side to detect which columns are present
+    const dayAbbreviations = {
+      MON: "Monday", TUE: "Tuesday", WED: "Wednesday", THU: "Thursday",
+      FRI: "Friday", SAT: "Saturday", SUN: "Sunday",
+    };
+
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
         const wb = xlsx.read(evt.target.result, { type: "array" });
         const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = xlsx.utils.sheet_to_json(ws, { header: 1 });
-        const headers = (rows[0] || []).map((h) => String(h).toLowerCase().trim());
+        const rawRows = xlsx.utils.sheet_to_json(ws, { header: 1 });
+        const headers = (rawRows[0] || []).map((h) => String(h).toLowerCase().trim());
 
+        // Detect which updatable columns are present
         const found = [];
-        if (headers.some((h) => h.includes("phone") || h.includes("mobile") || h.includes("whatsapp") || h.includes("contact"))) found.push("phone");
-        if (headers.some((h) => h.includes("address 1") || h.includes("address1"))) found.push("address1");
-        if (headers.some((h) => h.includes("address 2") || h.includes("address2"))) found.push("address2");
-        if (headers.some((h) => h.includes("day"))) found.push("dayAssigned");
-        if (headers.some((h) => h.includes("assigned to") || h.includes("assignedto"))) found.push("assignedTo");
+        const phoneIdx = headers.findIndex((h) =>
+          h.includes("phone") || h.includes("mobile") || h.includes("whatsapp") || h.includes("contact"),
+        );
+        const addr1Idx = headers.findIndex((h) => h.includes("address 1") || h.includes("address1"));
+        const addr2Idx = headers.findIndex((h) => h.includes("address 2") || h.includes("address2"));
+        const dayIdx = headers.findIndex((h) => h.includes("day"));
+        const staffIdx = headers.findIndex((h) => h.includes("assigned to") || h.includes("assignedto"));
+        const nameIdx = headers.findIndex((h) => h.includes("name"));
+
+        if (phoneIdx >= 0) found.push("phone");
+        if (addr1Idx >= 0) found.push("address1");
+        if (addr2Idx >= 0) found.push("address2");
+        if (dayIdx >= 0) found.push("dayAssigned");
+        if (staffIdx >= 0) found.push("assignedTo");
         setDetectedFields(found);
+
+        // Parse all data rows now; skip rows with no name
+        const dataRows = rawRows.slice(1).map((row) => {
+          const name = nameIdx >= 0 ? String(row[nameIdx] || "").trim() : "";
+          if (!name) return null;
+          const dayRaw = dayIdx >= 0 ? String(row[dayIdx] || "").trim() : "";
+          const dayProcessed = dayAbbreviations[dayRaw.toUpperCase()] || dayRaw;
+          return {
+            name,
+            phone: phoneIdx >= 0 ? String(row[phoneIdx] || "").trim() || undefined : undefined,
+            address1: addr1Idx >= 0 ? String(row[addr1Idx] || "").trim() : "",
+            address2: addr2Idx >= 0 ? String(row[addr2Idx] || "").trim() : "",
+            dayAssigned: dayProcessed,
+            assignedTo: staffIdx >= 0 ? String(row[staffIdx] || "").trim() : "",
+          };
+        }).filter(Boolean);
+
+        setParsedRows(dataRows);
       } catch {
         // if parse fails, still allow upload with no field detection
       }
@@ -371,9 +408,14 @@ const RetailerList = () => {
     reader.readAsArrayBuffer(file);
   };
 
+  const BATCH_SIZE = 50;
+
   const handleImportSubmit = async (e) => {
     e.preventDefault();
-    if (!importFile) { setModalError("Please choose a file"); return; }
+    if (!importFile) {
+      setModalError("Please choose a file");
+      return;
+    }
 
     // Step 1 → Step 2: show field selection before actually uploading
     if (importStep === 1) {
@@ -381,58 +423,83 @@ const RetailerList = () => {
       return;
     }
 
+    if (parsedRows.length === 0) {
+      setModalError("No valid rows found in the file (all rows may be missing a retailer name).");
+      return;
+    }
+
     setImportLoading(true);
     setModalError("");
     setModalMessage("");
 
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setModalError("Your session has expired. Please log in again.");
+      setImportLoading(false);
+      navigate("/login");
+      return;
+    }
+
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setModalError("Your session has expired. Please log in again.");
-        setImportLoading(false);
-        navigate("/login");
-        return;
+      const total = parsedRows.length;
+      let done = 0;
+      let totalInserted = 0;
+      let totalUpdated = 0;
+      const allUpdatedDetails = [];
+
+      setImportProgress({ current: 0, total });
+
+      // Send in batches for speed + live progress
+      for (let i = 0; i < total; i += BATCH_SIZE) {
+        const batch = parsedRows.slice(i, i + BATCH_SIZE);
+
+        const response = await fetch(`${API_BASE}/retailers/import-batch`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ rows: batch, updateFields }),
+        });
+
+        if (response.status === 401) {
+          localStorage.removeItem("token");
+          setModalError("Your session has expired. Please log in again.");
+          setImportLoading(false);
+          navigate("/login");
+          return;
+        }
+
+        const data = await response.json();
+        if (!response.ok)
+          throw new Error(data?.message || `Import failed (status ${response.status})`);
+
+        totalInserted += data.insertedCount || 0;
+        totalUpdated += data.updatedCount || 0;
+        if (data.updatedDetails) allUpdatedDetails.push(...data.updatedDetails);
+
+        done = Math.min(i + BATCH_SIZE, total);
+        setImportProgress({ current: done, total });
       }
-
-      const formData = new FormData();
-      formData.append("file", importFile);
-      if (updateFields.length > 0) {
-        formData.append("updateFields", JSON.stringify(updateFields));
-      }
-
-      const response = await fetch(`${API_BASE}/retailers/import`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-
-      if (response.status === 401) {
-        localStorage.removeItem("token");
-        setModalError("Your session has expired. Please log in again.");
-        setImportLoading(false);
-        navigate("/login");
-        return;
-      }
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data?.message || `Import failed (status ${response.status})`);
 
       await fetchRetailers();
       setImportResult({
-        importedCount: data.importedCount || 0,
-        updatedCount: data.updatedCount || 0,
-        updatedDetails: data.updatedDetails || [],
-        errorCount: data.errorCount || 0,
-        errors: data.errors || [],
+        importedCount: totalInserted,
+        updatedCount: totalUpdated,
+        updatedDetails: allUpdatedDetails,
+        errorCount: 0,
+        errors: [],
       });
       setImportStep(3);
       setImportFile(null);
+      setParsedRows([]);
       setUpdateFields([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err) {
       setModalError(err.message || "Failed to import retailers");
     } finally {
       setImportLoading(false);
+      setImportProgress(null);
     }
   };
 
@@ -1033,11 +1100,17 @@ const RetailerList = () => {
                   <ModalBody>
                     {/* Step indicators */}
                     <ImportStepRow>
-                      <ImportStepDot active={importStep >= 1}>1. Upload</ImportStepDot>
+                      <ImportStepDot active={importStep >= 1}>
+                        1. Upload
+                      </ImportStepDot>
                       <ImportStepLine />
-                      <ImportStepDot active={importStep >= 2}>2. Update Fields</ImportStepDot>
+                      <ImportStepDot active={importStep >= 2}>
+                        2. Update Fields
+                      </ImportStepDot>
                       <ImportStepLine />
-                      <ImportStepDot active={importStep >= 3}>3. Results</ImportStepDot>
+                      <ImportStepDot active={importStep >= 3}>
+                        3. Results
+                      </ImportStepDot>
                     </ImportStepRow>
 
                     {importStep === 1 && (
@@ -1051,10 +1124,13 @@ const RetailerList = () => {
                             onChange={handleImportFileChange}
                           />
                         </Field>
-                        {importFile && <FileText>Selected: {importFile.name}</FileText>}
+                        {importFile && (
+                          <FileText>Selected: {importFile.name}</FileText>
+                        )}
                         <Hint>
                           <strong>Name</strong> column is required (master key).
-                          New retailers get all columns imported. Existing retailers get selected fields updated.
+                          New retailers get all columns imported. Existing
+                          retailers get selected fields updated.
                         </Hint>
                       </>
                     )}
@@ -1062,8 +1138,10 @@ const RetailerList = () => {
                     {importStep === 2 && (
                       <>
                         <ImportSectionTitle>
-                          <strong>New retailers</strong> will be fully created with all columns.
-                          For <strong>existing retailers</strong> (matched by Name), choose which fields to update:
+                          <strong>New retailers</strong> will be fully created
+                          with all columns. For{" "}
+                          <strong>existing retailers</strong> (matched by Name),
+                          choose which fields to update:
                         </ImportSectionTitle>
 
                         <FieldCheckboxGrid>
@@ -1087,7 +1165,9 @@ const RetailerList = () => {
                                 />
                                 <label htmlFor={`uf_${f.key}`}>
                                   {f.label}
-                                  {!inExcel && <NotInExcel> (not in file)</NotInExcel>}
+                                  {!inExcel && (
+                                    <NotInExcel> (not in file)</NotInExcel>
+                                  )}
                                 </label>
                               </FieldCheckboxRow>
                             );
@@ -1099,7 +1179,20 @@ const RetailerList = () => {
                             ? "No fields selected → all available fields in Excel will be updated for existing retailers."
                             : `Only selected fields will be updated for existing retailers.`}
                         </Hint>
-                        {importLoading && <FileText>Importing…</FileText>}
+                        {importProgress && (
+                          <ImportProgressBox>
+                            <ImportProgressText>
+                              Importing… {importProgress.current} of {importProgress.total} rows
+                            </ImportProgressText>
+                            <ImportProgressTrack>
+                              <ImportProgressFill
+                                style={{
+                                  width: `${Math.round((importProgress.current / importProgress.total) * 100)}%`,
+                                }}
+                              />
+                            </ImportProgressTrack>
+                          </ImportProgressBox>
+                        )}
                       </>
                     )}
 
@@ -1107,17 +1200,29 @@ const RetailerList = () => {
                       <>
                         <ImportResultGrid>
                           <ImportResultCard color="#dcfce7" border="#86efac">
-                            <ImportResultCount>{importResult.importedCount}</ImportResultCount>
-                            <ImportResultLabel>New Retailers Added</ImportResultLabel>
+                            <ImportResultCount>
+                              {importResult.importedCount}
+                            </ImportResultCount>
+                            <ImportResultLabel>
+                              New Retailers Added
+                            </ImportResultLabel>
                           </ImportResultCard>
                           <ImportResultCard color="#dbeafe" border="#93c5fd">
-                            <ImportResultCount>{importResult.updatedCount}</ImportResultCount>
-                            <ImportResultLabel>Existing Retailers Updated</ImportResultLabel>
+                            <ImportResultCount>
+                              {importResult.updatedCount}
+                            </ImportResultCount>
+                            <ImportResultLabel>
+                              Existing Retailers Updated
+                            </ImportResultLabel>
                           </ImportResultCard>
                           {importResult.errorCount > 0 && (
                             <ImportResultCard color="#fee2e2" border="#fca5a5">
-                              <ImportResultCount>{importResult.errorCount}</ImportResultCount>
-                              <ImportResultLabel>Rows with Errors</ImportResultLabel>
+                              <ImportResultCount>
+                                {importResult.errorCount}
+                              </ImportResultCount>
+                              <ImportResultLabel>
+                                Rows with Errors
+                              </ImportResultLabel>
                             </ImportResultCard>
                           )}
                         </ImportResultGrid>
@@ -1130,7 +1235,9 @@ const RetailerList = () => {
                             <UpdatedDetailsList>
                               {importResult.updatedDetails.map((d, i) => (
                                 <UpdatedDetailItem key={i}>
-                                  <UpdatedDetailName>{d.name}</UpdatedDetailName>
+                                  <UpdatedDetailName>
+                                    {d.name}
+                                  </UpdatedDetailName>
                                   <UpdatedDetailFields>
                                     {d.fields.join(" · ")}
                                   </UpdatedDetailFields>
@@ -1163,7 +1270,10 @@ const RetailerList = () => {
                     ) : (
                       <>
                         {importStep === 2 ? (
-                          <SecondaryBtn type="button" onClick={() => setImportStep(1)}>
+                          <SecondaryBtn
+                            type="button"
+                            onClick={() => setImportStep(1)}
+                          >
                             ← Back
                           </SecondaryBtn>
                         ) : (
@@ -1174,7 +1284,8 @@ const RetailerList = () => {
                               setImportStep(1);
                               setDetectedFields([]);
                               setUpdateFields([]);
-                              if (fileInputRef.current) fileInputRef.current.value = "";
+                              if (fileInputRef.current)
+                                fileInputRef.current.value = "";
                               setModalError("");
                               setModalMessage("");
                             }}
@@ -1182,7 +1293,10 @@ const RetailerList = () => {
                             Clear
                           </SecondaryBtn>
                         )}
-                        <PrimaryBtn type="submit" disabled={importLoading || !importFile}>
+                        <PrimaryBtn
+                          type="submit"
+                          disabled={importLoading || !importFile}
+                        >
                           <FaUpload />{" "}
                           {importLoading
                             ? "Importing…"
@@ -1526,7 +1640,9 @@ const CardEditBtn = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  &:hover { background: var(--nb-border); }
+  &:hover {
+    background: var(--nb-border);
+  }
 `;
 
 const RowEditBtn = styled.button`
@@ -1940,8 +2056,13 @@ const DangerBtn = styled.button`
   font-weight: 600;
   cursor: pointer;
   font-size: 0.88rem;
-  &:hover:not(:disabled) { background: #b91c1c; }
-  &:disabled { opacity: 0.55; cursor: not-allowed; }
+  &:hover:not(:disabled) {
+    background: #b91c1c;
+  }
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
 `;
 
 const CardActionBtns = styled.div`
@@ -1962,8 +2083,13 @@ const CardDeleteBtn = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  &:hover { background: #fca5a5; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  &:hover {
+    background: #fca5a5;
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 `;
 
 const RowActionBtns = styled.div`
@@ -1980,8 +2106,13 @@ const RowDeleteBtn = styled.button`
   cursor: pointer;
   color: #dc2626;
   font-size: 0.85rem;
-  &:hover { background: #fee2e2; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  &:hover {
+    background: #fee2e2;
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 `;
 
 const ImportStepRow = styled.div`
@@ -2032,7 +2163,9 @@ const FieldCheckboxRow = styled.div`
   gap: 0.6rem;
   opacity: ${(p) => (p.disabled ? 0.5 : 1)};
 
-  input[type="checkbox"] { cursor: ${(p) => (p.disabled ? "not-allowed" : "pointer")}; }
+  input[type="checkbox"] {
+    cursor: ${(p) => (p.disabled ? "not-allowed" : "pointer")};
+  }
 
   label {
     font-size: 0.88rem;
@@ -2105,6 +2238,32 @@ const UpdatedDetailFields = styled.span`
   font-size: 0.75rem;
   color: #0369a1;
   font-weight: 500;
+`;
+
+const ImportProgressBox = styled.div`
+  margin-top: 1rem;
+`;
+
+const ImportProgressText = styled.div`
+  font-size: 0.85rem;
+  color: #374151;
+  margin-bottom: 0.4rem;
+  font-weight: 500;
+`;
+
+const ImportProgressTrack = styled.div`
+  width: 100%;
+  height: 10px;
+  background: #e5e7eb;
+  border-radius: 5px;
+  overflow: hidden;
+`;
+
+const ImportProgressFill = styled.div`
+  height: 100%;
+  background: #2563eb;
+  border-radius: 5px;
+  transition: width 0.2s ease;
 `;
 
 export default RetailerList;

@@ -318,7 +318,8 @@ const BillAssignedToday = () => {
             };
 
       const formData = new FormData();
-      if (cachedLocation) formData.append("location", JSON.stringify(cachedLocation));
+      if (cachedLocation)
+        formData.append("location", JSON.stringify(cachedLocation));
       formData.append(
         "allocations",
         JSON.stringify(
@@ -427,7 +428,8 @@ const BillAssignedToday = () => {
             };
 
       const formData = new FormData();
-      if (cachedLocation) formData.append("location", JSON.stringify(cachedLocation));
+      if (cachedLocation)
+        formData.append("location", JSON.stringify(cachedLocation));
       formData.append("bill", selectedBill._id);
       formData.append("amountCollected", roundedAmount);
       formData.append("paymentMode", paymentMode);

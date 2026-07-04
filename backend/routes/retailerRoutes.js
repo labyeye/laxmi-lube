@@ -226,11 +226,20 @@ router.post(
       if (req.body.updateFields) {
         try {
           updateFields = JSON.parse(req.body.updateFields);
-        } catch { updateFields = []; }
+        } catch {
+          updateFields = [];
+        }
       }
       // If no fields selected, default to updating all available fields
-      const ALL_FIELDS = ["phone", "address1", "address2", "dayAssigned", "assignedTo"];
-      const fieldsToUpdate = updateFields.length > 0 ? updateFields : ALL_FIELDS;
+      const ALL_FIELDS = [
+        "phone",
+        "address1",
+        "address2",
+        "dayAssigned",
+        "assignedTo",
+      ];
+      const fieldsToUpdate =
+        updateFields.length > 0 ? updateFields : ALL_FIELDS;
 
       // ── Pass 2: find existing retailers by name ────────────────────────────
       const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -258,15 +267,30 @@ router.post(
           const updatedFields = [];
           for (const field of fieldsToUpdate) {
             if (field === "phone") {
-              if (r.phone !== undefined) { updateData.phone = r.phone; updatedFields.push("Phone"); }
+              if (r.phone !== undefined) {
+                updateData.phone = r.phone;
+                updatedFields.push("Phone");
+              }
             } else if (field === "address1") {
-              if (r.address1) { updateData.address1 = r.address1; updatedFields.push("Address 1"); }
+              if (r.address1) {
+                updateData.address1 = r.address1;
+                updatedFields.push("Address 1");
+              }
             } else if (field === "address2") {
-              if (r.address2 !== undefined) { updateData.address2 = r.address2; updatedFields.push("Address 2"); }
+              if (r.address2 !== undefined) {
+                updateData.address2 = r.address2;
+                updatedFields.push("Address 2");
+              }
             } else if (field === "dayAssigned") {
-              if (r.dayAssigned) { updateData.dayAssigned = r.dayAssigned; updatedFields.push("Collection Day"); }
+              if (r.dayAssigned) {
+                updateData.dayAssigned = r.dayAssigned;
+                updatedFields.push("Collection Day");
+              }
             } else if (field === "assignedTo") {
-              if (r.assignedTo !== undefined) { updateData.assignedTo = r.assignedTo; updatedFields.push("Assigned To"); }
+              if (r.assignedTo !== undefined) {
+                updateData.assignedTo = r.assignedTo;
+                updatedFields.push("Assigned To");
+              }
             }
           }
           if (Object.keys(updateData).length > 0) {
@@ -281,7 +305,9 @@ router.post(
       }
 
       if (toInsert.length > 0) {
-        const inserted = await Retailer.insertMany(toInsert, { ordered: false });
+        const inserted = await Retailer.insertMany(toInsert, {
+          ordered: false,
+        });
         insertedCount = inserted.length;
       }
 
@@ -303,6 +329,136 @@ router.post(
     }
   },
 );
+
+// Fast batch import: accepts parsed rows as JSON, uses bulkWrite for speed
+router.post("/import-batch", protect, adminOnly, async (req, res) => {
+  try {
+    const { rows, updateFields } = req.body;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return res.json({
+        insertedCount: 0,
+        updatedCount: 0,
+        updatedDetails: [],
+      });
+    }
+
+    const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const ALL_FIELDS = [
+      "phone",
+      "address1",
+      "address2",
+      "dayAssigned",
+      "assignedTo",
+    ];
+    const fieldsToUpdate =
+      Array.isArray(updateFields) && updateFields.length > 0
+        ? updateFields
+        : ALL_FIELDS;
+
+    // Load staff map once
+    const staffMembers = await User.find({ role: { $in: ["staff", "admin"] } })
+      .select("name")
+      .lean();
+    const staffByName = new Map(
+      staffMembers.map((s) => [s.name.toUpperCase(), s._id]),
+    );
+
+    // Find which names already exist (one query)
+    const names = rows.map((r) => r.name).filter(Boolean);
+    const existing = await Retailer.find({
+      name: { $in: names.map((n) => new RegExp(`^${escapeRegex(n)}$`, "i")) },
+    })
+      .select("name _id")
+      .lean();
+    const existingMap = new Map(
+      existing.map((r) => [r.name.toUpperCase(), r._id]),
+    );
+
+    const toInsert = [];
+    const bulkOps = [];
+    let insertedCount = 0;
+    let updatedCount = 0;
+    const updatedDetails = [];
+
+    for (const row of rows) {
+      const name = (row.name || "").trim();
+      if (!name) continue;
+
+      const assignedToId = row.assignedTo
+        ? staffByName.get(row.assignedTo.toUpperCase()) || undefined
+        : undefined;
+
+      const existingId = existingMap.get(name.toUpperCase());
+
+      if (existingId) {
+        // Existing: update only selected fields
+        const updateData = {};
+        const fieldLabels = [];
+        for (const f of fieldsToUpdate) {
+          if (f === "phone" && row.phone != null) {
+            updateData.phone = row.phone;
+            fieldLabels.push("Phone");
+          }
+          if (f === "address1" && row.address1) {
+            updateData.address1 = row.address1;
+            fieldLabels.push("Address 1");
+          }
+          if (f === "address2" && row.address2 != null) {
+            updateData.address2 = row.address2;
+            fieldLabels.push("Address 2");
+          }
+          if (f === "dayAssigned" && row.dayAssigned) {
+            updateData.dayAssigned = row.dayAssigned;
+            fieldLabels.push("Day");
+          }
+          if (f === "assignedTo" && assignedToId) {
+            updateData.assignedTo = assignedToId;
+            fieldLabels.push("Staff");
+          }
+        }
+        if (Object.keys(updateData).length > 0) {
+          bulkOps.push({
+            updateOne: {
+              filter: { _id: existingId },
+              update: { $set: updateData },
+            },
+          });
+          updatedCount++;
+          updatedDetails.push({ name, fields: fieldLabels });
+        }
+      } else {
+        // New retailer: insert all available data
+        toInsert.push({
+          name,
+          address1: row.address1 || "",
+          address2: row.address2 || "",
+          phone: row.phone || undefined,
+          dayAssigned: row.dayAssigned || "",
+          assignedTo: assignedToId,
+          createdBy: req.user._id,
+          status: "ACTIVE",
+        });
+      }
+    }
+
+    // Bulk write in parallel for max speed
+    await Promise.all([
+      bulkOps.length > 0
+        ? Retailer.bulkWrite(bulkOps, { ordered: false })
+        : Promise.resolve(),
+      toInsert.length > 0
+        ? Retailer.insertMany(toInsert, { ordered: false }).then((r) => {
+            insertedCount = r.length;
+          })
+        : Promise.resolve(),
+    ]);
+
+    res.json({ insertedCount, updatedCount, updatedDetails });
+  } catch (err) {
+    console.error("Batch import error:", err);
+    res.status(500).json({ message: err.message });
+  }
+});
 
 router.put("/:id", protect, adminOnly, async (req, res) => {
   try {

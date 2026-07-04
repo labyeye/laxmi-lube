@@ -205,7 +205,8 @@ const TallyReportPage = () => {
             Mode: c.mode,
             "Payment Detail": paymentDetail(c.mode, c.paymentDetails),
             "Collected By": c.collectedBy,
-            "Verification": c.verificationStatus === "verified" ? "Verified" : "Pending",
+            Verification:
+              c.verificationStatus === "verified" ? "Verified" : "Pending",
           });
         });
       });
@@ -215,7 +216,11 @@ const TallyReportPage = () => {
         Collected: reportData.summary?.totalCollected,
         Due: reportData.summary?.totalDue,
       });
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Retailer Ledger");
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet(rows),
+        "Retailer Ledger",
+      );
     }
 
     if (activeType === "staff") {
@@ -226,9 +231,14 @@ const TallyReportPage = () => {
         Amount: c.amount,
         Mode: c.mode,
         "Payment Detail": paymentDetail(c.mode, c.paymentDetails),
-        Verification: c.verificationStatus === "verified" ? "Verified" : "Pending",
+        Verification:
+          c.verificationStatus === "verified" ? "Verified" : "Pending",
       }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(colRows), "Collections");
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet(colRows),
+        "Collections",
+      );
 
       const billRows = (reportData.bills || []).map((b) => ({
         "Invoice No": b.billNumber,
@@ -238,7 +248,11 @@ const TallyReportPage = () => {
         Due: b.dueAmount,
         Status: b.status,
       }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(billRows), "Assigned Bills");
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet(billRows),
+        "Assigned Bills",
+      );
     }
 
     if (activeType === "collection") {
@@ -250,19 +264,24 @@ const TallyReportPage = () => {
         Mode: c.mode,
         "Payment Detail": paymentDetail(c.mode, c.paymentDetails),
         "Collected By": c.collectedBy,
-        Verification: c.verificationStatus === "verified" ? "Verified" : "Pending",
+        Verification:
+          c.verificationStatus === "verified" ? "Verified" : "Pending",
       }));
       rows.push({
         Date: "GRAND TOTAL",
         Amount: reportData.summary?.totalAmount,
       });
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Collections");
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet(rows),
+        "Collections",
+      );
     }
 
     if (activeType === "salary") {
       const rows = (reportData.data || []).map((s) => ({
         Staff: s.staffName,
-        Month: `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][(s.month||1)-1]} ${s.year}`,
+        Month: `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][(s.month || 1) - 1]} ${s.year}`,
         "Basic Salary": s.basicSalary,
         "Advance Deducted": s.advanceDeducted,
         "Net Payable": s.netSalaryPayable,
@@ -271,7 +290,11 @@ const TallyReportPage = () => {
         Status: s.paymentStatus,
         "Paid Date": s.paidDate ? fmt(s.paidDate) : "—",
       }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Salary Ledger");
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet(rows),
+        "Salary Ledger",
+      );
 
       if ((reportData.advances || []).length > 0) {
         const advRows = reportData.advances.map((a) => ({
@@ -281,7 +304,11 @@ const TallyReportPage = () => {
           Reason: a.reason || "—",
           Status: a.status,
         }));
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(advRows), "Advance Register");
+        XLSX.utils.book_append_sheet(
+          wb,
+          XLSX.utils.json_to_sheet(advRows),
+          "Advance Register",
+        );
       }
     }
 
@@ -675,7 +702,9 @@ const RetailerReport = ({ data }) => (
                   </span>{" "}
                   &nbsp;|&nbsp; by {c.collectedBy} &nbsp;|&nbsp;{" "}
                   <VerifyBadge $status={c.verificationStatus}>
-                    {c.verificationStatus === "verified" ? "Verified" : "Pending"}
+                    {c.verificationStatus === "verified"
+                      ? "Verified"
+                      : "Pending"}
                   </VerifyBadge>
                 </Td>
               </tr>
@@ -1437,8 +1466,8 @@ const VerifyBadge = styled.span`
   border-radius: 4px;
   font-size: 0.72rem;
   font-weight: 700;
-  background: ${(p) => p.$status === "verified" ? "#dcfce7" : "#fef9c3"};
-  color: ${(p) => p.$status === "verified" ? "#166534" : "#854d0e"};
+  background: ${(p) => (p.$status === "verified" ? "#dcfce7" : "#fef9c3")};
+  color: ${(p) => (p.$status === "verified" ? "#166534" : "#854d0e")};
 `;
 
 const StatusBadge = styled.span`

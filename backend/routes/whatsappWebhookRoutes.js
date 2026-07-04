@@ -62,12 +62,16 @@ router.post("/", async (req, res) => {
                 // Group receipt — update every collection in the group
                 const paymentGroupId = rest.slice("GROUP:".length);
                 await Collection.updateMany({ paymentGroupId }, update);
-                console.log(`Group ${paymentGroupId} marked ${status.toUpperCase()} by ${senderPhone}`);
+                console.log(
+                  `Group ${paymentGroupId} marked ${status.toUpperCase()} by ${senderPhone}`,
+                );
               } else {
                 // Single collection
                 const collectionId = rest;
                 await Collection.findByIdAndUpdate(collectionId, update);
-                console.log(`Collection ${collectionId} marked ${status.toUpperCase()} by ${senderPhone}`);
+                console.log(
+                  `Collection ${collectionId} marked ${status.toUpperCase()} by ${senderPhone}`,
+                );
               }
             }
           }

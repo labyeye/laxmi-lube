@@ -19,11 +19,21 @@ const AdminCollectionHistory = () => {
   const [collections, setCollections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [searchTerm, setSearchTerm] = useState(() => localStorage.getItem("adminColl_search") || "");
-  const [startDate, setStartDate] = useState(() => localStorage.getItem("adminColl_startDate") || "");
-  const [endDate, setEndDate] = useState(() => localStorage.getItem("adminColl_endDate") || "");
-  const [verificationFilter, setVerificationFilter] = useState(() => localStorage.getItem("adminColl_verifFilter") || "");
-  const [paymentModeFilter, setPaymentModeFilter] = useState(() => localStorage.getItem("adminColl_paymentFilter") || "");
+  const [searchTerm, setSearchTerm] = useState(
+    () => localStorage.getItem("adminColl_search") || "",
+  );
+  const [startDate, setStartDate] = useState(
+    () => localStorage.getItem("adminColl_startDate") || "",
+  );
+  const [endDate, setEndDate] = useState(
+    () => localStorage.getItem("adminColl_endDate") || "",
+  );
+  const [verificationFilter, setVerificationFilter] = useState(
+    () => localStorage.getItem("adminColl_verifFilter") || "",
+  );
+  const [paymentModeFilter, setPaymentModeFilter] = useState(
+    () => localStorage.getItem("adminColl_paymentFilter") || "",
+  );
   const [viewGroup, setViewGroup] = useState(null); // array of collections shown in modal
   const [expandedGroups, setExpandedGroups] = useState({});
   const [zoomImage, setZoomImage] = useState(null);
@@ -148,9 +158,12 @@ const AdminCollectionHistory = () => {
     const matchesSearch =
       !searchTerm ||
       collection.bill?.billNumber?.toString().includes(searchTerm) ||
-      collection.bill?.retailer?.toLowerCase().includes(searchTerm.toLowerCase());
+      collection.bill?.retailer
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase());
     const matchesVerification =
-      !verificationFilter || collection.verificationStatus === verificationFilter;
+      !verificationFilter ||
+      collection.verificationStatus === verificationFilter;
     const matchesPayment =
       !paymentModeFilter ||
       collection.paymentMode?.toLowerCase() === paymentModeFilter.toLowerCase();
@@ -193,18 +206,24 @@ const AdminCollectionHistory = () => {
       const res = await axios.patch(
         `https://backend.laxmilube.in/api/collections/${collectionId}/verify`,
         body,
-        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        },
       );
       const resolved = res.data.matchResult || res.data.verificationStatus;
       setCollections((prev) =>
         prev.map((c) => (c._id === collectionId ? { ...c, ...res.data } : c)),
       );
       const updatedGroup = viewGroup
-        ? viewGroup.map((c) => (c._id === collectionId ? { ...c, ...res.data } : c))
+        ? viewGroup.map((c) =>
+            c._id === collectionId ? { ...c, ...res.data } : c,
+          )
         : null;
       setViewGroup(updatedGroup);
       if (resolved === "verified" && updatedGroup) {
-        const allVerified = updatedGroup.every((c) => c.verificationStatus === "verified");
+        const allVerified = updatedGroup.every(
+          (c) => c.verificationStatus === "verified",
+        );
         if (allVerified) generateCollectionPDF(updatedGroup, remarkText);
       }
       return resolved;
@@ -218,7 +237,9 @@ const AdminCollectionHistory = () => {
   const handleVerifyAll = async () => {
     if (!viewGroup) return;
     const pending = viewGroup.filter(
-      (c) => c.verificationStatus === "pending" || c.verificationStatus === "not_verified",
+      (c) =>
+        c.verificationStatus === "pending" ||
+        c.verificationStatus === "not_verified",
     );
     if (pending.length === 0) return;
     const digits = lastFiveDigits.trim();
@@ -230,7 +251,11 @@ const AdminCollectionHistory = () => {
     const notMatched = [];
     for (const c of pending) {
       // Cash: always force-verified with no digit check
-      const result = await handleVerify(c._id, "verified", mode === "cash" ? undefined : digits || undefined);
+      const result = await handleVerify(
+        c._id,
+        "verified",
+        mode === "cash" ? undefined : digits || undefined,
+      );
       if (result === "not_verified") notMatched.push(c._id);
     }
     if (notMatched.length > 0) {
@@ -344,7 +369,10 @@ const AdminCollectionHistory = () => {
                       value={paymentModeFilter}
                       onChange={(e) => {
                         setPaymentModeFilter(e.target.value);
-                        localStorage.setItem("adminColl_paymentFilter", e.target.value);
+                        localStorage.setItem(
+                          "adminColl_paymentFilter",
+                          e.target.value,
+                        );
                       }}
                     >
                       <option value="">All Modes</option>
@@ -361,7 +389,10 @@ const AdminCollectionHistory = () => {
                       value={verificationFilter}
                       onChange={(e) => {
                         setVerificationFilter(e.target.value);
-                        localStorage.setItem("adminColl_verifFilter", e.target.value);
+                        localStorage.setItem(
+                          "adminColl_verifFilter",
+                          e.target.value,
+                        );
                       }}
                     >
                       <option value="">All Status</option>
@@ -417,11 +448,11 @@ const AdminCollectionHistory = () => {
                                 )
                                 ? "verified"
                                 : row.members.some(
-                                    (m) =>
-                                      m.verificationStatus === "not_verified",
-                                  )
-                                ? "not_verified"
-                                : "pending"
+                                      (m) =>
+                                        m.verificationStatus === "not_verified",
+                                    )
+                                  ? "not_verified"
+                                  : "pending"
                               : first.verificationStatus,
                           )}
                         </td>
@@ -429,7 +460,12 @@ const AdminCollectionHistory = () => {
                           <ActionBtns>
                             <EyeBtn
                               title="View details"
-                              onClick={() => { setViewGroup(row.members); setLastFiveDigits(""); setDigitMatchResult(null); setForceVerifyQueue([]); }}
+                              onClick={() => {
+                                setViewGroup(row.members);
+                                setLastFiveDigits("");
+                                setDigitMatchResult(null);
+                                setForceVerifyQueue([]);
+                              }}
                             >
                               <FaEye />
                             </EyeBtn>
@@ -468,7 +504,12 @@ const AdminCollectionHistory = () => {
                               <ActionBtns>
                                 <EyeBtn
                                   title="View bill"
-                                  onClick={() => { setViewGroup([m]); setLastFiveDigits(""); setDigitMatchResult(null); setForceVerifyQueue([]); }}
+                                  onClick={() => {
+                                    setViewGroup([m]);
+                                    setLastFiveDigits("");
+                                    setDigitMatchResult(null);
+                                    setForceVerifyQueue([]);
+                                  }}
                                 >
                                   <FaEye />
                                 </EyeBtn>
@@ -499,7 +540,11 @@ const AdminCollectionHistory = () => {
           <EmptyState>
             <FaMoneyBillWave size={40} />
             <p>No collections found</p>
-            {(searchTerm || startDate || endDate || verificationFilter || paymentModeFilter) && (
+            {(searchTerm ||
+              startDate ||
+              endDate ||
+              verificationFilter ||
+              paymentModeFilter) && (
               <ClearFiltersBtn
                 onClick={() => {
                   setSearchTerm("");
@@ -523,14 +568,30 @@ const AdminCollectionHistory = () => {
       </PageContainer>
 
       {viewGroup && (
-        <ModalOverlay onClick={() => { setViewGroup(null); setLastFiveDigits(""); setDigitMatchResult(null); setForceVerifyQueue([]); }}>
+        <ModalOverlay
+          onClick={() => {
+            setViewGroup(null);
+            setLastFiveDigits("");
+            setDigitMatchResult(null);
+            setForceVerifyQueue([]);
+          }}
+        >
           <DetailModal onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <h3>
                 Collection Details
                 {viewGroup.length > 1 ? ` (${viewGroup.length} bills)` : ""}
               </h3>
-              <CloseBtn onClick={() => { setViewGroup(null); setLastFiveDigits(""); setDigitMatchResult(null); setForceVerifyQueue([]); }}>×</CloseBtn>
+              <CloseBtn
+                onClick={() => {
+                  setViewGroup(null);
+                  setLastFiveDigits("");
+                  setDigitMatchResult(null);
+                  setForceVerifyQueue([]);
+                }}
+              >
+                ×
+              </CloseBtn>
             </ModalHeader>
             <ModalBody>
               <DetailGrid>
@@ -591,15 +652,18 @@ const AdminCollectionHistory = () => {
 
                 {viewGroup.some((c) => c.verificationStatus === "pending") && (
                   <DigitVerifyBox>
-                    {(viewGroup[0].paymentMode || "").toLowerCase() !== "cash" ? (
+                    {(viewGroup[0].paymentMode || "").toLowerCase() !==
+                    "cash" ? (
                       <>
                         <DigitVerifyLabel>
                           Enter last 5 digits of{" "}
-                          {(viewGroup[0].paymentMode || "").toLowerCase() === "upi"
+                          {(viewGroup[0].paymentMode || "").toLowerCase() ===
+                          "upi"
                             ? "UTR / Transaction ID"
-                            : (viewGroup[0].paymentMode || "").toLowerCase() === "cheque"
-                            ? "Cheque Number"
-                            : "Transaction ID"}
+                            : (viewGroup[0].paymentMode || "").toLowerCase() ===
+                                "cheque"
+                              ? "Cheque Number"
+                              : "Transaction ID"}
                         </DigitVerifyLabel>
                         <DigitVerifyRow>
                           <DigitInput
@@ -608,15 +672,26 @@ const AdminCollectionHistory = () => {
                             placeholder="e.g. 43210"
                             value={lastFiveDigits}
                             onChange={(e) => {
-                              setLastFiveDigits(e.target.value.replace(/[^a-zA-Z0-9]/g, ""));
+                              setLastFiveDigits(
+                                e.target.value.replace(/[^a-zA-Z0-9]/g, ""),
+                              );
                               setDigitMatchResult(null);
                             }}
                           />
                           <VerifyAllBtn
                             onClick={handleVerifyAll}
-                            disabled={verifyingId === "__group__" || lastFiveDigits.trim().length === 0}
+                            disabled={
+                              verifyingId === "__group__" ||
+                              lastFiveDigits.trim().length === 0
+                            }
                           >
-                            {verifyingId === "__group__" ? "Verifying…" : <><FaCheckCircle /> Verify</>}
+                            {verifyingId === "__group__" ? (
+                              "Verifying…"
+                            ) : (
+                              <>
+                                <FaCheckCircle /> Verify
+                              </>
+                            )}
                           </VerifyAllBtn>
                         </DigitVerifyRow>
                       </>
@@ -626,28 +701,41 @@ const AdminCollectionHistory = () => {
                           onClick={handleVerifyAll}
                           disabled={verifyingId === "__group__"}
                         >
-                          {verifyingId === "__group__" ? "Verifying…" : <><FaCheckCircle /> Mark as Verified</>}
+                          {verifyingId === "__group__" ? (
+                            "Verifying…"
+                          ) : (
+                            <>
+                              <FaCheckCircle /> Mark as Verified
+                            </>
+                          )}
                         </VerifyAllBtn>
                       </DigitVerifyRow>
                     )}
-                    {digitMatchResult === "verified" && forceVerifyQueue.length === 0 && (
-                      <MatchResultBadge $match={true}>
-                        {(viewGroup[0].paymentMode || "").toLowerCase() === "cash"
-                          ? "✓ Marked as Verified"
-                          : "✓ Digits matched — All Verified"}
-                      </MatchResultBadge>
-                    )}
+                    {digitMatchResult === "verified" &&
+                      forceVerifyQueue.length === 0 && (
+                        <MatchResultBadge $match={true}>
+                          {(viewGroup[0].paymentMode || "").toLowerCase() ===
+                          "cash"
+                            ? "✓ Marked as Verified"
+                            : "✓ Digits matched — All Verified"}
+                        </MatchResultBadge>
+                      )}
                     {forceVerifyQueue.length > 0 && (
                       <ForceConfirmBox>
                         <ForceConfirmText>
-                          ⚠️ {forceVerifyQueue.length} bill{forceVerifyQueue.length > 1 ? "s" : ""} did not match the digits. Do you still want to verify {forceVerifyQueue.length > 1 ? "them" : "it"}?
+                          ⚠️ {forceVerifyQueue.length} bill
+                          {forceVerifyQueue.length > 1 ? "s" : ""} did not match
+                          the digits. Do you still want to verify{" "}
+                          {forceVerifyQueue.length > 1 ? "them" : "it"}?
                         </ForceConfirmText>
                         <ForceConfirmBtns>
                           <ForceYesBtn
                             onClick={handleForceVerifyAll}
                             disabled={verifyingId === "__force__"}
                           >
-                            {verifyingId === "__force__" ? "Verifying…" : "Yes, Verify Anyway"}
+                            {verifyingId === "__force__"
+                              ? "Verifying…"
+                              : "Yes, Verify Anyway"}
                           </ForceYesBtn>
                           <ForceNoBtn onClick={() => setForceVerifyQueue([])}>
                             Cancel
@@ -666,10 +754,18 @@ const AdminCollectionHistory = () => {
                   }
                   onChange={(e) => {
                     const val = e.target.value;
-                    setVerifyRemarks((prev) => ({ ...prev, [activeGroupKey]: val }));
+                    setVerifyRemarks((prev) => ({
+                      ...prev,
+                      [activeGroupKey]: val,
+                    }));
                     // Auto-fill last 5 digits only for non-cash payments
-                    if ((viewGroup[0].paymentMode || "").toLowerCase() !== "cash") {
-                      const last5 = val.replace(/[^a-zA-Z0-9]/g, "").slice(-5).toUpperCase();
+                    if (
+                      (viewGroup[0].paymentMode || "").toLowerCase() !== "cash"
+                    ) {
+                      const last5 = val
+                        .replace(/[^a-zA-Z0-9]/g, "")
+                        .slice(-5)
+                        .toUpperCase();
                       setLastFiveDigits(last5);
                       setDigitMatchResult(null);
                     }
@@ -707,13 +803,25 @@ const AdminCollectionHistory = () => {
                   >
                     📍 View on Google Maps
                     {viewGroup[0].location.accuracy && (
-                      <span> (±{Math.round(viewGroup[0].location.accuracy)}m)</span>
+                      <span>
+                        {" "}
+                        (±{Math.round(viewGroup[0].location.accuracy)}m)
+                      </span>
                     )}
                   </LocationLink>
                   <LocationCoords>
-                    {viewGroup[0].location.lat.toFixed(6)}, {viewGroup[0].location.lng.toFixed(6)}
+                    {viewGroup[0].location.lat.toFixed(6)},{" "}
+                    {viewGroup[0].location.lng.toFixed(6)}
                     {viewGroup[0].location.recordedAt && (
-                      <> · {new Date(viewGroup[0].location.recordedAt).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata" })}</>
+                      <>
+                        {" "}
+                        ·{" "}
+                        {new Date(
+                          viewGroup[0].location.recordedAt,
+                        ).toLocaleTimeString("en-IN", {
+                          timeZone: "Asia/Kolkata",
+                        })}
+                      </>
                     )}
                   </LocationCoords>
                 </LocationSection>
@@ -1217,7 +1325,6 @@ const SavedRemark = styled.div`
   color: #6b7280;
   font-style: italic;
 `;
-
 
 const FilterSelect = styled.select`
   border: 1px solid var(--nb-border);

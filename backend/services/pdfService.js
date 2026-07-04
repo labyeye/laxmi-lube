@@ -231,12 +231,28 @@ async function generateGroupReceiptPDF(members, retailer) {
     if (!pos) return;
     const { x, y } = pos;
     const g = rgb(0, 0.6, 0);
-    page.drawLine({ start: { x, y: y + 3 }, end: { x: x + 3, y }, thickness: 1.5, color: g });
-    page.drawLine({ start: { x: x + 3, y }, end: { x: x + 9, y: y + 8 }, thickness: 1.5, color: g });
+    page.drawLine({
+      start: { x, y: y + 3 },
+      end: { x: x + 3, y },
+      thickness: 1.5,
+      color: g,
+    });
+    page.drawLine({
+      start: { x: x + 3, y },
+      end: { x: x + 9, y: y + 8 },
+      thickness: 1.5,
+      color: g,
+    });
   };
 
   const putX = (pos, size = 11) => {
-    page.drawText("X", { x: pos.x, y: pos.y, size, font: boldFont, color: rgb(0.85, 0, 0) });
+    page.drawText("X", {
+      x: pos.x,
+      y: pos.y,
+      size,
+      font: boldFont,
+      color: rgb(0.85, 0, 0),
+    });
   };
 
   const first = members[0];
@@ -252,10 +268,14 @@ async function generateGroupReceiptPDF(members, retailer) {
   const dd = String(dateObj.getDate()).padStart(2, "0");
   const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
   const yyyy = String(dateObj.getFullYear());
-  put(dd[0], POS.dateD1, 10, true); put(dd[1], POS.dateD2, 10, true);
-  put(mm[0], POS.dateM1, 10, true); put(mm[1], POS.dateM2, 10, true);
-  put(yyyy[0], POS.dateY1, 10, true); put(yyyy[1], POS.dateY2, 10, true);
-  put(yyyy[2], POS.dateY3, 10, true); put(yyyy[3], POS.dateY4, 10, true);
+  put(dd[0], POS.dateD1, 10, true);
+  put(dd[1], POS.dateD2, 10, true);
+  put(mm[0], POS.dateM1, 10, true);
+  put(mm[1], POS.dateM2, 10, true);
+  put(yyyy[0], POS.dateY1, 10, true);
+  put(yyyy[1], POS.dateY2, 10, true);
+  put(yyyy[2], POS.dateY3, 10, true);
+  put(yyyy[3], POS.dateY4, 10, true);
 
   // Retailer name
   put(retailer?.name || first.bill?.retailer || "", POS.retailerName, 10, true);
@@ -266,7 +286,8 @@ async function generateGroupReceiptPDF(members, retailer) {
 
   // Payment mode marks
   if (mode === "cheque") {
-    putX(POS.cashMark); putX(POS.upiMark);
+    putX(POS.cashMark);
+    putX(POS.upiMark);
   } else if (mode === "Cash") {
     putTick(POS.cashMark);
   } else if (mode === "upi") {
@@ -280,7 +301,8 @@ async function generateGroupReceiptPDF(members, retailer) {
     put(pd.chequeNumber || "", POS.chequeNo, 9);
     put(pd.chequeDate || "", POS.chequeDt, 9);
   } else {
-    put("NA", POS.chequeNo, 9); put("NA", POS.chequeDt, 9);
+    put("NA", POS.chequeNo, 9);
+    put("NA", POS.chequeDt, 9);
   }
 
   // Combined invoice line: #1042(Rs.5000), #1043(Rs.3000), ...

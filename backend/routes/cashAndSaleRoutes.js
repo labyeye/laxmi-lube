@@ -14,7 +14,9 @@ router.get("/", protect, adminOnly, async (req, res) => {
       .sort({ createdAt: -1 });
     res.json(entries);
   } catch (err) {
-    res.status(500).json({ message: "Failed to fetch entries", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to fetch entries", error: err.message });
   }
 });
 
@@ -23,7 +25,9 @@ router.post("/", protect, adminOnly, async (req, res) => {
   try {
     const { billNumber, amount, personName, notes } = req.body;
     if (!billNumber || !amount || !personName) {
-      return res.status(400).json({ message: "billNumber, amount and personName are required" });
+      return res
+        .status(400)
+        .json({ message: "billNumber, amount and personName are required" });
     }
     const entry = await CashAndSale.create({
       billNumber: billNumber.toString().trim().toUpperCase(),
@@ -34,7 +38,9 @@ router.post("/", protect, adminOnly, async (req, res) => {
     });
     res.status(201).json(entry);
   } catch (err) {
-    res.status(500).json({ message: "Failed to create entry", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to create entry", error: err.message });
   }
 });
 
@@ -60,7 +66,9 @@ router.get("/check-bill/:billNumber", protect, adminOnly, async (req, res) => {
       },
     });
   } catch (err) {
-    res.status(500).json({ message: "Failed to check bill", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to check bill", error: err.message });
   }
 });
 
@@ -70,7 +78,9 @@ router.patch("/:id/adjust", protect, adminOnly, async (req, res) => {
     const entry = await CashAndSale.findById(req.params.id);
     if (!entry) return res.status(404).json({ message: "Entry not found" });
     if (entry.status === "adjusted") {
-      return res.status(400).json({ message: "This entry has already been adjusted" });
+      return res
+        .status(400)
+        .json({ message: "This entry has already been adjusted" });
     }
 
     const bill = await Bill.findOne({
@@ -78,11 +88,16 @@ router.patch("/:id/adjust", protect, adminOnly, async (req, res) => {
       deleted: { $ne: true },
     });
     if (!bill) {
-      return res.status(404).json({ message: `Bill #${entry.billNumber} not found in database` });
+      return res
+        .status(404)
+        .json({ message: `Bill #${entry.billNumber} not found in database` });
     }
 
     const prevDue = bill.dueAmount;
-    bill.dueAmount = Math.max(0, parseFloat((bill.dueAmount - entry.amount).toFixed(2)));
+    bill.dueAmount = Math.max(
+      0,
+      parseFloat((bill.dueAmount - entry.amount).toFixed(2)),
+    );
     bill.history = bill.history || [];
     bill.history.push({
       action: "cash_and_sale_adjustment",
@@ -125,12 +140,16 @@ router.delete("/:id", protect, adminOnly, async (req, res) => {
     const entry = await CashAndSale.findById(req.params.id);
     if (!entry) return res.status(404).json({ message: "Entry not found" });
     if (entry.status === "adjusted") {
-      return res.status(400).json({ message: "Cannot delete an already-adjusted entry" });
+      return res
+        .status(400)
+        .json({ message: "Cannot delete an already-adjusted entry" });
     }
     await entry.deleteOne();
     res.json({ message: "Entry deleted" });
   } catch (err) {
-    res.status(500).json({ message: "Failed to delete entry", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to delete entry", error: err.message });
   }
 });
 

@@ -30,11 +30,21 @@ const VerifyCollectionsPage = () => {
   const [collections, setCollections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [searchTerm, setSearchTerm] = useState(() => localStorage.getItem("verifyColl_search") || "");
-  const [startDate, setStartDate] = useState(() => localStorage.getItem("verifyColl_startDate") || "");
-  const [endDate, setEndDate] = useState(() => localStorage.getItem("verifyColl_endDate") || "");
-  const [verificationFilter, setVerificationFilter] = useState(() => localStorage.getItem("verifyColl_verifFilter") || "");
-  const [paymentModeFilter, setPaymentModeFilter] = useState(() => localStorage.getItem("verifyColl_paymentFilter") || "");
+  const [searchTerm, setSearchTerm] = useState(
+    () => localStorage.getItem("verifyColl_search") || "",
+  );
+  const [startDate, setStartDate] = useState(
+    () => localStorage.getItem("verifyColl_startDate") || "",
+  );
+  const [endDate, setEndDate] = useState(
+    () => localStorage.getItem("verifyColl_endDate") || "",
+  );
+  const [verificationFilter, setVerificationFilter] = useState(
+    () => localStorage.getItem("verifyColl_verifFilter") || "",
+  );
+  const [paymentModeFilter, setPaymentModeFilter] = useState(
+    () => localStorage.getItem("verifyColl_paymentFilter") || "",
+  );
   const [viewGroup, setViewGroup] = useState(null);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [zoomImage, setZoomImage] = useState(null);
@@ -176,9 +186,12 @@ const VerifyCollectionsPage = () => {
     const matchesSearch =
       !searchTerm ||
       collection.bill?.billNumber?.toString().includes(searchTerm) ||
-      collection.bill?.retailer?.toLowerCase().includes(searchTerm.toLowerCase());
+      collection.bill?.retailer
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase());
     const matchesVerification =
-      !verificationFilter || collection.verificationStatus === verificationFilter;
+      !verificationFilter ||
+      collection.verificationStatus === verificationFilter;
     const matchesPayment =
       !paymentModeFilter ||
       collection.paymentMode?.toLowerCase() === paymentModeFilter.toLowerCase();
@@ -220,18 +233,24 @@ const VerifyCollectionsPage = () => {
       const res = await axios.patch(
         `https://backend.laxmilube.in/api/collections/${collectionId}/verify`,
         body,
-        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        },
       );
       const resolved = res.data.matchResult || res.data.verificationStatus;
       setCollections((prev) =>
         prev.map((c) => (c._id === collectionId ? { ...c, ...res.data } : c)),
       );
       const updatedGroup = viewGroup
-        ? viewGroup.map((c) => (c._id === collectionId ? { ...c, ...res.data } : c))
+        ? viewGroup.map((c) =>
+            c._id === collectionId ? { ...c, ...res.data } : c,
+          )
         : null;
       setViewGroup(updatedGroup);
       if (resolved === "verified" && updatedGroup) {
-        const allVerified = updatedGroup.every((c) => c.verificationStatus === "verified");
+        const allVerified = updatedGroup.every(
+          (c) => c.verificationStatus === "verified",
+        );
         if (allVerified) generateCollectionPDF(updatedGroup, remarkText);
       }
       return resolved;
@@ -392,7 +411,10 @@ const VerifyCollectionsPage = () => {
                         value={paymentModeFilter}
                         onChange={(e) => {
                           setPaymentModeFilter(e.target.value);
-                          localStorage.setItem("verifyColl_paymentFilter", e.target.value);
+                          localStorage.setItem(
+                            "verifyColl_paymentFilter",
+                            e.target.value,
+                          );
                         }}
                       >
                         <option value="">All Modes</option>
@@ -409,7 +431,10 @@ const VerifyCollectionsPage = () => {
                         value={verificationFilter}
                         onChange={(e) => {
                           setVerificationFilter(e.target.value);
-                          localStorage.setItem("verifyColl_verifFilter", e.target.value);
+                          localStorage.setItem(
+                            "verifyColl_verifFilter",
+                            e.target.value,
+                          );
                         }}
                       >
                         <option value="">All Status</option>
@@ -465,11 +490,12 @@ const VerifyCollectionsPage = () => {
                                   )
                                   ? "verified"
                                   : row.members.some(
-                                      (m) =>
-                                        m.verificationStatus === "not_verified",
-                                    )
-                                  ? "not_verified"
-                                  : "pending"
+                                        (m) =>
+                                          m.verificationStatus ===
+                                          "not_verified",
+                                      )
+                                    ? "not_verified"
+                                    : "pending"
                                 : first.verificationStatus,
                             )}
                           </td>
@@ -477,7 +503,11 @@ const VerifyCollectionsPage = () => {
                             <ActionBtns>
                               <EyeBtn
                                 title="View details"
-                                onClick={() => { setViewGroup(row.members); setLastFiveDigits(""); setDigitMatchResult(null); }}
+                                onClick={() => {
+                                  setViewGroup(row.members);
+                                  setLastFiveDigits("");
+                                  setDigitMatchResult(null);
+                                }}
                               >
                                 <FaEye />
                               </EyeBtn>
@@ -516,7 +546,11 @@ const VerifyCollectionsPage = () => {
                                 <ActionBtns>
                                   <EyeBtn
                                     title="View bill"
-                                    onClick={() => { setViewGroup([m]); setLastFiveDigits(""); setDigitMatchResult(null); }}
+                                    onClick={() => {
+                                      setViewGroup([m]);
+                                      setLastFiveDigits("");
+                                      setDigitMatchResult(null);
+                                    }}
                                   >
                                     <FaEye />
                                   </EyeBtn>
@@ -547,7 +581,11 @@ const VerifyCollectionsPage = () => {
             <EmptyState>
               <FaMoneyBillWave size={40} />
               <EmptyMessage>No collections found</EmptyMessage>
-              {(searchTerm || startDate || endDate || verificationFilter || paymentModeFilter) && (
+              {(searchTerm ||
+                startDate ||
+                endDate ||
+                verificationFilter ||
+                paymentModeFilter) && (
                 <ClearFiltersBtn
                   onClick={() => {
                     setSearchTerm("");
@@ -572,14 +610,28 @@ const VerifyCollectionsPage = () => {
       </MainContent>
 
       {viewGroup && (
-        <ModalOverlay onClick={() => { setViewGroup(null); setLastFiveDigits(""); setDigitMatchResult(null); }}>
+        <ModalOverlay
+          onClick={() => {
+            setViewGroup(null);
+            setLastFiveDigits("");
+            setDigitMatchResult(null);
+          }}
+        >
           <DetailModal onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <h3>
                 Collection Details
                 {viewGroup.length > 1 ? ` (${viewGroup.length} bills)` : ""}
               </h3>
-              <CloseBtn onClick={() => { setViewGroup(null); setLastFiveDigits(""); setDigitMatchResult(null); }}>×</CloseBtn>
+              <CloseBtn
+                onClick={() => {
+                  setViewGroup(null);
+                  setLastFiveDigits("");
+                  setDigitMatchResult(null);
+                }}
+              >
+                ×
+              </CloseBtn>
             </ModalHeader>
             <ModalBody>
               <DetailGrid>
@@ -641,15 +693,18 @@ const VerifyCollectionsPage = () => {
                 {/* Digit-match verification — shown only if any bill is pending */}
                 {viewGroup.some((c) => c.verificationStatus === "pending") && (
                   <DigitVerifyBox>
-                    {(viewGroup[0].paymentMode || "").toLowerCase() !== "cash" ? (
+                    {(viewGroup[0].paymentMode || "").toLowerCase() !==
+                    "cash" ? (
                       <>
                         <DigitVerifyLabel>
                           Enter last 5 digits of{" "}
-                          {(viewGroup[0].paymentMode || "").toLowerCase() === "upi"
+                          {(viewGroup[0].paymentMode || "").toLowerCase() ===
+                          "upi"
                             ? "UTR / Transaction ID"
-                            : (viewGroup[0].paymentMode || "").toLowerCase() === "cheque"
-                            ? "Cheque Number"
-                            : "Transaction ID"}
+                            : (viewGroup[0].paymentMode || "").toLowerCase() ===
+                                "cheque"
+                              ? "Cheque Number"
+                              : "Transaction ID"}
                         </DigitVerifyLabel>
                         <DigitVerifyRow>
                           <DigitInput
@@ -658,15 +713,26 @@ const VerifyCollectionsPage = () => {
                             placeholder="e.g. 43210"
                             value={lastFiveDigits}
                             onChange={(e) => {
-                              setLastFiveDigits(e.target.value.replace(/[^a-zA-Z0-9]/g, ""));
+                              setLastFiveDigits(
+                                e.target.value.replace(/[^a-zA-Z0-9]/g, ""),
+                              );
                               setDigitMatchResult(null);
                             }}
                           />
                           <VerifyAllBtn
                             onClick={handleVerifyAll}
-                            disabled={verifyingId === "__group__" || lastFiveDigits.trim().length === 0}
+                            disabled={
+                              verifyingId === "__group__" ||
+                              lastFiveDigits.trim().length === 0
+                            }
                           >
-                            {verifyingId === "__group__" ? "Verifying…" : <><FaCheckCircle /> Verify</>}
+                            {verifyingId === "__group__" ? (
+                              "Verifying…"
+                            ) : (
+                              <>
+                                <FaCheckCircle /> Verify
+                              </>
+                            )}
                           </VerifyAllBtn>
                         </DigitVerifyRow>
                       </>
@@ -676,12 +742,20 @@ const VerifyCollectionsPage = () => {
                           onClick={handleVerifyAll}
                           disabled={verifyingId === "__group__"}
                         >
-                          {verifyingId === "__group__" ? "Verifying…" : <><FaCheckCircle /> Mark as Verified</>}
+                          {verifyingId === "__group__" ? (
+                            "Verifying…"
+                          ) : (
+                            <>
+                              <FaCheckCircle /> Mark as Verified
+                            </>
+                          )}
                         </VerifyAllBtn>
                       </DigitVerifyRow>
                     )}
                     {digitMatchResult && (
-                      <MatchResultBadge $match={digitMatchResult === "verified"}>
+                      <MatchResultBadge
+                        $match={digitMatchResult === "verified"}
+                      >
                         {digitMatchResult === "verified"
                           ? "✓ Digits matched — Verified"
                           : "✗ Digits did not match — Not Verified"}

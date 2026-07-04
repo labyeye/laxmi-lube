@@ -1224,12 +1224,18 @@ router.get("/export/excel", protect, adminOnly, async (req, res) => {
 function istStart(dateStr) {
   return dateStr
     ? new Date(dateStr + "T00:00:00+05:30")
-    : new Date(new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }) + "T00:00:00+05:30");
+    : new Date(
+        new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }) +
+          "T00:00:00+05:30",
+      );
 }
 function istEnd(dateStr) {
   return dateStr
     ? new Date(dateStr + "T23:59:59.999+05:30")
-    : new Date(new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }) + "T23:59:59.999+05:30");
+    : new Date(
+        new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }) +
+          "T23:59:59.999+05:30",
+      );
 }
 
 // GET /api/reports/tally/retailers  – list all retailers for selector

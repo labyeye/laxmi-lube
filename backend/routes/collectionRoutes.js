@@ -9,7 +9,9 @@ const mongoose = require("mongoose");
 function parseCollectedOn(dateStr) {
   if (!dateStr) return new Date();
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-    const todayIST = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    const todayIST = new Date().toLocaleDateString("en-CA", {
+      timeZone: "Asia/Kolkata",
+    });
     if (dateStr === todayIST) return new Date(); // actual current time for today
     return new Date(dateStr + "T00:00:00+05:30"); // midnight IST for past dates
   }
@@ -25,7 +27,10 @@ const {
 } = require("../middleware/authMiddleware");
 const { format } = require("date-fns");
 const exceljs = require("exceljs");
-const { generateReceiptPDF, generateGroupReceiptPDF } = require("../services/pdfService");
+const {
+  generateReceiptPDF,
+  generateGroupReceiptPDF,
+} = require("../services/pdfService");
 const {
   sendRetailerReceipt,
   sendAdminNotification,
@@ -184,8 +189,11 @@ async function triggerGroupWhatsApp(paymentGroupId) {
   const retailer = await Retailer.findOne({ name: first.bill?.retailer });
   const staffName = first.collectedBy?.name || "Staff";
   const collectionDate = format(new Date(first.collectedOn), "dd MMM yyyy");
-  const totalAmount = members.reduce((sum, c) => sum + c.amountCollected, 0).toFixed(2);
-  const paymentModeLabel = PAYMENT_MODE_LABELS[first.paymentMode] || first.paymentMode;
+  const totalAmount = members
+    .reduce((sum, c) => sum + c.amountCollected, 0)
+    .toFixed(2);
+  const paymentModeLabel =
+    PAYMENT_MODE_LABELS[first.paymentMode] || first.paymentMode;
 
   // Combined bill string for template body: "#1042 (₹5000), #1043 (₹3000)"
   const combinedBillStr = members
@@ -224,16 +232,20 @@ async function triggerGroupWhatsApp(paymentGroupId) {
   }
 
   // Update whatsappStatus on every member in the group
-  await Collection.updateMany({ paymentGroupId }, {
-    whatsappStatus: waStatus,
-    ...(waStatus === "sent" ? { whatsappSentAt: new Date() } : {}),
-  });
+  await Collection.updateMany(
+    { paymentGroupId },
+    {
+      whatsappStatus: waStatus,
+      ...(waStatus === "sent" ? { whatsappSentAt: new Date() } : {}),
+    },
+  );
 
   await sendAdminNotifyOnce({
     retailerName: first.bill?.retailer || "N/A",
     retailerPhone: retailer?.phone || "N/A",
     retailerAddress:
-      [retailer?.address1, retailer?.address2].filter(Boolean).join(", ") || "N/A",
+      [retailer?.address1, retailer?.address2].filter(Boolean).join(", ") ||
+      "N/A",
     amount: totalAmount,
     billNumber: combinedBillNumbers,
     paymentMode: paymentModeLabel,
@@ -514,7 +526,9 @@ router.post(
                 lat: loc.lat ?? null,
                 lng: loc.lng ?? null,
                 accuracy: loc.accuracy ?? null,
-                recordedAt: loc.recordedAt ? new Date(loc.recordedAt) : new Date(),
+                recordedAt: loc.recordedAt
+                  ? new Date(loc.recordedAt)
+                  : new Date(),
               };
             } catch {
               return null;
@@ -679,7 +693,9 @@ router.post(
                 lat: loc.lat ?? null,
                 lng: loc.lng ?? null,
                 accuracy: loc.accuracy ?? null,
-                recordedAt: loc.recordedAt ? new Date(loc.recordedAt) : new Date(),
+                recordedAt: loc.recordedAt
+                  ? new Date(loc.recordedAt)
+                  : new Date(),
               };
             } catch {
               return null;
@@ -917,13 +933,17 @@ router.patch(
 
       // Find the collection first so we can do digit matching (lean = plain JS object)
       const existing = await Collection.findById(req.params.id).lean();
-      if (!existing) return res.status(404).json({ message: "Collection not found" });
+      if (!existing)
+        return res.status(404).json({ message: "Collection not found" });
 
       let resolvedStatus = status;
 
       // If lastFiveDigits provided, auto-determine status by matching payment reference
       if (lastFiveDigits && lastFiveDigits.trim().length > 0) {
-        const digits = lastFiveDigits.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+        const digits = lastFiveDigits
+          .trim()
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, "");
         const pd = existing.paymentDetails || {};
         const mode = (existing.paymentMode || "").toLowerCase();
 
@@ -939,13 +959,18 @@ router.patch(
           candidates = [pd.receiptNumber];
         }
 
-        const ref = (candidates.find((v) => v && String(v).trim().length > 0) || "")
+        const ref = (
+          candidates.find((v) => v && String(v).trim().length > 0) || ""
+        )
           .toString()
           .trim()
           .toUpperCase()
           .replace(/[^A-Z0-9]/g, "");
 
-        console.log(`[Verify] mode=${mode} digits="${digits}" ref="${ref}" ref_last5="${ref.slice(-digits.length)}" pd=`, JSON.stringify(pd));
+        console.log(
+          `[Verify] mode=${mode} digits="${digits}" ref="${ref}" ref_last5="${ref.slice(-digits.length)}" pd=`,
+          JSON.stringify(pd),
+        );
 
         const matches = ref.length > 0 && ref.slice(-digits.length) === digits;
         resolvedStatus = matches ? "verified" : "not_verified";

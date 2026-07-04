@@ -26,13 +26,18 @@ const CashAndSalePage = () => {
 
   // Create modal
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ billNumber: "", amount: "", personName: "", notes: "" });
+  const [form, setForm] = useState({
+    billNumber: "",
+    amount: "",
+    personName: "",
+    notes: "",
+  });
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
 
   // Adjust modal
   const [adjustEntry, setAdjustEntry] = useState(null); // the CashAndSale entry being adjusted
-  const [billCheck, setBillCheck] = useState(null);     // { found, bill } from API
+  const [billCheck, setBillCheck] = useState(null); // { found, bill } from API
   const [checking, setChecking] = useState(false);
   const [adjusting, setAdjusting] = useState(false);
   const [adjustError, setAdjustError] = useState("");
@@ -82,7 +87,9 @@ const CashAndSalePage = () => {
     ev.preventDefault();
     setCreateError("");
     if (!form.billNumber || !form.amount || !form.personName) {
-      return setCreateError("Bill number, amount and person name are required.");
+      return setCreateError(
+        "Bill number, amount and person name are required.",
+      );
     }
     setCreating(true);
     try {
@@ -171,7 +178,12 @@ const CashAndSalePage = () => {
               <option value="pending">Pending</option>
               <option value="adjusted">Adjusted</option>
             </FilterSelect>
-            <AddBtn onClick={() => { setShowCreate(true); setCreateError(""); }}>
+            <AddBtn
+              onClick={() => {
+                setShowCreate(true);
+                setCreateError("");
+              }}
+            >
               <FaPlus /> Add Entry
             </AddBtn>
           </HeaderActions>
@@ -205,9 +217,13 @@ const CashAndSalePage = () => {
               <tbody>
                 {filtered.map((e) => (
                   <tr key={e._id}>
-                    <td><BillNum>#{e.billNumber}</BillNum></td>
+                    <td>
+                      <BillNum>#{e.billNumber}</BillNum>
+                    </td>
                     <td>{e.personName}</td>
-                    <td><strong>{formatCurrency(e.amount)}</strong></td>
+                    <td>
+                      <strong>{formatCurrency(e.amount)}</strong>
+                    </td>
                     <td>{e.notes || <Muted>—</Muted>}</td>
                     <td>{formatDate(e.createdAt)}</td>
                     <td>
@@ -265,7 +281,9 @@ const CashAndSalePage = () => {
                     type="text"
                     placeholder="e.g. 1042"
                     value={form.billNumber}
-                    onChange={(e) => setForm((p) => ({ ...p, billNumber: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, billNumber: e.target.value }))
+                    }
                   />
                 </Field>
                 <Field>
@@ -276,7 +294,9 @@ const CashAndSalePage = () => {
                     step="0.01"
                     placeholder="e.g. 5000"
                     value={form.amount}
-                    onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, amount: e.target.value }))
+                    }
                   />
                 </Field>
                 <Field>
@@ -285,7 +305,9 @@ const CashAndSalePage = () => {
                     type="text"
                     placeholder="Name of who paid"
                     value={form.personName}
-                    onChange={(e) => setForm((p) => ({ ...p, personName: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, personName: e.target.value }))
+                    }
                   />
                 </Field>
                 <Field>
@@ -294,7 +316,9 @@ const CashAndSalePage = () => {
                     rows={2}
                     placeholder="Any remarks…"
                     value={form.notes}
-                    onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, notes: e.target.value }))
+                    }
                   />
                 </Field>
                 {createError && <ErrText>{createError}</ErrText>}
@@ -333,7 +357,9 @@ const CashAndSalePage = () => {
               </AdjustSummary>
 
               {checking ? (
-                <CheckingBox><Spinner /> Checking bill in database…</CheckingBox>
+                <CheckingBox>
+                  <Spinner /> Checking bill in database…
+                </CheckingBox>
               ) : adjustError && !billCheck ? (
                 <ErrText>{adjustError}</ErrText>
               ) : billCheck && !billCheck.found ? (
@@ -341,7 +367,10 @@ const CashAndSalePage = () => {
                   <FaTimesCircle size={18} />
                   <div>
                     <strong>Bill #{adjustEntry.billNumber} not found</strong>
-                    <p>This bill does not exist in the database yet. You can adjust once the bill is imported.</p>
+                    <p>
+                      This bill does not exist in the database yet. You can
+                      adjust once the bill is imported.
+                    </p>
                   </div>
                 </BillNotFound>
               ) : billCheck?.found ? (
@@ -367,23 +396,32 @@ const CashAndSalePage = () => {
                     </BillDetailRow>
                     <BillDetailRow>
                       <span>Current Due</span>
-                      <strong>{formatCurrency(billCheck.bill.dueAmount)}</strong>
+                      <strong>
+                        {formatCurrency(billCheck.bill.dueAmount)}
+                      </strong>
                     </BillDetailRow>
                     <BillDetailRow $highlight>
                       <span>Due After Adjustment</span>
                       <strong>
                         {formatCurrency(
-                          Math.max(0, billCheck.bill.dueAmount - adjustEntry.amount),
+                          Math.max(
+                            0,
+                            billCheck.bill.dueAmount - adjustEntry.amount,
+                          ),
                         )}
                       </strong>
                     </BillDetailRow>
                   </BillDetails>
                   <ConfirmText>
-                    Do you want to adjust <strong>{formatCurrency(adjustEntry.amount)}</strong> against Bill #{billCheck.bill.billNumber}?
+                    Do you want to adjust{" "}
+                    <strong>{formatCurrency(adjustEntry.amount)}</strong>{" "}
+                    against Bill #{billCheck.bill.billNumber}?
                   </ConfirmText>
                   {adjustError && <ErrText>{adjustError}</ErrText>}
                   <ModalFooter>
-                    <GhostBtn onClick={() => setAdjustEntry(null)}>Cancel</GhostBtn>
+                    <GhostBtn onClick={() => setAdjustEntry(null)}>
+                      Cancel
+                    </GhostBtn>
                     <SaveBtn onClick={handleAdjust} disabled={adjusting}>
                       {adjusting ? "Adjusting…" : "Confirm Adjustment"}
                     </SaveBtn>
@@ -400,7 +438,9 @@ const CashAndSalePage = () => {
 
 // ── Styled Components ──────────────────────────────────────────────────────────
 
-const PageContainer = styled.div`width: 100%;`;
+const PageContainer = styled.div`
+  width: 100%;
+`;
 
 const Header = styled.header`
   display: flex;
@@ -419,7 +459,9 @@ const Header = styled.header`
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    h1 { font-size: 1.8rem; }
+    h1 {
+      font-size: 1.8rem;
+    }
   }
 `;
 
@@ -446,7 +488,9 @@ const SearchBox = styled.div`
     width: 160px;
   }
 
-  svg { color: var(--nb-border); }
+  svg {
+    color: var(--nb-border);
+  }
 `;
 
 const FilterSelect = styled.select`
@@ -473,7 +517,9 @@ const AddBtn = styled.button`
   font-weight: 600;
   cursor: pointer;
 
-  &:hover { opacity: 0.9; }
+  &:hover {
+    opacity: 0.9;
+  }
 `;
 
 const TableWrap = styled.div`
@@ -489,7 +535,8 @@ const Table = styled.table`
   font-size: 0.875rem;
   min-width: 800px;
 
-  th, td {
+  th,
+  td {
     padding: 0.85rem 1rem;
     text-align: left;
     border-bottom: 1px solid var(--nb-border);
@@ -505,10 +552,16 @@ const Table = styled.table`
     white-space: nowrap;
   }
 
-  td { color: var(--nb-ink); }
+  td {
+    color: var(--nb-ink);
+  }
 
-  tr:last-child td { border-bottom: none; }
-  tr:hover { background: var(--nb-muted); }
+  tr:last-child td {
+    border-bottom: none;
+  }
+  tr:hover {
+    background: var(--nb-muted);
+  }
 `;
 
 const BillNum = styled.span`
@@ -516,7 +569,9 @@ const BillNum = styled.span`
   color: var(--nb-blue);
 `;
 
-const Muted = styled.span`color: #9ca3af;`;
+const Muted = styled.span`
+  color: #9ca3af;
+`;
 
 const Badge = styled.span`
   display: inline-flex;
@@ -550,7 +605,9 @@ const AdjustBtn = styled.button`
   font-weight: 600;
   cursor: pointer;
 
-  &:hover { background: var(--nb-muted); }
+  &:hover {
+    background: var(--nb-muted);
+  }
 `;
 
 const DeleteBtn = styled.button`
@@ -562,7 +619,9 @@ const DeleteBtn = styled.button`
   cursor: pointer;
   font-size: 0.8rem;
 
-  &:hover { background: #fee2e2; }
+  &:hover {
+    background: #fee2e2;
+  }
 `;
 
 const AdjustedInfo = styled.span`
@@ -588,7 +647,11 @@ const Spinner = styled.div`
   animation: spin 0.8s linear infinite;
   flex-shrink: 0;
 
-  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
 `;
 
 const ErrorMsg = styled.div`
@@ -615,7 +678,7 @@ const EmptyState = styled.div`
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -630,7 +693,7 @@ const Modal = styled.div`
   max-width: 480px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 `;
 
 const ModalHeader = styled.div`
@@ -640,7 +703,11 @@ const ModalHeader = styled.div`
   padding: 1rem 1.25rem;
   border-bottom: 1px solid var(--nb-border);
 
-  h3 { margin: 0; font-size: 1rem; color: var(--nb-ink); }
+  h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--nb-ink);
+  }
 `;
 
 const CloseBtn = styled.button`
@@ -653,7 +720,9 @@ const CloseBtn = styled.button`
   padding: 0 4px;
 `;
 
-const ModalBody = styled.div`padding: 1.25rem;`;
+const ModalBody = styled.div`
+  padding: 1.25rem;
+`;
 
 const Field = styled.div`
   display: flex;
@@ -667,7 +736,8 @@ const Field = styled.div`
     color: #374151;
   }
 
-  input, textarea {
+  input,
+  textarea {
     padding: 0.5rem 0.7rem;
     border: 1px solid var(--nb-border);
     border-radius: 6px;
@@ -675,10 +745,14 @@ const Field = styled.div`
     font-family: inherit;
     color: var(--nb-ink);
     outline: none;
-    &:focus { border-color: var(--nb-blue); }
+    &:focus {
+      border-color: var(--nb-blue);
+    }
   }
 
-  textarea { resize: vertical; }
+  textarea {
+    resize: vertical;
+  }
 `;
 
 const ErrText = styled.p`
@@ -703,7 +777,9 @@ const GhostBtn = styled.button`
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
-  &:hover { background: var(--nb-muted); }
+  &:hover {
+    background: var(--nb-muted);
+  }
 `;
 
 const SaveBtn = styled.button`
@@ -715,8 +791,13 @@ const SaveBtn = styled.button`
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
-  &:hover:not(:disabled) { opacity: 0.9; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 `;
 
 const AdjustSummary = styled.div`
@@ -753,8 +834,14 @@ const BillNotFound = styled.div`
   border-radius: 8px;
   color: #991b1b;
 
-  p { margin: 0.25rem 0 0; font-size: 0.82rem; color: #6b7280; }
-  strong { font-size: 0.875rem; }
+  p {
+    margin: 0.25rem 0 0;
+    font-size: 0.82rem;
+    color: #6b7280;
+  }
+  strong {
+    font-size: 0.875rem;
+  }
 `;
 
 const BillFound = styled.div`
@@ -786,8 +873,12 @@ const BillDetailRow = styled.div`
   background: ${(p) => (p.$highlight ? "#eff6ff" : "transparent")};
   color: ${(p) => (p.$highlight ? "var(--nb-blue)" : "var(--nb-ink)")};
 
-  &:last-child { border-bottom: none; }
-  span { color: #6b7280; }
+  &:last-child {
+    border-bottom: none;
+  }
+  span {
+    color: #6b7280;
+  }
 `;
 
 const ConfirmText = styled.p`

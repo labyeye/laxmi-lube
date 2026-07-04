@@ -17,10 +17,18 @@ const AdminApprovedCollections = () => {
   const [collections, setCollections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [searchTerm, setSearchTerm] = useState(() => localStorage.getItem("adminApprColl_search") || "");
-  const [startDate, setStartDate] = useState(() => localStorage.getItem("adminApprColl_startDate") || "");
-  const [endDate, setEndDate] = useState(() => localStorage.getItem("adminApprColl_endDate") || "");
-  const [paymentModeFilter, setPaymentModeFilter] = useState(() => localStorage.getItem("adminApprColl_paymentFilter") || "");
+  const [searchTerm, setSearchTerm] = useState(
+    () => localStorage.getItem("adminApprColl_search") || "",
+  );
+  const [startDate, setStartDate] = useState(
+    () => localStorage.getItem("adminApprColl_startDate") || "",
+  );
+  const [endDate, setEndDate] = useState(
+    () => localStorage.getItem("adminApprColl_endDate") || "",
+  );
+  const [paymentModeFilter, setPaymentModeFilter] = useState(
+    () => localStorage.getItem("adminApprColl_paymentFilter") || "",
+  );
   const [viewGroup, setViewGroup] = useState(null);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [zoomImage, setZoomImage] = useState(null);
@@ -79,7 +87,9 @@ const AdminApprovedCollections = () => {
     const matchesSearch =
       !searchTerm ||
       collection.bill?.billNumber?.toString().includes(searchTerm) ||
-      collection.bill?.retailer?.toLowerCase().includes(searchTerm.toLowerCase());
+      collection.bill?.retailer
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase());
     const matchesPayment =
       !paymentModeFilter ||
       collection.paymentMode?.toLowerCase() === paymentModeFilter.toLowerCase();
@@ -137,7 +147,10 @@ const AdminApprovedCollections = () => {
                 value={startDate}
                 onChange={(e) => {
                   setStartDate(e.target.value);
-                  localStorage.setItem("adminApprColl_startDate", e.target.value);
+                  localStorage.setItem(
+                    "adminApprColl_startDate",
+                    e.target.value,
+                  );
                 }}
               />
             </DateBox>
@@ -188,7 +201,10 @@ const AdminApprovedCollections = () => {
                       value={paymentModeFilter}
                       onChange={(e) => {
                         setPaymentModeFilter(e.target.value);
-                        localStorage.setItem("adminApprColl_paymentFilter", e.target.value);
+                        localStorage.setItem(
+                          "adminApprColl_paymentFilter",
+                          e.target.value,
+                        );
                       }}
                     >
                       <option value="">All Modes</option>
@@ -377,7 +393,9 @@ const AdminApprovedCollections = () => {
                       </VerifiedBadge>
                     </BillInfo>
                     {c.verificationRemarks && (
-                      <SavedRemark>Remark: "{c.verificationRemarks}"</SavedRemark>
+                      <SavedRemark>
+                        Remark: "{c.verificationRemarks}"
+                      </SavedRemark>
                     )}
                   </BillVerifyRow>
                 ))}

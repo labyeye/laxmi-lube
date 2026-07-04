@@ -40,7 +40,7 @@ async function main() {
     console.log(
       `  [${record._id}]  ${oldDate.toISOString()}  →  ${newDate.toISOString()}` +
         `  (was ${oldDate.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })},` +
-        `  will be ${newDate.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })})`
+        `  will be ${newDate.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })})`,
     );
 
     if (!DRY_RUN) {
@@ -50,7 +50,9 @@ async function main() {
   }
 
   if (DRY_RUN) {
-    console.log(`\nDry run complete — ${records.length} records would be updated`);
+    console.log(
+      `\nDry run complete — ${records.length} records would be updated`,
+    );
   } else {
     console.log(`\nDone — updated ${updated} records`);
   }
