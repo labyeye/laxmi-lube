@@ -19,6 +19,7 @@ import {
   FaTimes,
   FaUpload,
   FaEdit,
+  FaTrash,
 } from "react-icons/fa";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -71,8 +72,20 @@ const RetailerList = () => {
   const [modalError, setModalError] = useState("");
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
+  const [importStep, setImportStep] = useState(1); // 1=upload, 2=field select
+  const [detectedFields, setDetectedFields] = useState([]); // fields found in Excel
+  const [updateFields, setUpdateFields] = useState([]); // fields user chose to update
   const [editingRetailerId, setEditingRetailerId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const fileInputRef = useRef(null);
+
+  const UPDATABLE_FIELDS = [
+    { key: "phone", label: "Phone / WhatsApp Number" },
+    { key: "address1", label: "Address Line 1" },
+    { key: "address2", label: "Address Line 2" },
+    { key: "dayAssigned", label: "Collection Day" },
+    { key: "assignedTo", label: "Assigned To (Staff)" },
+  ];
 
   const fetchRetailers = async () => {
     try {
@@ -180,6 +193,9 @@ const RetailerList = () => {
     setModalMessage("");
     setModalError("");
     setImportFile(null);
+    setImportStep(1);
+    setDetectedFields([]);
+    setUpdateFields([]);
     setEditingRetailerId(null);
   };
 
@@ -289,16 +305,60 @@ const RetailerList = () => {
     }
   };
 
+  const handleDeleteRetailer = async (id, name) => {
+    if (!window.confirm(`Delete retailer "${name}"? This cannot be undone.`)) return;
+    setDeletingId(id);
+    try {
+      await axios.delete(`${API_BASE}/retailers/${id}`, { headers: getAuthHeaders() });
+      setRecords((prev) => prev.filter((r) => r._id !== id));
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to delete retailer");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const handleImportFileChange = (e) => {
-    setImportFile(e.target.files?.[0] || null);
+    const file = e.target.files?.[0] || null;
+    setImportFile(file);
     setModalError("");
     setModalMessage("");
+    setImportStep(1);
+    setDetectedFields([]);
+    setUpdateFields([]);
+
+    if (!file) return;
+
+    // Parse the Excel client-side to detect which columns are present
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const wb = xlsx.read(evt.target.result, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = xlsx.utils.sheet_to_json(ws, { header: 1 });
+        const headers = (rows[0] || []).map((h) => String(h).toLowerCase().trim());
+
+        const found = [];
+        if (headers.some((h) => h.includes("phone") || h.includes("mobile") || h.includes("whatsapp") || h.includes("contact"))) found.push("phone");
+        if (headers.some((h) => h.includes("address 1") || h.includes("address1"))) found.push("address1");
+        if (headers.some((h) => h.includes("address 2") || h.includes("address2"))) found.push("address2");
+        if (headers.some((h) => h.includes("day"))) found.push("dayAssigned");
+        if (headers.some((h) => h.includes("assigned to") || h.includes("assignedto"))) found.push("assignedTo");
+        setDetectedFields(found);
+      } catch {
+        // if parse fails, still allow upload with no field detection
+      }
+    };
+    reader.readAsArrayBuffer(file);
   };
 
   const handleImportSubmit = async (e) => {
     e.preventDefault();
-    if (!importFile) {
-      setModalError("Please choose a file");
+    if (!importFile) { setModalError("Please choose a file"); return; }
+
+    // Step 1 → Step 2: show field selection before actually uploading
+    if (importStep === 1) {
+      setImportStep(2);
       return;
     }
 
@@ -307,15 +367,18 @@ const RetailerList = () => {
     setModalMessage("");
 
     try {
-      const formData = new FormData();
-      formData.append("file", importFile);
       const token = localStorage.getItem("token");
-
       if (!token) {
         setModalError("Your session has expired. Please log in again.");
         setImportLoading(false);
         navigate("/login");
         return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", importFile);
+      if (updateFields.length > 0) {
+        formData.append("updateFields", JSON.stringify(updateFields));
       }
 
       const response = await fetch(`${API_BASE}/retailers/import`, {
@@ -333,22 +396,18 @@ const RetailerList = () => {
       }
 
       const data = await response.json();
+      if (!response.ok) throw new Error(data?.message || `Import failed (status ${response.status})`);
 
-      if (!response.ok) {
-        throw new Error(
-          data?.message || `Import failed (status ${response.status})`,
-        );
-      }
-
-      setModalMessage(
-        `Imported ${data.importedCount} retailers. ${data.errorCount} rows had errors.`,
-      );
-      if (data.errorCount > 0) {
-        setModalError(data.errors?.join("; ") || "Some rows had errors");
-      }
+      const parts = [];
+      if (data.importedCount > 0) parts.push(`${data.importedCount} new retailers added`);
+      if (data.updatedCount > 0) parts.push(`${data.updatedCount} retailers updated`);
+      setModalMessage(parts.join(", ") + (data.errorCount > 0 ? `. ${data.errorCount} rows had errors.` : "."));
+      if (data.errorCount > 0) setModalError(data.errors?.join("; ") || "Some rows had errors");
 
       await fetchRetailers();
       setImportFile(null);
+      setImportStep(1);
+      setUpdateFields([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err) {
       setModalError(err.message || "Failed to import retailers");
@@ -417,13 +476,23 @@ const RetailerList = () => {
     const isActive = status === "ACTIVE";
     return (
       <RCard>
-        <CardEditBtn
-          type="button"
-          title="Edit retailer"
-          onClick={() => openEditModal(record)}
-        >
-          <FaEdit />
-        </CardEditBtn>
+        <CardActionBtns>
+          <CardEditBtn
+            type="button"
+            title="Edit retailer"
+            onClick={() => openEditModal(record)}
+          >
+            <FaEdit />
+          </CardEditBtn>
+          <CardDeleteBtn
+            type="button"
+            title="Delete retailer"
+            onClick={() => handleDeleteRetailer(record._id, record.name)}
+            disabled={deletingId === record._id}
+          >
+            <FaTrash />
+          </CardDeleteBtn>
+        </CardActionBtns>
         <RCardAvatar>{initials}</RCardAvatar>
         <RCardName>{name}</RCardName>
         {address && <RCardSub>{address}</RCardSub>}
@@ -470,13 +539,23 @@ const RetailerList = () => {
           </RCardStatus>
         </CCell>
         <CCell>
-          <RowEditBtn
-            type="button"
-            title="Edit retailer"
-            onClick={() => openEditModal(record)}
-          >
-            <FaEdit />
-          </RowEditBtn>
+          <RowActionBtns>
+            <RowEditBtn
+              type="button"
+              title="Edit retailer"
+              onClick={() => openEditModal(record)}
+            >
+              <FaEdit />
+            </RowEditBtn>
+            <RowDeleteBtn
+              type="button"
+              title="Delete retailer"
+              onClick={() => handleDeleteRetailer(record._id, record.name)}
+              disabled={deletingId === record._id}
+            >
+              <FaTrash />
+            </RowDeleteBtn>
+          </RowActionBtns>
         </CCell>
       </CRow>
     );
@@ -688,13 +767,23 @@ const RetailerList = () => {
                       </RCardStatus>
                     </CCell>
                     <CCell>
-                      <RowEditBtn
-                        type="button"
-                        title="Edit retailer"
-                        onClick={() => openEditModal(r)}
-                      >
-                        <FaEdit />
-                      </RowEditBtn>
+                      <RowActionBtns>
+                        <RowEditBtn
+                          type="button"
+                          title="Edit retailer"
+                          onClick={() => openEditModal(r)}
+                        >
+                          <FaEdit />
+                        </RowEditBtn>
+                        <RowDeleteBtn
+                          type="button"
+                          title="Delete retailer"
+                          onClick={() => handleDeleteRetailer(r._id, r.name)}
+                          disabled={deletingId === r._id}
+                        >
+                          <FaTrash />
+                        </RowDeleteBtn>
+                      </RowActionBtns>
                     </CCell>
                   </CRow>
                 ))}
@@ -922,47 +1011,101 @@ const RetailerList = () => {
               ) : (
                 <form onSubmit={handleImportSubmit}>
                   <ModalBody>
-                    <Field>
-                      <label>Upload Excel File (.xlsx / .xls)</label>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".xlsx,.xls"
-                        onChange={handleImportFileChange}
-                      />
-                    </Field>
+                    {/* Step indicators */}
+                    <ImportStepRow>
+                      <ImportStepDot active={importStep >= 1}>1. Upload File</ImportStepDot>
+                      <ImportStepLine />
+                      <ImportStepDot active={importStep >= 2}>2. Choose Fields</ImportStepDot>
+                    </ImportStepRow>
 
-                    {importFile && (
-                      <FileText>Selected: {importFile.name}</FileText>
+                    {importStep === 1 && (
+                      <>
+                        <Field>
+                          <label>Upload Excel File (.xlsx / .xls)</label>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".xlsx,.xls"
+                            onChange={handleImportFileChange}
+                          />
+                        </Field>
+                        {importFile && <FileText>Selected: {importFile.name}</FileText>}
+                        <Hint>
+                          <strong>Name</strong> column is required (used as master key to match retailers).
+                          Optional columns: Address 1, Address 2, Phone, Day Assigned, Assigned To.
+                        </Hint>
+                      </>
                     )}
 
-                    {importLoading && <FileText>Importing...</FileText>}
+                    {importStep === 2 && (
+                      <>
+                        <ImportSectionTitle>
+                          Retailer Name will be used to match existing records.
+                          Choose which fields to <strong>replace</strong> for matched retailers:
+                        </ImportSectionTitle>
 
-                    <Hint>
-                      Required: Retailer Name. Optional: Address 1, Address 2,
-                      Assigned To, Day Assigned, Phone for WhatsApp.
-                    </Hint>
+                        <FieldCheckboxGrid>
+                          {UPDATABLE_FIELDS.map((f) => {
+                            const inExcel = detectedFields.includes(f.key);
+                            const checked = updateFields.includes(f.key);
+                            return (
+                              <FieldCheckboxRow key={f.key} disabled={!inExcel}>
+                                <input
+                                  type="checkbox"
+                                  id={`uf_${f.key}`}
+                                  checked={checked}
+                                  disabled={!inExcel}
+                                  onChange={(e) => {
+                                    setUpdateFields((prev) =>
+                                      e.target.checked
+                                        ? [...prev, f.key]
+                                        : prev.filter((x) => x !== f.key)
+                                    );
+                                  }}
+                                />
+                                <label htmlFor={`uf_${f.key}`}>
+                                  {f.label}
+                                  {!inExcel && <NotInExcel> (not in file)</NotInExcel>}
+                                </label>
+                              </FieldCheckboxRow>
+                            );
+                          })}
+                        </FieldCheckboxGrid>
+
+                        <Hint style={{ marginTop: "0.75rem" }}>
+                          {updateFields.length === 0
+                            ? "No fields selected → only NEW retailers will be added (existing ones unchanged)."
+                            : `Selected fields will be updated for existing retailers. New retailers will be created automatically.`}
+                        </Hint>
+                        {importLoading && <FileText>Importing…</FileText>}
+                      </>
+                    )}
                   </ModalBody>
 
                   <ModalFooter>
-                    <SecondaryBtn
-                      type="button"
-                      onClick={() => {
-                        setImportFile(null);
-                        if (fileInputRef.current)
-                          fileInputRef.current.value = "";
-                        setModalError("");
-                        setModalMessage("");
-                      }}
-                    >
-                      Clear
-                    </SecondaryBtn>
-                    <PrimaryBtn
-                      type="submit"
-                      disabled={importLoading || !importFile}
-                    >
+                    {importStep === 2 ? (
+                      <SecondaryBtn type="button" onClick={() => setImportStep(1)}>
+                        ← Back
+                      </SecondaryBtn>
+                    ) : (
+                      <SecondaryBtn
+                        type="button"
+                        onClick={() => {
+                          setImportFile(null);
+                          setImportStep(1);
+                          setDetectedFields([]);
+                          setUpdateFields([]);
+                          if (fileInputRef.current) fileInputRef.current.value = "";
+                          setModalError("");
+                          setModalMessage("");
+                        }}
+                      >
+                        Clear
+                      </SecondaryBtn>
+                    )}
+                    <PrimaryBtn type="submit" disabled={importLoading || !importFile}>
                       <FaUpload />{" "}
-                      {importLoading ? "Uploading..." : "Import Retailers"}
+                      {importLoading ? "Importing…" : importStep === 1 ? "Next →" : "Import Now"}
                     </PrimaryBtn>
                   </ModalFooter>
                 </form>
@@ -1239,9 +1382,6 @@ const RCard = styled.div`
 `;
 
 const CardEditBtn = styled.button`
-  position: absolute;
-  top: 0.6rem;
-  right: 0.6rem;
   background: var(--nb-muted);
   border: none;
   border-radius: 6px;
@@ -1251,9 +1391,7 @@ const CardEditBtn = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  &:hover {
-    background: var(--nb-border);
-  }
+  &:hover { background: var(--nb-border); }
 `;
 
 const RowEditBtn = styled.button`
@@ -1579,6 +1717,110 @@ const Hint = styled.div`
   background: var(--nb-cream);
   border: 1px solid var(--nb-border);
   border-radius: 8px;
+`;
+
+const CardActionBtns = styled.div`
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  display: flex;
+  gap: 4px;
+`;
+
+const CardDeleteBtn = styled.button`
+  background: #fee2e2;
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem;
+  cursor: pointer;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  &:hover { background: #fca5a5; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+`;
+
+const RowActionBtns = styled.div`
+  display: flex;
+  gap: 4px;
+  align-items: center;
+`;
+
+const RowDeleteBtn = styled.button`
+  background: none;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  padding: 0.35rem 0.55rem;
+  cursor: pointer;
+  color: #dc2626;
+  font-size: 0.85rem;
+  &:hover { background: #fee2e2; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+`;
+
+const ImportStepRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 1.25rem;
+`;
+
+const ImportStepDot = styled.div`
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background: ${(p) => (p.active ? "var(--nb-blue)" : "var(--nb-muted)")};
+  color: ${(p) => (p.active ? "var(--nb-white)" : "var(--nb-blue-medium)")};
+  border: 1px solid var(--nb-border);
+`;
+
+const ImportStepLine = styled.div`
+  flex: 1;
+  height: 2px;
+  background: var(--nb-border);
+  margin: 0 4px;
+`;
+
+const ImportSectionTitle = styled.p`
+  font-size: 0.85rem;
+  color: var(--nb-ink);
+  margin-bottom: 0.75rem;
+  line-height: 1.5;
+`;
+
+const FieldCheckboxGrid = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--nb-cream);
+  border: 1px solid var(--nb-border);
+  border-radius: 8px;
+`;
+
+const FieldCheckboxRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  opacity: ${(p) => (p.disabled ? 0.5 : 1)};
+
+  input[type="checkbox"] { cursor: ${(p) => (p.disabled ? "not-allowed" : "pointer")}; }
+
+  label {
+    font-size: 0.88rem;
+    color: var(--nb-ink);
+    cursor: ${(p) => (p.disabled ? "not-allowed" : "pointer")};
+    font-weight: 500;
+  }
+`;
+
+const NotInExcel = styled.span`
+  font-size: 0.75rem;
+  color: var(--nb-blue-medium);
+  font-weight: 400;
 `;
 
 export default RetailerList;

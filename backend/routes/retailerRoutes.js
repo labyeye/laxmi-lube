@@ -234,37 +234,67 @@ router.post(
         });
       }
 
-      // ── Pass 2: single query to find already-existing retailers ────────────
+      // ── Parse updateFields param (array of field keys to replace) ───────────
+      let updateFields = [];
+      if (req.body.updateFields) {
+        try {
+          updateFields = JSON.parse(req.body.updateFields);
+        } catch {
+          updateFields = [];
+        }
+      }
+      const isUpdateMode = Array.isArray(updateFields) && updateFields.length > 0;
+
+      // ── Pass 2: find existing retailers by name ────────────────────────────
       const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const names = validRetailers.map((r) => r.name);
       const existingRetailers = await Retailer.find({
         name: { $in: names.map((n) => new RegExp(`^${escapeRegex(n)}$`, "i")) },
       })
-        .select("name")
+        .select("name _id")
         .lean();
-      const existingNames = new Set(
-        existingRetailers.map((r) => r.name.toUpperCase()),
+      const existingMap = new Map(
+        existingRetailers.map((r) => [r.name.toUpperCase(), r._id]),
       );
 
-      const toInsert = validRetailers.filter((r) => {
-        if (existingNames.has(r.name.toUpperCase())) {
-          errors.push(`Retailer with exact name "${r.name}" already exists`);
-          return false;
-        }
-        return true;
-      });
-
-      // ── Pass 3: bulk insert all new retailers in one shot ──────────────────
+      // ── Pass 3: update existing / insert new ──────────────────────────────
       let insertedCount = 0;
+      let updatedCount = 0;
+      const toInsert = [];
+
+      for (const r of validRetailers) {
+        const existingId = existingMap.get(r.name.toUpperCase());
+        if (existingId) {
+          if (isUpdateMode) {
+            // Build update object with only the selected fields
+            const updateData = {};
+            for (const field of updateFields) {
+              if (field === "phone" && r.phone !== undefined) updateData.phone = r.phone;
+              if (field === "address1") updateData.address1 = r.address1;
+              if (field === "address2") updateData.address2 = r.address2;
+              if (field === "dayAssigned") updateData.dayAssigned = r.dayAssigned;
+              if (field === "assignedTo" && r.assignedTo !== undefined) updateData.assignedTo = r.assignedTo;
+            }
+            if (Object.keys(updateData).length > 0) {
+              await Retailer.findByIdAndUpdate(existingId, { $set: updateData });
+              updatedCount++;
+            }
+          } else {
+            errors.push(`Retailer with name "${r.name}" already exists`);
+          }
+        } else {
+          toInsert.push(r);
+        }
+      }
+
       if (toInsert.length > 0) {
-        const inserted = await Retailer.insertMany(toInsert, {
-          ordered: false,
-        });
+        const inserted = await Retailer.insertMany(toInsert, { ordered: false });
         insertedCount = inserted.length;
       }
 
       res.json({
         importedCount: insertedCount,
+        updatedCount,
         errorCount: errors.length,
         errors: errors.slice(0, 10),
       });
