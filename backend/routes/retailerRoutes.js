@@ -185,22 +185,9 @@ router.post(
         const address2 = addr2Col !== -1 ? row[addr2Col]?.trim() : "";
         const dayAssigned =
           dayAssignedCol !== -1 ? row[dayAssignedCol]?.trim() : "";
-        let processedDayAssigned = dayAssigned;
-        if (dayAbbreviations[dayAssigned?.toUpperCase()]) {
-          processedDayAssigned = dayAbbreviations[dayAssigned.toUpperCase()];
-        } else if (
-          ![
-            "Monday",
-            "Tuesday",
-            "Wednesday",
-            "Thursday",
-            "Friday",
-            "Saturday",
-            "Sunday",
-          ].includes(dayAssigned)
-        ) {
-          processedDayAssigned = "";
-        }
+        // Expand abbreviations (MON→Monday etc.) but accept any value as-is
+        const processedDayAssigned =
+          dayAbbreviations[dayAssigned?.toUpperCase()] || dayAssigned || "";
 
         // If assignedTo staff name isn't found, just skip the field (no error)
         let assignedTo = null;
