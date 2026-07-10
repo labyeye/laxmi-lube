@@ -26,7 +26,7 @@ const RetailerOrders = () => {
       }
 
       const response = await axios.get(
-        "https://backend.laxmilube.in/api/retailer/orders",
+        "http://localhost:1200/api/retailer/orders",
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -51,7 +51,7 @@ const RetailerOrders = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        "https://backend.laxmilube.in/api/products",
+        "http://localhost:1200/api/products",
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -128,7 +128,7 @@ const RetailerOrders = () => {
       const token = localStorage.getItem("token");
 
       const response = await axios.post(
-        "https://backend.laxmilube.in/api/retailer/orders",
+        "http://localhost:1200/api/retailer/orders",
         { items: orderItems },
         { headers: { Authorization: `Bearer ${token}` } },
       );

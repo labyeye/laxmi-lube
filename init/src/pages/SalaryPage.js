@@ -32,7 +32,7 @@ const SalaryPage = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        "https://backend.laxmilube.in/api/salaries",
+        "http://localhost:1200/api/salaries",
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -48,7 +48,7 @@ const SalaryPage = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        "https://backend.laxmilube.in/api/users",
+        "http://localhost:1200/api/users",
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -67,7 +67,7 @@ const SalaryPage = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        `https://backend.laxmilube.in/api/advances/open/${staffId}`,
+        `http://localhost:1200/api/advances/open/${staffId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -129,14 +129,14 @@ const SalaryPage = () => {
 
       if (editingId) {
         await axios.put(
-          `https://backend.laxmilube.in/api/salaries/${editingId}`,
+          `http://localhost:1200/api/salaries/${editingId}`,
           formData,
           config,
         );
         alert("Salary updated successfully");
       } else {
         await axios.post(
-          "https://backend.laxmilube.in/api/salaries",
+          "http://localhost:1200/api/salaries",
           formData,
           config,
         );
@@ -176,7 +176,7 @@ const SalaryPage = () => {
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`https://backend.laxmilube.in/api/salaries/${id}`, {
+      await axios.delete(`http://localhost:1200/api/salaries/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       alert("Salary deleted successfully");

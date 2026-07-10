@@ -342,12 +342,15 @@ router.post(
         return res.status(400).json({ message: "No data found in the file" });
       }
 
+      let defaultStaffId = null;
       try {
         const User = require("../models/User");
-        const staffMembers = await User.find({ role: "staff" }).lean();
+        const staffMembers = await User.find({ role: { $in: ["staff", "admin"] } }).lean();
         staffMembers.forEach((staff) => {
           staffMap.set(staff.name.toUpperCase(), staff._id);
         });
+        // Default fallback: "Office Sale" user
+        defaultStaffId = staffMap.get("OFFICE SALE") || null;
       } catch (err) {
         console.warn("Could not load staff members:", err.message);
       }
@@ -467,7 +470,7 @@ router.post(
           billDate,
           collectionDay,
           status,
-          assignedTo: staffName ? staffMap.get(staffName.toUpperCase()) : null,
+          assignedTo: staffName ? (staffMap.get(staffName.toUpperCase()) || defaultStaffId) : defaultStaffId,
         });
       }
 
@@ -542,7 +545,9 @@ router.post(
 );
 router.get("/assigned-customers", protect, staffOnly, async (req, res) => {
   try {
-    const bills = await Bill.find({ assignedTo: req.user._id }).distinct(
+    const viewableStaff = req.user.permissions?.collections?.viewableStaff || [];
+    const allowedIds = [req.user._id, ...viewableStaff];
+    const bills = await Bill.find({ assignedTo: { $in: allowedIds } }).distinct(
       "retailer",
     );
     res.json(bills);
@@ -581,8 +586,11 @@ router.get("/bills-assigned-today", protect, staffOnly, async (req, res) => {
       "query:",
       req.query,
     );
+    const viewableStaff = req.user.permissions?.collections?.viewableStaff || [];
+    const allowedIds = [req.user._id, ...viewableStaff];
+
     const query = {
-      assignedTo: req.user._id,
+      assignedTo: { $in: allowedIds },
       status: { $ne: "Paid" },
     };
 

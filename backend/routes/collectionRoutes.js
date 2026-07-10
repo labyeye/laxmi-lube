@@ -753,12 +753,18 @@ router.post(
 router.get("/", protect, async (req, res) => {
   try {
     const { search, startDate, endDate } = req.query;
-    // Admins and staff with collections.verify permission see all collections
-    // (they need to review everyone's work); other staff only see their own.
+    // Admins and verifiers see all collections.
+    // Other staff see their own + any additional staff assigned via viewableStaff.
     const canSeeAll =
       req.user.role === "admin" ||
       req.user.permissions?.collections?.verify === true;
-    const filter = canSeeAll ? {} : { collectedBy: req.user._id };
+
+    let filter = {};
+    if (!canSeeAll) {
+      const viewableStaff = req.user.permissions?.collections?.viewableStaff || [];
+      const allowedIds = [req.user._id, ...viewableStaff];
+      filter = { collectedBy: { $in: allowedIds } };
+    }
 
     if (search) {
       const bills = await Bill.find({
@@ -1005,5 +1011,33 @@ router.patch(
     }
   },
 );
+
+// Admin edit a collection entry
+router.put("/:id", protect, adminOnly, async (req, res) => {
+  try {
+    const { amountCollected, paymentMode, paymentDetails, remarks, collectedOn } = req.body;
+
+    const update = {};
+    if (amountCollected !== undefined) update.amountCollected = Number(amountCollected);
+    if (paymentMode !== undefined) update.paymentMode = paymentMode;
+    if (paymentDetails !== undefined) update.paymentDetails = paymentDetails;
+    if (remarks !== undefined) update.remarks = remarks;
+    if (collectedOn !== undefined) update.collectedOn = new Date(collectedOn);
+
+    const collection = await Collection.findByIdAndUpdate(
+      req.params.id,
+      { $set: update },
+      { new: true, runValidators: true },
+    )
+      .populate("bill", "billNumber retailer amount dueAmount billDate")
+      .populate("collectedBy", "name");
+
+    if (!collection) return res.status(404).json({ message: "Collection not found" });
+
+    res.json(collection);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 module.exports = router;

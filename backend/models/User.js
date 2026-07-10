@@ -35,6 +35,8 @@ const userSchema = new mongoose.Schema({
       edit: { type: Boolean, default: false },
       delete: { type: Boolean, default: false },
       verify: { type: Boolean, default: false },
+      // Staff IDs whose collections this user can also view (in addition to their own)
+      viewableStaff: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     },
     products: {
       view: { type: Boolean, default: true },

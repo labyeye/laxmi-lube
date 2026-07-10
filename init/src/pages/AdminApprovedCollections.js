@@ -39,7 +39,7 @@ const AdminApprovedCollections = () => {
       setLoading(true);
       setError("");
 
-      let url = "https://backend.laxmilube.in/api/collections";
+      let url = "http://localhost:1200/api/collections";
       const params = new URLSearchParams();
       if (searchTerm) params.append("search", searchTerm);
       if (startDate) params.append("startDate", startDate);
@@ -398,12 +398,12 @@ const AdminApprovedCollections = () => {
                   <SSImageWrap
                     onClick={() =>
                       setZoomImage(
-                        `https://backend.laxmilube.in/${viewGroup[0].screenshotPath.replace(/\\/g, "/")}`,
+                        `http://localhost:1200/${viewGroup[0].screenshotPath.replace(/\\/g, "/")}`,
                       )
                     }
                   >
                     <SSImage
-                      src={`https://backend.laxmilube.in/${viewGroup[0].screenshotPath.replace(/\\/g, "/")}`}
+                      src={`http://localhost:1200/${viewGroup[0].screenshotPath.replace(/\\/g, "/")}`}
                       alt="Payment screenshot"
                     />
                     <ZoomHint>

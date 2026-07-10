@@ -14,7 +14,7 @@ import "react-date-range/dist/theme/default.css";
 import Layout from "../components/Layout";
 import { format, subDays } from "date-fns";
 
-const API_BASE_URL = "https://backend.laxmilube.in/api/admin/reports";
+const API_BASE_URL = "http://localhost:1200/api/admin/reports";
 
 const ReportPage = () => {
   const [reports, setReports] = useState([]);

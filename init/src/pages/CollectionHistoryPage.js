@@ -48,7 +48,7 @@ const CollectionsHistory = () => {
       if (!token) throw new Error("Authentication token not found");
 
       const response = await axios.get(
-        `https://backend.laxmilube.in/api/users/me`,
+        `http://localhost:1200/api/users/me`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -70,7 +70,7 @@ const CollectionsHistory = () => {
       setLoading(true);
       setError("");
 
-      let url = "https://backend.laxmilube.in/api/collections";
+      let url = "http://localhost:1200/api/collections";
       const params = new URLSearchParams();
 
       if (searchTerm) params.append("search", searchTerm);
@@ -128,7 +128,7 @@ const CollectionsHistory = () => {
     setWaToast(null);
     try {
       const res = await axios.post(
-        `https://backend.laxmilube.in/api/collections/${collectionId}/send-whatsapp`,
+        `http://localhost:1200/api/collections/${collectionId}/send-whatsapp`,
         {},
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -162,7 +162,7 @@ const CollectionsHistory = () => {
     setWaToast(null);
     try {
       const res = await axios.post(
-        `https://backend.laxmilube.in/api/collections/group/${paymentGroupId}/send-whatsapp`,
+        `http://localhost:1200/api/collections/group/${paymentGroupId}/send-whatsapp`,
         {},
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -571,12 +571,12 @@ const CollectionsHistory = () => {
                   <SSImageWrap
                     onClick={() =>
                       setZoomImage(
-                        `https://backend.laxmilube.in/${viewCollection[0].screenshotPath.replace(/\\/g, "/")}`,
+                        `http://localhost:1200/${viewCollection[0].screenshotPath.replace(/\\/g, "/")}`,
                       )
                     }
                   >
                     <SSImage
-                      src={`https://backend.laxmilube.in/${viewCollection[0].screenshotPath.replace(/\\/g, "/")}`}
+                      src={`http://localhost:1200/${viewCollection[0].screenshotPath.replace(/\\/g, "/")}`}
                       alt="Payment screenshot"
                     />
                     <ZoomHint>

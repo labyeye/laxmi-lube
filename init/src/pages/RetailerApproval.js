@@ -29,7 +29,7 @@ const RetailerApproval = () => {
       }
 
       const response = await axios.get(
-        "https://backend.laxmilube.in/api/retailers/pending",
+        "http://localhost:1200/api/retailers/pending",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -62,7 +62,7 @@ const RetailerApproval = () => {
       const token = localStorage.getItem("token");
 
       await axios.put(
-        `https://backend.laxmilube.in/api/retailers/${retailerId}/approve`,
+        `http://localhost:1200/api/retailers/${retailerId}/approve`,
         {},
         {
           headers: {
@@ -92,7 +92,7 @@ const RetailerApproval = () => {
       const token = localStorage.getItem("token");
 
       await axios.put(
-        `https://backend.laxmilube.in/api/retailers/${retailerId}/reject`,
+        `http://localhost:1200/api/retailers/${retailerId}/reject`,
         { reason },
         {
           headers: {

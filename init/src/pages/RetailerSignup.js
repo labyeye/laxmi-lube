@@ -37,7 +37,7 @@ const RetailerSignup = () => {
 
   const fetchStaffList = async () => {
     try {
-      const res = await axios.get("https://backend.laxmilube.in/api/users");
+      const res = await axios.get("http://localhost:1200/api/users");
       const staffMembers = res.data.filter(
         (user) => user.role === "staff" && user.isActive !== false,
       );
@@ -100,7 +100,7 @@ const RetailerSignup = () => {
 
     try {
       const res = await axios.post(
-        "https://backend.laxmilube.in/api/auth/retailer/signup",
+        "http://localhost:1200/api/auth/retailer/signup",
         {
           shopName: formData.shopName,
           address1: formData.address1,

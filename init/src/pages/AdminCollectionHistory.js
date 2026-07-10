@@ -12,6 +12,7 @@ import {
   FaSearchPlus,
   FaCheckCircle,
   FaDownload,
+  FaEdit,
 } from "react-icons/fa";
 import { jsPDF } from "jspdf";
 import Layout from "../components/Layout";
@@ -43,13 +44,31 @@ const AdminCollectionHistory = () => {
   const [lastFiveDigits, setLastFiveDigits] = useState("");
   const [digitMatchResult, setDigitMatchResult] = useState(null); // "verified" | "not_verified" | null
   const [forceVerifyQueue, setForceVerifyQueue] = useState([]); // bills that didn't match, awaiting force-confirm
+  const [editCollection, setEditCollection] = useState(null); // single collection being edited
+  const [editForm, setEditForm] = useState({});
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [editGroup, setEditGroup] = useState(null); // group (array) being edited together
+  const [editGroupForm, setEditGroupForm] = useState({
+    paymentMode: "Cash",
+    collectedOn: "",
+    remarks: "",
+    transactionId: "",
+    upiId: "",
+    chequeNumber: "",
+    bankName: "",
+    receiptNumber: "",
+  });
+  const [editGroupAmounts, setEditGroupAmounts] = useState({}); // { [collectionId]: amount }
+  const [editGroupSaving, setEditGroupSaving] = useState(false);
+  const [editGroupError, setEditGroupError] = useState("");
 
   const fetchCollections = async () => {
     try {
       setLoading(true);
       setError("");
 
-      let url = "https://backend.laxmilube.in/api/collections";
+      let url = "http://localhost:1200/api/collections";
       const params = new URLSearchParams();
       if (searchTerm) params.append("search", searchTerm);
       if (startDate) params.append("startDate", startDate);
@@ -195,7 +214,7 @@ const AdminCollectionHistory = () => {
       const body = { status, remarks: remarkText };
       if (digits) body.lastFiveDigits = digits;
       const res = await axios.patch(
-        `https://backend.laxmilube.in/api/collections/${collectionId}/verify`,
+        `http://localhost:1200/api/collections/${collectionId}/verify`,
         body,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -267,6 +286,154 @@ const AdminCollectionHistory = () => {
     setForceVerifyQueue([]);
     setDigitMatchResult("verified");
     setVerifyingId(null);
+  };
+
+  const openEditGroupModal = (members) => {
+    const first = members[0];
+    const pd = first.paymentDetails || {};
+    setEditGroup(members);
+    setEditGroupError("");
+    setEditGroupForm({
+      paymentMode: first.paymentMode || "Cash",
+      collectedOn: first.collectedOn
+        ? new Date(first.collectedOn).toISOString().slice(0, 16)
+        : "",
+      remarks: first.remarks || "",
+      transactionId:
+        pd.transactionId || pd.upiTransactionId || pd.bankTransactionId || "",
+      upiId: pd.upiId || "",
+      chequeNumber: pd.chequeNumber || pd.chequeNo || "",
+      bankName: pd.bankName || "",
+      receiptNumber: pd.receiptNumber || "",
+    });
+    const amounts = {};
+    members.forEach((m) => {
+      amounts[m._id] = m.amountCollected || "";
+    });
+    setEditGroupAmounts(amounts);
+  };
+
+  const handleEditGroupSave = async () => {
+    if (!editGroup) return;
+    setEditGroupSaving(true);
+    setEditGroupError("");
+    try {
+      const mode = editGroupForm.paymentMode;
+      let paymentDetails = {};
+      if (mode === "upi")
+        paymentDetails = {
+          transactionId: editGroupForm.transactionId,
+          upiId: editGroupForm.upiId,
+        };
+      else if (mode === "cheque")
+        paymentDetails = {
+          chequeNumber: editGroupForm.chequeNumber,
+          bankName: editGroupForm.bankName,
+        };
+      else if (mode === "bank_transfer")
+        paymentDetails = {
+          transactionId: editGroupForm.transactionId,
+          bankName: editGroupForm.bankName,
+        };
+      else if (mode === "Cash")
+        paymentDetails = { receiptNumber: editGroupForm.receiptNumber };
+
+      const token = localStorage.getItem("token");
+      await Promise.all(
+        editGroup.map((m) =>
+          axios.put(
+            `https://backend.laxmilube.in/api/collections/${m._id}`,
+            {
+              amountCollected: Number(editGroupAmounts[m._id]),
+              paymentMode: mode,
+              paymentDetails,
+              remarks: editGroupForm.remarks,
+              collectedOn: editGroupForm.collectedOn,
+            },
+            { headers: { Authorization: `Bearer ${token}` } },
+          ),
+        ),
+      );
+      setEditGroup(null);
+      await fetchCollections();
+    } catch (err) {
+      setEditGroupError(
+        err.response?.data?.message || "Failed to save changes",
+      );
+    } finally {
+      setEditGroupSaving(false);
+    }
+  };
+
+  const openEditModal = (collection) => {
+    setEditCollection(collection);
+    setEditError("");
+    // Pre-fill form with current values
+    const pd = collection.paymentDetails || {};
+    setEditForm({
+      amountCollected: collection.amountCollected || "",
+      paymentMode: collection.paymentMode || "Cash",
+      collectedOn: collection.collectedOn
+        ? new Date(collection.collectedOn).toISOString().slice(0, 16)
+        : "",
+      remarks: collection.remarks || "",
+      // payment detail fields
+      transactionId:
+        pd.transactionId || pd.upiTransactionId || pd.bankTransactionId || "",
+      upiId: pd.upiId || "",
+      chequeNumber: pd.chequeNumber || pd.chequeNo || "",
+      bankName: pd.bankName || "",
+      receiptNumber: pd.receiptNumber || "",
+    });
+  };
+
+  const handleEditSave = async () => {
+    if (!editCollection) return;
+    setEditSaving(true);
+    setEditError("");
+    try {
+      const mode = editForm.paymentMode;
+      let paymentDetails = {};
+      if (mode === "upi") {
+        paymentDetails = {
+          transactionId: editForm.transactionId,
+          upiId: editForm.upiId,
+        };
+      } else if (mode === "cheque") {
+        paymentDetails = {
+          chequeNumber: editForm.chequeNumber,
+          bankName: editForm.bankName,
+        };
+      } else if (mode === "bank_transfer") {
+        paymentDetails = {
+          transactionId: editForm.transactionId,
+          bankName: editForm.bankName,
+        };
+      } else if (mode === "Cash") {
+        paymentDetails = { receiptNumber: editForm.receiptNumber };
+      }
+
+      await axios.put(
+        `http://localhost:1200/api/collections/${editCollection._id}`,
+        {
+          amountCollected: Number(editForm.amountCollected),
+          paymentMode: mode,
+          paymentDetails,
+          remarks: editForm.remarks,
+          collectedOn: editForm.collectedOn,
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        },
+      );
+
+      setEditCollection(null);
+      await fetchCollections();
+    } catch (err) {
+      setEditError(err.response?.data?.message || "Failed to save changes");
+    } finally {
+      setEditSaving(false);
+    }
   };
 
   const verificationBadge = (status) => {
@@ -460,6 +627,16 @@ const AdminCollectionHistory = () => {
                             >
                               <FaEye />
                             </EyeBtn>
+                            <EditBtn
+                              title="Edit collection"
+                              onClick={() =>
+                                row.isGroup
+                                  ? openEditGroupModal(row.members)
+                                  : openEditModal(first)
+                              }
+                            >
+                              <FaEdit />
+                            </EditBtn>
                             {(row.isGroup
                               ? row.members.every(
                                   (m) => m.verificationStatus === "verified",
@@ -504,6 +681,12 @@ const AdminCollectionHistory = () => {
                                 >
                                   <FaEye />
                                 </EyeBtn>
+                                <EditBtn
+                                  title="Edit collection"
+                                  onClick={() => openEditModal(m)}
+                                >
+                                  <FaEdit />
+                                </EditBtn>
                                 {m.verificationStatus === "verified" && (
                                   <EyeBtn
                                     title="Download PDF"
@@ -824,12 +1007,12 @@ const AdminCollectionHistory = () => {
                   <SSImageWrap
                     onClick={() =>
                       setZoomImage(
-                        `https://backend.laxmilube.in/${viewGroup[0].screenshotPath.replace(/\\/g, "/")}`,
+                        `http://localhost:1200/${viewGroup[0].screenshotPath.replace(/\\/g, "/")}`,
                       )
                     }
                   >
                     <SSImage
-                      src={`https://backend.laxmilube.in/${viewGroup[0].screenshotPath.replace(/\\/g, "/")}`}
+                      src={`http://localhost:1200/${viewGroup[0].screenshotPath.replace(/\\/g, "/")}`}
                       alt="Payment screenshot"
                     />
                     <ZoomHint>
@@ -854,6 +1037,371 @@ const AdminCollectionHistory = () => {
             onClick={(e) => e.stopPropagation()}
           />
         </ZoomOverlay>
+      )}
+
+      {/* Edit Collection Modal */}
+      {editCollection && (
+        <EditOverlay onClick={() => setEditCollection(null)}>
+          <EditModal onClick={(e) => e.stopPropagation()}>
+            <EditModalHeader>
+              <h3>Edit Collection — #{editCollection.bill?.billNumber}</h3>
+              <CloseBtn onClick={() => setEditCollection(null)}>×</CloseBtn>
+            </EditModalHeader>
+            <EditModalBody>
+              <EditFieldRow>
+                <EditLabel>Amount Collected (₹)</EditLabel>
+                <EditInput
+                  type="number"
+                  min="1"
+                  value={editForm.amountCollected}
+                  onChange={(e) =>
+                    setEditForm((p) => ({
+                      ...p,
+                      amountCollected: e.target.value,
+                    }))
+                  }
+                />
+              </EditFieldRow>
+
+              <EditFieldRow>
+                <EditLabel>Payment Mode</EditLabel>
+                <EditSelect
+                  value={editForm.paymentMode}
+                  onChange={(e) =>
+                    setEditForm((p) => ({ ...p, paymentMode: e.target.value }))
+                  }
+                >
+                  <option value="Cash">Cash</option>
+                  <option value="upi">UPI</option>
+                  <option value="cheque">Cheque</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                </EditSelect>
+              </EditFieldRow>
+
+              {editForm.paymentMode === "upi" && (
+                <>
+                  <EditFieldRow>
+                    <EditLabel>Transaction / UTR ID</EditLabel>
+                    <EditInput
+                      value={editForm.transactionId}
+                      onChange={(e) =>
+                        setEditForm((p) => ({
+                          ...p,
+                          transactionId: e.target.value,
+                        }))
+                      }
+                    />
+                  </EditFieldRow>
+                  <EditFieldRow>
+                    <EditLabel>UPI ID</EditLabel>
+                    <EditInput
+                      value={editForm.upiId}
+                      onChange={(e) =>
+                        setEditForm((p) => ({ ...p, upiId: e.target.value }))
+                      }
+                    />
+                  </EditFieldRow>
+                </>
+              )}
+              {editForm.paymentMode === "cheque" && (
+                <>
+                  <EditFieldRow>
+                    <EditLabel>Cheque Number</EditLabel>
+                    <EditInput
+                      value={editForm.chequeNumber}
+                      onChange={(e) =>
+                        setEditForm((p) => ({
+                          ...p,
+                          chequeNumber: e.target.value,
+                        }))
+                      }
+                    />
+                  </EditFieldRow>
+                  <EditFieldRow>
+                    <EditLabel>Bank Name</EditLabel>
+                    <EditInput
+                      value={editForm.bankName}
+                      onChange={(e) =>
+                        setEditForm((p) => ({ ...p, bankName: e.target.value }))
+                      }
+                    />
+                  </EditFieldRow>
+                </>
+              )}
+              {editForm.paymentMode === "bank_transfer" && (
+                <>
+                  <EditFieldRow>
+                    <EditLabel>Transaction ID</EditLabel>
+                    <EditInput
+                      value={editForm.transactionId}
+                      onChange={(e) =>
+                        setEditForm((p) => ({
+                          ...p,
+                          transactionId: e.target.value,
+                        }))
+                      }
+                    />
+                  </EditFieldRow>
+                  <EditFieldRow>
+                    <EditLabel>Bank Name</EditLabel>
+                    <EditInput
+                      value={editForm.bankName}
+                      onChange={(e) =>
+                        setEditForm((p) => ({ ...p, bankName: e.target.value }))
+                      }
+                    />
+                  </EditFieldRow>
+                </>
+              )}
+              {editForm.paymentMode === "Cash" && (
+                <EditFieldRow>
+                  <EditLabel>Receipt Number</EditLabel>
+                  <EditInput
+                    value={editForm.receiptNumber}
+                    onChange={(e) =>
+                      setEditForm((p) => ({
+                        ...p,
+                        receiptNumber: e.target.value,
+                      }))
+                    }
+                  />
+                </EditFieldRow>
+              )}
+
+              <EditFieldRow>
+                <EditLabel>Collection Date &amp; Time</EditLabel>
+                <EditInput
+                  type="datetime-local"
+                  value={editForm.collectedOn}
+                  onChange={(e) =>
+                    setEditForm((p) => ({ ...p, collectedOn: e.target.value }))
+                  }
+                />
+              </EditFieldRow>
+
+              <EditFieldRow>
+                <EditLabel>Remarks</EditLabel>
+                <EditTextarea
+                  rows={2}
+                  value={editForm.remarks}
+                  onChange={(e) =>
+                    setEditForm((p) => ({ ...p, remarks: e.target.value }))
+                  }
+                />
+              </EditFieldRow>
+
+              {editError && <EditErrorMsg>{editError}</EditErrorMsg>}
+            </EditModalBody>
+            <EditModalFooter>
+              <EditCancelBtn onClick={() => setEditCollection(null)}>
+                Cancel
+              </EditCancelBtn>
+              <EditSaveBtn onClick={handleEditSave} disabled={editSaving}>
+                {editSaving ? "Saving…" : "Save Changes"}
+              </EditSaveBtn>
+            </EditModalFooter>
+          </EditModal>
+        </EditOverlay>
+      )}
+
+      {/* Edit Group Modal — shared fields + per-bill amounts */}
+      {editGroup && (
+        <EditOverlay onClick={() => setEditGroup(null)}>
+          <EditModal onClick={(e) => e.stopPropagation()}>
+            <EditModalHeader>
+              <h3>Edit Group ({editGroup.length} bills)</h3>
+              <CloseBtn onClick={() => setEditGroup(null)}>×</CloseBtn>
+            </EditModalHeader>
+            <EditModalBody>
+              {/* Per-bill amounts */}
+              <EditGroupSection>
+                <EditGroupSectionTitle>Amount per Bill</EditGroupSectionTitle>
+                {editGroup.map((m) => (
+                  <EditFieldRow key={m._id}>
+                    <EditLabel>
+                      #{m.bill?.billNumber} — {m.bill?.retailer}
+                    </EditLabel>
+                    <EditInput
+                      type="number"
+                      min="1"
+                      value={editGroupAmounts[m._id] ?? ""}
+                      onChange={(e) =>
+                        setEditGroupAmounts((p) => ({
+                          ...p,
+                          [m._id]: e.target.value,
+                        }))
+                      }
+                    />
+                  </EditFieldRow>
+                ))}
+              </EditGroupSection>
+
+              {/* Shared fields */}
+              <EditGroupSection>
+                <EditGroupSectionTitle>
+                  Shared Details (applied to all bills)
+                </EditGroupSectionTitle>
+                <EditFieldRow>
+                  <EditLabel>Payment Mode</EditLabel>
+                  <EditSelect
+                    value={editGroupForm.paymentMode}
+                    onChange={(e) =>
+                      setEditGroupForm((p) => ({
+                        ...p,
+                        paymentMode: e.target.value,
+                      }))
+                    }
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="upi">UPI</option>
+                    <option value="cheque">Cheque</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                  </EditSelect>
+                </EditFieldRow>
+
+                {editGroupForm.paymentMode === "upi" && (
+                  <>
+                    <EditFieldRow>
+                      <EditLabel>Transaction / UTR ID</EditLabel>
+                      <EditInput
+                        value={editGroupForm.transactionId}
+                        onChange={(e) =>
+                          setEditGroupForm((p) => ({
+                            ...p,
+                            transactionId: e.target.value,
+                          }))
+                        }
+                      />
+                    </EditFieldRow>
+                    <EditFieldRow>
+                      <EditLabel>UPI ID</EditLabel>
+                      <EditInput
+                        value={editGroupForm.upiId}
+                        onChange={(e) =>
+                          setEditGroupForm((p) => ({
+                            ...p,
+                            upiId: e.target.value,
+                          }))
+                        }
+                      />
+                    </EditFieldRow>
+                  </>
+                )}
+                {editGroupForm.paymentMode === "cheque" && (
+                  <>
+                    <EditFieldRow>
+                      <EditLabel>Cheque Number</EditLabel>
+                      <EditInput
+                        value={editGroupForm.chequeNumber}
+                        onChange={(e) =>
+                          setEditGroupForm((p) => ({
+                            ...p,
+                            chequeNumber: e.target.value,
+                          }))
+                        }
+                      />
+                    </EditFieldRow>
+                    <EditFieldRow>
+                      <EditLabel>Bank Name</EditLabel>
+                      <EditInput
+                        value={editGroupForm.bankName}
+                        onChange={(e) =>
+                          setEditGroupForm((p) => ({
+                            ...p,
+                            bankName: e.target.value,
+                          }))
+                        }
+                      />
+                    </EditFieldRow>
+                  </>
+                )}
+                {editGroupForm.paymentMode === "bank_transfer" && (
+                  <>
+                    <EditFieldRow>
+                      <EditLabel>Transaction ID</EditLabel>
+                      <EditInput
+                        value={editGroupForm.transactionId}
+                        onChange={(e) =>
+                          setEditGroupForm((p) => ({
+                            ...p,
+                            transactionId: e.target.value,
+                          }))
+                        }
+                      />
+                    </EditFieldRow>
+                    <EditFieldRow>
+                      <EditLabel>Bank Name</EditLabel>
+                      <EditInput
+                        value={editGroupForm.bankName}
+                        onChange={(e) =>
+                          setEditGroupForm((p) => ({
+                            ...p,
+                            bankName: e.target.value,
+                          }))
+                        }
+                      />
+                    </EditFieldRow>
+                  </>
+                )}
+                {editGroupForm.paymentMode === "Cash" && (
+                  <EditFieldRow>
+                    <EditLabel>Receipt Number</EditLabel>
+                    <EditInput
+                      value={editGroupForm.receiptNumber}
+                      onChange={(e) =>
+                        setEditGroupForm((p) => ({
+                          ...p,
+                          receiptNumber: e.target.value,
+                        }))
+                      }
+                    />
+                  </EditFieldRow>
+                )}
+
+                <EditFieldRow>
+                  <EditLabel>Collection Date &amp; Time</EditLabel>
+                  <EditInput
+                    type="datetime-local"
+                    value={editGroupForm.collectedOn}
+                    onChange={(e) =>
+                      setEditGroupForm((p) => ({
+                        ...p,
+                        collectedOn: e.target.value,
+                      }))
+                    }
+                  />
+                </EditFieldRow>
+
+                <EditFieldRow>
+                  <EditLabel>Remarks</EditLabel>
+                  <EditTextarea
+                    rows={2}
+                    value={editGroupForm.remarks}
+                    onChange={(e) =>
+                      setEditGroupForm((p) => ({
+                        ...p,
+                        remarks: e.target.value,
+                      }))
+                    }
+                  />
+                </EditFieldRow>
+              </EditGroupSection>
+
+              {editGroupError && <EditErrorMsg>{editGroupError}</EditErrorMsg>}
+            </EditModalBody>
+            <EditModalFooter>
+              <EditCancelBtn onClick={() => setEditGroup(null)}>
+                Cancel
+              </EditCancelBtn>
+              <EditSaveBtn
+                onClick={handleEditGroupSave}
+                disabled={editGroupSaving}
+              >
+                {editGroupSaving ? "Saving…" : "Save All"}
+              </EditSaveBtn>
+            </EditModalFooter>
+          </EditModal>
+        </EditOverlay>
       )}
     </Layout>
   );
@@ -1042,7 +1590,8 @@ const VerifyBadge = styled.span`
   border-radius: 10px;
   font-size: 0.72rem;
   font-weight: 600;
-  background-color: ${(p) => (VERIFY_COLORS[p.status] || VERIFY_COLORS.pending).bg};
+  background-color: ${(p) =>
+    (VERIFY_COLORS[p.status] || VERIFY_COLORS.pending).bg};
   color: ${(p) => (VERIFY_COLORS[p.status] || VERIFY_COLORS.pending).color};
 `;
 
@@ -1546,6 +2095,181 @@ const ForceNoBtn = styled.button`
   transition: background 0.15s;
   &:hover {
     background: #f3f4f6;
+  }
+`;
+
+const EditOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  padding: 1rem;
+`;
+
+const EditModal = styled.div`
+  background: #fff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+`;
+
+const EditModalHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #e5e7eb;
+  h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #111827;
+  }
+`;
+
+const EditModalBody = styled.div`
+  padding: 1.25rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+`;
+
+const EditModalFooter = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid #e5e7eb;
+`;
+
+const EditFieldRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+`;
+
+const EditLabel = styled.label`
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+`;
+
+const EditInput = styled.input`
+  padding: 0.5rem 0.75rem;
+  border: 1.5px solid #d1d5db;
+  border-radius: 7px;
+  font-size: 0.9rem;
+  color: #111827;
+  outline: none;
+  &:focus {
+    border-color: #2563eb;
+  }
+`;
+
+const EditSelect = styled.select`
+  padding: 0.5rem 0.75rem;
+  border: 1.5px solid #d1d5db;
+  border-radius: 7px;
+  font-size: 0.9rem;
+  color: #111827;
+  outline: none;
+  background: #fff;
+  &:focus {
+    border-color: #2563eb;
+  }
+`;
+
+const EditTextarea = styled.textarea`
+  padding: 0.5rem 0.75rem;
+  border: 1.5px solid #d1d5db;
+  border-radius: 7px;
+  font-size: 0.9rem;
+  color: #111827;
+  resize: vertical;
+  outline: none;
+  &:focus {
+    border-color: #2563eb;
+  }
+`;
+
+const EditErrorMsg = styled.div`
+  color: #dc2626;
+  font-size: 0.82rem;
+  padding: 0.5rem 0.75rem;
+  background: #fef2f2;
+  border-radius: 6px;
+`;
+
+const EditSaveBtn = styled.button`
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: 0.55rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  &:hover:not(:disabled) {
+    background: #1d4ed8;
+  }
+`;
+
+const EditCancelBtn = styled.button`
+  background: #f3f4f6;
+  color: #374151;
+  border: none;
+  border-radius: 7px;
+  padding: 0.55rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  &:hover {
+    background: #e5e7eb;
+  }
+`;
+
+const EditGroupSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+`;
+
+const EditGroupSectionTitle = styled.div`
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+`;
+
+const EditBtn = styled.button`
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  padding: 5px 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.8rem;
+  &:hover {
+    background: #dbeafe;
   }
 `;
 

@@ -74,7 +74,7 @@ const Users = () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        "https://backend.laxmilube.in/api/users",
+        "http://localhost:1200/api/users",
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         },
@@ -148,7 +148,7 @@ const Users = () => {
   const handleDelete = async (userId) => {
     if (!window.confirm("Are you sure you want to delete this user?")) return;
     try {
-      await axios.delete(`https://backend.laxmilube.in/api/users/${userId}`, {
+      await axios.delete(`http://localhost:1200/api/users/${userId}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setMessage("User deleted successfully");
@@ -169,7 +169,7 @@ const Users = () => {
     try {
       await Promise.all(
         selectedUsers.map((id) =>
-          axios.delete(`https://backend.laxmilube.in/api/users/${id}`, {
+          axios.delete(`http://localhost:1200/api/users/${id}`, {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
@@ -192,7 +192,7 @@ const Users = () => {
     const newStatus = user.status === "inactive" ? "active" : "inactive";
     try {
       await axios.put(
-        `https://backend.laxmilube.in/api/users/${user._id}`,
+        `http://localhost:1200/api/users/${user._id}`,
         { ...user, status: newStatus },
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -221,7 +221,7 @@ const Users = () => {
         const payload = { ...newUser };
         if (!payload.password) delete payload.password;
         await axios.put(
-          `https://backend.laxmilube.in/api/users/${currentUserId}`,
+          `http://localhost:1200/api/users/${currentUserId}`,
           payload,
           {
             headers: {
@@ -231,7 +231,7 @@ const Users = () => {
         );
         setMessage("User updated successfully");
       } else {
-        await axios.post("https://backend.laxmilube.in/api/users", newUser, {
+        await axios.post("http://localhost:1200/api/users", newUser, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
         setMessage("User added successfully");
@@ -277,7 +277,7 @@ const Users = () => {
   const handleUpdatePermissions = async (userId, permissions) => {
     try {
       await axios.patch(
-        `https://backend.laxmilube.in/api/users/${userId}/permissions`,
+        `http://localhost:1200/api/users/${userId}/permissions`,
         { permissions },
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -969,6 +969,8 @@ const Users = () => {
                   userId={selectedUserForPermissions._id}
                   currentPermissions={selectedUserForPermissions.permissions}
                   onUpdate={handleUpdatePermissions}
+                  allStaff={users.filter((u) => u.role !== "retailer")}
+                  targetUserId={selectedUserForPermissions._id}
                 />
               </ModalBody>
             </ModalBox>

@@ -29,7 +29,7 @@ const RetailerBilling = () => {
       }
 
       const response = await axios.get(
-        "https://backend.laxmilube.in/api/retailer/bills",
+        "http://localhost:1200/api/retailer/bills",
         {
           headers: {
             Authorization: `Bearer ${token}`,

@@ -28,7 +28,7 @@ const AdvancePage = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        "https://backend.laxmilube.in/api/advances",
+        "http://localhost:1200/api/advances",
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -44,7 +44,7 @@ const AdvancePage = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        "https://backend.laxmilube.in/api/users",
+        "http://localhost:1200/api/users",
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -94,14 +94,14 @@ const AdvancePage = () => {
 
       if (editingId) {
         await axios.put(
-          `https://backend.laxmilube.in/api/advances/${editingId}`,
+          `http://localhost:1200/api/advances/${editingId}`,
           formData,
           config,
         );
         alert("Advance updated successfully");
       } else {
         await axios.post(
-          "https://backend.laxmilube.in/api/advances",
+          "http://localhost:1200/api/advances",
           formData,
           config,
         );
@@ -148,7 +148,7 @@ const AdvancePage = () => {
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`https://backend.laxmilube.in/api/advances/${id}`, {
+      await axios.delete(`http://localhost:1200/api/advances/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       alert("Advance deleted successfully");

@@ -26,7 +26,7 @@ export const usePermissions = () => {
         }
 
         const response = await axios.get(
-          "https://backend.laxmilube.in/api/users/me",
+          "http://localhost:1200/api/users/me",
           {
             headers: { Authorization: `Bearer ${token}` },
           },

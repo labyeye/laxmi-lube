@@ -57,13 +57,13 @@ const BillsPage = () => {
 
       const [billsResponse, staffResponse, collectionsResponse] =
         await Promise.all([
-          axios.get("https://backend.laxmilube.in/api/bills", {
+          axios.get("http://localhost:1200/api/bills", {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get("https://backend.laxmilube.in/api/users/staff", {
+          axios.get("http://localhost:1200/api/users/staff", {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get("https://backend.laxmilube.in/api/collections", {
+          axios.get("http://localhost:1200/api/collections", {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -204,7 +204,7 @@ const BillsPage = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        "https://backend.laxmilube.in/api/bills/import",
+        "http://localhost:1200/api/bills/import",
         {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
@@ -314,7 +314,7 @@ const BillsPage = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
-        `https://backend.laxmilube.in/api/bills/${selectedBill._id}`,
+        `http://localhost:1200/api/bills/${selectedBill._id}`,
         editFormData,
         {
           headers: {
@@ -356,7 +356,7 @@ const BillsPage = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
-        `https://backend.laxmilube.in/api/bills/${selectedBill._id}/assign`,
+        `http://localhost:1200/api/bills/${selectedBill._id}/assign`,
         { staffId },
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -383,7 +383,7 @@ const BillsPage = () => {
 
     const token = localStorage.getItem("token");
     try {
-      await axios.delete(`https://backend.laxmilube.in/api/bills/${billId}`, {
+      await axios.delete(`http://localhost:1200/api/bills/${billId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -471,7 +471,7 @@ const BillsPage = () => {
     try {
       await Promise.all(
         selectedIds.map((id) =>
-          axios.delete(`https://backend.laxmilube.in/api/bills/${id}`, {
+          axios.delete(`http://localhost:1200/api/bills/${id}`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ),

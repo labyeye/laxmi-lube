@@ -57,13 +57,13 @@ const OrderCreate = () => {
       try {
         const token = localStorage.getItem("token");
         const [retailersRes, productsRes, userRes] = await Promise.all([
-          axios.get("https://backend.laxmilube.in/api/retailers", {
+          axios.get("http://localhost:1200/api/retailers", {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get("https://backend.laxmilube.in/api/products", {
+          axios.get("http://localhost:1200/api/products", {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get("https://backend.laxmilube.in/api/users/me", {
+          axios.get("http://localhost:1200/api/users/me", {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -217,7 +217,7 @@ const OrderCreate = () => {
     try {
       const token = localStorage.getItem("token");
       await axios.post(
-        "https://backend.laxmilube.in/api/orders",
+        "http://localhost:1200/api/orders",
         {
           retailerId: selectedRetailer,
           items: orderItems.map((item) => ({

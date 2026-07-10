@@ -8,7 +8,7 @@ import {
 } from "react-icons/fa";
 import Layout from "../components/Layout";
 
-const API_URL = "https://backend.laxmilube.in/api/reconciliation/check";
+const API_URL = "http://localhost:1200/api/reconciliation/check";
 
 const STATUS_LABELS = {
   match: "Matched",
