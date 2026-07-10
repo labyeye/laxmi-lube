@@ -547,9 +547,11 @@ router.get("/assigned-customers", protect, staffOnly, async (req, res) => {
   try {
     const viewableStaff = req.user.permissions?.collections?.viewableStaff || [];
     const allowedIds = [req.user._id, ...viewableStaff];
-    const bills = await Bill.find({ assignedTo: { $in: allowedIds } }).distinct(
-      "retailer",
-    );
+    // If user can see other staff's bills, also include unassigned (null) bills
+    const assignedFilter = viewableStaff.length > 0
+      ? { $or: [{ assignedTo: { $in: allowedIds } }, { assignedTo: null }, { assignedTo: { $exists: false } }] }
+      : { assignedTo: { $in: allowedIds } };
+    const bills = await Bill.find(assignedFilter).distinct("retailer");
     res.json(bills);
   } catch (err) {
     res.status(500).json({
@@ -589,8 +591,13 @@ router.get("/bills-assigned-today", protect, staffOnly, async (req, res) => {
     const viewableStaff = req.user.permissions?.collections?.viewableStaff || [];
     const allowedIds = [req.user._id, ...viewableStaff];
 
+    // If user can see other staff's bills, also include bills with no assignedTo
+    const assignedFilter = viewableStaff.length > 0
+      ? { $or: [{ assignedTo: { $in: allowedIds } }, { assignedTo: null }, { assignedTo: { $exists: false } }] }
+      : { assignedTo: { $in: allowedIds } };
+
     const query = {
-      assignedTo: { $in: allowedIds },
+      ...assignedFilter,
       status: { $ne: "Paid" },
     };
 
