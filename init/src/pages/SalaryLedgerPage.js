@@ -19,7 +19,7 @@ const SalaryLedgerPage = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        "http://localhost:1200/api/users",
+        "https://backend.laxmilube.in/api/users",
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -44,7 +44,7 @@ const SalaryLedgerPage = () => {
 
       // Fetch salaries for the year
       const salariesResponse = await axios.get(
-        `http://localhost:1200/api/salaries/staff/${selectedStaff}`,
+        `https://backend.laxmilube.in/api/salaries/staff/${selectedStaff}`,
         config,
       );
       const salaries = salariesResponse.data.filter(
@@ -53,7 +53,7 @@ const SalaryLedgerPage = () => {
 
       // Fetch advances for the year
       const advancesResponse = await axios.get(
-        `http://localhost:1200/api/advances/staff/${selectedStaff}`,
+        `https://backend.laxmilube.in/api/advances/staff/${selectedStaff}`,
         config,
       );
       const advances = advancesResponse.data.filter((adv) => {

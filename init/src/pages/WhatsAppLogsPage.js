@@ -3,7 +3,7 @@ import styled, { keyframes } from "styled-components";
 import axios from "axios";
 import Layout from "../components/Layout";
 
-const API = "http://localhost:1200/api";
+const API = "https://backend.laxmilube.in/api";
 const getHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem("token")}`,
 });

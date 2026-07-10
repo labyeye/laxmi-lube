@@ -8,7 +8,7 @@ const BillsHistory = () => {
     const fetchBills = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:1200/api/staff/bills-history",
+          "https://backend.laxmilube.in/api/staff/bills-history",
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,

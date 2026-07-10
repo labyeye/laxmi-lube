@@ -68,7 +68,7 @@ const AdminCollectionHistory = () => {
       setLoading(true);
       setError("");
 
-      let url = "http://localhost:1200/api/collections";
+      let url = "https://backend.laxmilube.in/api/collections";
       const params = new URLSearchParams();
       if (searchTerm) params.append("search", searchTerm);
       if (startDate) params.append("startDate", startDate);
@@ -214,7 +214,7 @@ const AdminCollectionHistory = () => {
       const body = { status, remarks: remarkText };
       if (digits) body.lastFiveDigits = digits;
       const res = await axios.patch(
-        `http://localhost:1200/api/collections/${collectionId}/verify`,
+        `https://backend.laxmilube.in/api/collections/${collectionId}/verify`,
         body,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -414,7 +414,7 @@ const AdminCollectionHistory = () => {
       }
 
       await axios.put(
-        `http://localhost:1200/api/collections/${editCollection._id}`,
+        `https://backend.laxmilube.in/api/collections/${editCollection._id}`,
         {
           amountCollected: Number(editForm.amountCollected),
           paymentMode: mode,
@@ -1007,12 +1007,12 @@ const AdminCollectionHistory = () => {
                   <SSImageWrap
                     onClick={() =>
                       setZoomImage(
-                        `http://localhost:1200/${viewGroup[0].screenshotPath.replace(/\\/g, "/")}`,
+                        `https://backend.laxmilube.in/${viewGroup[0].screenshotPath.replace(/\\/g, "/")}`,
                       )
                     }
                   >
                     <SSImage
-                      src={`http://localhost:1200/${viewGroup[0].screenshotPath.replace(/\\/g, "/")}`}
+                      src={`https://backend.laxmilube.in/${viewGroup[0].screenshotPath.replace(/\\/g, "/")}`}
                       alt="Payment screenshot"
                     />
                     <ZoomHint>

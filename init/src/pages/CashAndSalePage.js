@@ -13,7 +13,7 @@ import {
 } from "react-icons/fa";
 import Layout from "../components/Layout";
 
-const API = "http://localhost:1200/api/cash-and-sale";
+const API = "https://backend.laxmilube.in/api/cash-and-sale";
 const authHeader = () => ({
   Authorization: `Bearer ${localStorage.getItem("token")}`,
 });

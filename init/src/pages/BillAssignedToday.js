@@ -112,7 +112,7 @@ const BillAssignedToday = () => {
       if (!token) throw new Error("Authentication token not found");
 
       const response = await axios.get(
-        `http://localhost:1200/api/users/me`,
+        `https://backend.laxmilube.in/api/users/me`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -130,7 +130,7 @@ const BillAssignedToday = () => {
   const fetchNextReceiptNumber = async () => {
     try {
       const res = await axios.get(
-        "http://localhost:1200/api/collections/next-receipt-number",
+        "https://backend.laxmilube.in/api/collections/next-receipt-number",
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         },
@@ -147,7 +147,7 @@ const BillAssignedToday = () => {
   const fetchAllAssignedCustomers = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:1200/api/bills/assigned-customers",
+        "https://backend.laxmilube.in/api/bills/assigned-customers",
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         },
@@ -179,7 +179,7 @@ const BillAssignedToday = () => {
       setError("");
 
       const response = await axios.get(
-        "http://localhost:1200/api/bills/bills-assigned-today",
+        "https://backend.laxmilube.in/api/bills/bills-assigned-today",
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
           params: {
@@ -337,7 +337,7 @@ const BillAssignedToday = () => {
       if (screenshotFile) formData.append("screenshot", screenshotFile);
 
       await axios.post(
-        "http://localhost:1200/api/collections/split",
+        "https://backend.laxmilube.in/api/collections/split",
         formData,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -440,7 +440,7 @@ const BillAssignedToday = () => {
       if (screenshotFile) formData.append("screenshot", screenshotFile);
 
       const saveRes = await axios.post(
-        "http://localhost:1200/api/collections",
+        "https://backend.laxmilube.in/api/collections",
         formData,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -483,7 +483,7 @@ const BillAssignedToday = () => {
       // Step 2: send WhatsApp
       try {
         const waRes = await axios.post(
-          `http://localhost:1200/api/collections/${savedId}/send-whatsapp`,
+          `https://backend.laxmilube.in/api/collections/${savedId}/send-whatsapp`,
           {},
           {
             headers: {

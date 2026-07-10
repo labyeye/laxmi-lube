@@ -63,7 +63,7 @@ const ModuleSettings = () => {
       try {
         const token = localStorage.getItem("token");
         const response = await fetch(
-          "http://localhost:1200/api/modules",
+          "https://backend.laxmilube.in/api/modules",
           {
             headers: { Authorization: `Bearer ${token}` },
           },
@@ -198,7 +198,7 @@ const ModuleSettings = () => {
         };
       });
       const response = await fetch(
-        `http://localhost:1200/api/modules/${activeModule._id}`,
+        `https://backend.laxmilube.in/api/modules/${activeModule._id}`,
         {
           method: "PUT",
           headers: {

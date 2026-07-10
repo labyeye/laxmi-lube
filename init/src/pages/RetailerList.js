@@ -25,7 +25,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import * as xlsx from "xlsx";
 
-const API_BASE = "http://localhost:1200/api";
+const API_BASE = "https://backend.laxmilube.in/api";
 const getAuthHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem("token")}`,
 });

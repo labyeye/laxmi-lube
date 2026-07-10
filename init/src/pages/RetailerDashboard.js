@@ -35,7 +35,7 @@ const RetailerDashboard = () => {
       }
 
       const response = await axios.get(
-        "http://localhost:1200/api/retailer/dashboard",
+        "https://backend.laxmilube.in/api/retailer/dashboard",
         {
           headers: {
             Authorization: `Bearer ${token}`,
