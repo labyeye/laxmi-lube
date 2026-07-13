@@ -182,6 +182,17 @@ const Layout = ({ children }) => {
           </NavItem>
 
           <NavItem
+            active={location.pathname === "/admin/retailer-advances"}
+            onClick={closeSidebar}
+          >
+            <CategoryIcon>
+              <FaStore />
+            </CategoryIcon>
+            <span>Retailer Advances</span>
+            <Link to="/admin/retailer-advances" />
+          </NavItem>
+
+          <NavItem
             active={location.pathname === "/admin/approved-collections"}
             onClick={closeSidebar}
           >
