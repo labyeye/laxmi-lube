@@ -25,7 +25,6 @@ import OrderCreate from "./pages/OrderCreate";
 import OrderList from "./pages/OrderList";
 import SalaryPage from "./pages/SalaryPage";
 import AdvancePage from "./pages/AdvancePage";
-import RetailerAdvancePage from "./pages/RetailerAdvancePage";
 import SalaryLedgerPage from "./pages/SalaryLedgerPage";
 import RetailerDashboard from "./pages/RetailerDashboard";
 import RetailerBilling from "./pages/RetailerBilling";
@@ -372,16 +371,6 @@ const App = () => {
             element={
               user?.role === "admin" ? (
                 <AdvancePage />
-              ) : (
-                <Navigate to="/login" />
-              )
-            }
-          />
-          <Route
-            path="/admin/retailer-advances"
-            element={
-              user?.role === "admin" ? (
-                <RetailerAdvancePage />
               ) : (
                 <Navigate to="/login" />
               )

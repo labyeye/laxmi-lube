@@ -55,7 +55,6 @@ app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/salaries", salaryRoutes);
 app.use("/api/advances", advanceRoutes);
-app.use("/api/retailer-advances", require("./routes/retailerAdvanceRoutes"));
 app.use("/api/retailer", retailerDashboardRoutes);
 app.use("/api/modules", moduleRoutes);
 app.use("/api/records", recordRoutes);

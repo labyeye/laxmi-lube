@@ -3,47 +3,26 @@ import { Link, useLocation } from "react-router-dom";
 import styled from "styled-components";
 import {
   FaFileInvoiceDollar,
-  FaSignOutAlt,
   FaShoppingCart,
   FaBoxes,
   FaStore,
-  FaChevronDown,
-  FaChevronRight,
-  FaMoneyBillWave,
-  FaBook,
-  FaCogs,
   FaBars,
   FaTimes,
-  FaFileAlt,
   FaWallet,
-  FaUserTie,
-  FaLayerGroup,
   FaChartLine,
   FaIdBadge,
   FaHome,
   FaWhatsapp,
-  FaBalanceScale,
   FaCheckCircle,
   FaExchangeAlt,
+  FaWrench,
+  FaArrowAltCircleRight,
 } from "react-icons/fa";
 import logo from "../image/logo.png";
 const Layout = ({ children }) => {
   const user = JSON.parse(localStorage.getItem("user"));
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const [openDropdowns, setOpenDropdowns] = useState({
-    retailers: false,
-    products: false,
-    orders: false,
-    collections: false,
-    salary: false,
-    reports: false,
-    hrstaff: false,
-    finance: false,
-  });
-
-  // Ref to the nav menu to detect scrolling and toggle scrollbar visibility
   const navRef = useRef(null);
 
   useEffect(() => {
@@ -84,13 +63,6 @@ const Layout = ({ children }) => {
     window.location.href = "/login";
   };
 
-  const toggleDropdown = (category) => {
-    setOpenDropdowns((prev) => ({
-      ...prev,
-      [category]: !prev[category],
-    }));
-  };
-
   const closeSidebar = () => setSidebarOpen(false);
 
   return (
@@ -118,7 +90,7 @@ const Layout = ({ children }) => {
         <NavMenu ref={navRef}>
           {/* ── DASHBOARD ─────────────────────────────────── */}
           <NavItem
-            active={location.pathname === "/admin"}
+            $active={location.pathname === "/admin"}
             onClick={closeSidebar}
           >
             <CategoryIcon>
@@ -132,7 +104,7 @@ const Layout = ({ children }) => {
           <SectionLabel>Sales</SectionLabel>
 
           <NavItem
-            active={
+            $active={
               location.pathname === "/admin/view-retailer" ||
               location.pathname === "/admin/add-retailer"
             }
@@ -146,7 +118,7 @@ const Layout = ({ children }) => {
           </NavItem>
 
           <NavItem
-            active={location.pathname === "/admin/order-list"}
+$active={location.pathname === "/admin/order-list"}
             onClick={closeSidebar}
           >
             <CategoryIcon>
@@ -157,7 +129,7 @@ const Layout = ({ children }) => {
           </NavItem>
 
           <NavItem
-            active={
+            $active={
               location.pathname === "/admin/bills" ||
               location.pathname === "/admin/bills-add"
             }
@@ -171,7 +143,7 @@ const Layout = ({ children }) => {
           </NavItem>
 
           <NavItem
-            active={location.pathname === "/admin/collections-history"}
+$active={location.pathname === "/admin/collections-history"}
             onClick={closeSidebar}
           >
             <CategoryIcon>
@@ -180,20 +152,8 @@ const Layout = ({ children }) => {
             <span>Collection History</span>
             <Link to="/admin/collections-history" />
           </NavItem>
-
           <NavItem
-            active={location.pathname === "/admin/retailer-advances"}
-            onClick={closeSidebar}
-          >
-            <CategoryIcon>
-              <FaStore />
-            </CategoryIcon>
-            <span>Retailer Advances</span>
-            <Link to="/admin/retailer-advances" />
-          </NavItem>
-
-          <NavItem
-            active={location.pathname === "/admin/approved-collections"}
+$active={location.pathname === "/admin/approved-collections"}
             onClick={closeSidebar}
           >
             <CategoryIcon>
@@ -204,7 +164,7 @@ const Layout = ({ children }) => {
           </NavItem>
 
           <NavItem
-            active={location.pathname === "/admin/cash-and-sale"}
+$active={location.pathname === "/admin/cash-and-sale"}
             onClick={closeSidebar}
           >
             <CategoryIcon>
@@ -218,7 +178,7 @@ const Layout = ({ children }) => {
           <SectionLabel>Communications</SectionLabel>
 
           <NavItem
-            active={location.pathname === "/admin/whatsapp-logs"}
+$active={location.pathname === "/admin/whatsapp-logs"}
             onClick={closeSidebar}
           >
             <CategoryIcon>
@@ -228,11 +188,22 @@ const Layout = ({ children }) => {
             <Link to="/admin/whatsapp-logs" />
           </NavItem>
 
+          <NavItem
+$active={location.pathname === "/admin/users"}
+            onClick={closeSidebar}
+          >
+            <CategoryIcon>
+              <FaIdBadge />
+            </CategoryIcon>{" "}
+            <span>Staff Directory</span>
+            <Link to="/admin/users" />
+          </NavItem>
+
           {/* ── INVENTORY ─────────────────────────────────── */}
           <SectionLabel>Inventory</SectionLabel>
 
           <NavItem
-            active={
+            $active={
               location.pathname === "/admin/view-product" ||
               location.pathname === "/admin/add-product"
             }
@@ -245,127 +216,38 @@ const Layout = ({ children }) => {
             <Link to="/admin/view-product" />
           </NavItem>
 
-          {/* ── FINANCE ───────────────────────────────────── */}
-          <SectionLabel>Finance</SectionLabel>
-
-          <NavCategory onClick={() => toggleDropdown("finance")}>
-            <CategoryHeader>
-              <CategoryIcon>
-                <FaMoneyBillWave />
-                <span>Payroll</span>
-              </CategoryIcon>
-              <ChevronIcon>
-                {openDropdowns.finance ? <FaChevronDown /> : <FaChevronRight />}
-              </ChevronIcon>
-            </CategoryHeader>
-          </NavCategory>
-          <DropdownMenu $isOpen={openDropdowns.finance}>
-            <NavItem
-              active={location.pathname === "/admin/salary"}
-              onClick={closeSidebar}
-            >
-              <FaMoneyBillWave />
-              <span>Process Salary</span>
-              <Link to="/admin/salary" />
-            </NavItem>
-            <NavItem
-              active={location.pathname === "/admin/advances"}
-              onClick={closeSidebar}
-            >
-              <FaWallet />
-              <span>Advance Register</span>
-              <Link to="/admin/advances" />
-            </NavItem>
-            <NavItem
-              active={location.pathname === "/admin/salary-ledger"}
-              onClick={closeSidebar}
-            >
-              <FaBook />
-              <span>Salary Ledger</span>
-              <Link to="/admin/salary-ledger" />
-            </NavItem>
-          </DropdownMenu>
-
-          {/* ── HR / STAFF ────────────────────────────────── */}
-          <SectionLabel>HR &amp; Staff</SectionLabel>
-
-          <NavCategory onClick={() => toggleDropdown("hrstaff")}>
-            <CategoryHeader>
-              <CategoryIcon>
-                <FaUserTie />
-                <span>Staff Management</span>
-              </CategoryIcon>
-              <ChevronIcon>
-                {openDropdowns.hrstaff ? <FaChevronDown /> : <FaChevronRight />}
-              </ChevronIcon>
-            </CategoryHeader>
-          </NavCategory>
-          <DropdownMenu $isOpen={openDropdowns.hrstaff}>
-            <NavItem
-              active={location.pathname === "/admin/users"}
-              onClick={closeSidebar}
-            >
-              <FaIdBadge />
-              <span>Staff Directory</span>
-              <Link to="/admin/users" />
-            </NavItem>
-          </DropdownMenu>
-
           {/* ── REPORTS ───────────────────────────────────── */}
           <SectionLabel>Reports</SectionLabel>
 
-          <NavCategory onClick={() => toggleDropdown("reports")}>
-            <CategoryHeader>
-              <CategoryIcon>
-                <FaChartLine />
-                <span>Analytics &amp; Reports</span>
-              </CategoryIcon>
-              <ChevronIcon>
-                {openDropdowns.reports ? <FaChevronDown /> : <FaChevronRight />}
-              </ChevronIcon>
-            </CategoryHeader>
-          </NavCategory>
-          <DropdownMenu $isOpen={openDropdowns.reports}>
-            <NavItem
-              active={location.pathname === "/admin/tally-reports"}
-              onClick={closeSidebar}
-            >
-              <FaLayerGroup />
-              <span>Tally Reports</span>
-              <Link to="/admin/tally-reports" />
-            </NavItem>
-            <NavItem
-              active={location.pathname === "/admin/reports"}
-              onClick={closeSidebar}
-            >
-              <FaFileAlt />
-              <span>Collection Reports</span>
-              <Link to="/admin/reports" />
-            </NavItem>
-            <NavItem
-              active={location.pathname === "/admin/reconciliation"}
-              onClick={closeSidebar}
-            >
-              <FaBalanceScale />
-              <span>Collection Reconciliation</span>
-              <Link to="/admin/reconciliation" />
-            </NavItem>
-          </DropdownMenu>
+          <NavItem
+$active={location.pathname === "/admin/tally-reports"}
+            onClick={closeSidebar}
+          >
+            <CategoryIcon>
+              <FaChartLine />
+            </CategoryIcon>{" "}
+            <span>Tally Reports</span>
+            <Link to="/admin/tally-reports" />
+          </NavItem>
 
           {/* ── ADMINISTRATION ────────────────────────────── */}
           <SectionLabel>Administration</SectionLabel>
 
           <NavItem
-            active={location.pathname === "/admin/settings"}
+$active={location.pathname === "/admin/settings"}
             onClick={closeSidebar}
           >
-            <FaCogs />
+            <CategoryIcon>
+              <FaWrench />
+            </CategoryIcon>
             <span>Settings</span>
             <Link to="/admin/settings" />
           </NavItem>
 
           <NavItem onClick={handleLogout}>
-            <FaSignOutAlt />
+            <CategoryIcon>
+              <FaArrowAltCircleRight />
+            </CategoryIcon>{" "}
             <span>Logout</span>
           </NavItem>
         </NavMenu>
@@ -584,28 +466,6 @@ const NavMenu = styled.ul`
     scrollbar-color: var(--nb-ink) transparent;
   }
 `;
-
-const NavCategory = styled.div`
-  cursor: pointer;
-  user-select: none;
-`;
-
-const CategoryHeader = styled.div`
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: var(--nb-ink);
-  transition: all var(--nb-transition);
-  border-radius: var(--nb-radius);
-  margin: 4px 16px;
-  background: transparent;
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.02);
-  }
-`;
-
 const CategoryIcon = styled.div`
   display: flex;
   align-items: center;
@@ -629,37 +489,18 @@ const CategoryIcon = styled.div`
   }
 `;
 
-const ChevronIcon = styled.div`
-  display: flex;
-  align-items: center;
-  transition: transform 0.3s ease;
-
-  svg {
-    font-size: 0.75rem;
-    color: var(--nb-ink);
-    transition: color var(--nb-transition);
-  }
-`;
-
-const DropdownMenu = styled.div`
-  max-height: ${(props) => (props.$isOpen ? "500px" : "0")};
-  overflow: hidden;
-  transition: max-height var(--nb-transition);
-  padding-left: 20px;
-`;
-
 const NavItem = styled.li`
   position: relative;
   padding: 10px 16px;
   display: flex;
   align-items: center;
-  color: ${(props) => (props.active ? "var(--nb-blue)" : "var(--nb-ink)")};
+  color: ${(props) => (props.$active ? "var(--nb-blue)" : "var(--nb-ink)")};
   cursor: pointer;
   transition:
     background-color var(--nb-transition),
     color var(--nb-transition);
   border-radius: var(--nb-radius-sm);
-  background: ${(props) => (props.active ? "var(--nb-white)" : "transparent")};
+  background: ${(props) => (props.$active ? "var(--nb-white)" : "transparent")};
   margin: 4px 12px;
 
   svg {
