@@ -12,6 +12,14 @@ const {
   staffOnly,
 } = require("../middleware/authMiddleware");
 
+// Map first character of bill number → brand
+const getBrandFromBillNumber = (billNumber) => {
+  if (!billNumber) return "Other";
+  const prefix = String(billNumber).trim().toUpperCase()[0];
+  const map = { A: "Amaron", S: "Shell", P: "Amaron", G: "Gulf" };
+  return map[prefix] || "Other";
+};
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadDir = "uploads/";
@@ -470,6 +478,7 @@ router.post(
           billDate,
           collectionDay,
           status,
+          brand: getBrandFromBillNumber(billNo),
           assignedTo: staffName ? (staffMap.get(staffName.toUpperCase()) || defaultStaffId) : defaultStaffId,
         });
       }

@@ -85,6 +85,12 @@ const BillSchema = new mongoose.Schema(
       type: String,
       enum: ["Cash", "Cheque", "Bank Transfer", "UPI", "Other"],
     },
+    brand: {
+      type: String,
+      enum: ["Amaron", "Shell", "Gulf", "Other"],
+      default: "Other",
+      index: true,
+    },
     notes: {
       type: String,
       trim: true,

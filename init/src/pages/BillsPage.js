@@ -44,6 +44,7 @@ const BillsPage = () => {
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [retailerFilter, setRetailerFilter] = useState("");
+  const [brandFilter, setBrandFilter] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
   const [totalCollected, setTotalCollected] = useState(0);
 
@@ -434,7 +435,8 @@ const BillsPage = () => {
           ?.name.toLowerCase()
           .includes(searchTerm.toLowerCase()));
     const matchesRetailer = !retailerFilter || bill.retailer === retailerFilter;
-    return matchesSearch && matchesRetailer;
+    const matchesBrand = !brandFilter || bill.brand === brandFilter;
+    return matchesSearch && matchesRetailer && matchesBrand;
   });
 
   const allSelected =
@@ -528,6 +530,16 @@ const BillsPage = () => {
             <AddBillButton onClick={exportExcel}>
               <FaDownload /> Export Excel
             </AddBillButton>
+            <RetailerSelect
+              value={brandFilter}
+              onChange={(e) => { setBrandFilter(e.target.value); setSelectedIds([]); }}
+            >
+              <option value="">All Brands</option>
+              <option value="Amaron">Amaron</option>
+              <option value="Shell">Shell</option>
+              <option value="Gulf">Gulf</option>
+              <option value="Other">Other</option>
+            </RetailerSelect>
             <RetailerSelect
               value={retailerFilter}
               onChange={(e) => {
@@ -631,7 +643,12 @@ const BillsPage = () => {
                             onChange={() => toggleSelect(bill._id)}
                           />
                         </td>
-                        <td>{bill.billNumber}</td>
+                        <td>
+                          {bill.billNumber}
+                          {bill.brand && bill.brand !== "Other" && (
+                            <BrandBadge brand={bill.brand}>{bill.brand}</BrandBadge>
+                          )}
+                        </td>
                         <td>{bill.retailer}</td>
                         <td>{formatCurrency(bill.amount)}</td>
                         <td>{fmtDate(bill.billDate)}</td>{" "}
@@ -1129,6 +1146,24 @@ const BillsTable = styled.table`
       font-size: 1rem;
     }
   }
+`;
+
+const BRAND_COLORS = {
+  Amaron: { bg: "#fef9c3", color: "#854d0e" },
+  Shell:  { bg: "#fce7f3", color: "#9d174d" },
+  Gulf:   { bg: "#dbeafe", color: "#1e40af" },
+};
+const BrandBadge = styled.span`
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  background: ${(p) => BRAND_COLORS[p.brand]?.bg || "#f3f4f6"};
+  color: ${(p) => BRAND_COLORS[p.brand]?.color || "#374151"};
+  vertical-align: middle;
 `;
 
 const StatusBadge = styled.span`
