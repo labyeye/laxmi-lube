@@ -16,6 +16,20 @@ import {
 } from "react-icons/fa";
 import { jsPDF } from "jspdf";
 import Layout from "../components/Layout";
+import amaronLogo from "../image/amaron-logo.jpg";
+import shellLogo from "../image/shell-logo.png";
+import gulfLogo from "../image/gulf-logo.png";
+
+const BRAND_LOGOS = { Amaron: amaronLogo, Shell: shellLogo, Gulf: gulfLogo };
+const BrandLogo = ({ brand }) => {
+  const logo = BRAND_LOGOS[brand];
+  if (!logo) return null;
+  return (
+    <BrandLogoWrap title={brand}>
+      <img src={logo} alt={brand} />
+    </BrandLogoWrap>
+  );
+};
 
 const AdminCollectionHistory = () => {
   const [collections, setCollections] = useState([]);
@@ -509,6 +523,7 @@ const AdminCollectionHistory = () => {
                 <tr>
                   <th></th>
                   <th>Bill #</th>
+                  <th>Brand</th>
                   <th>Retailer</th>
                   <th>Amount</th>
                   <th>Payment Mode</th>
@@ -589,6 +604,9 @@ const AdminCollectionHistory = () => {
                           )}
                         </td>
                         <td>{billLabel}</td>
+                        <td>
+                          <BrandLogo brand={first.bill?.brand} />
+                        </td>
                         <td>{first.bill?.retailer}</td>
                         <td>{formatCurrency(totalAmount)}</td>
                         <td>
@@ -1406,6 +1424,23 @@ const AdminCollectionHistory = () => {
     </Layout>
   );
 };
+
+const BrandLogoWrap = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid var(--nb-border);
+  border-radius: 6px;
+  padding: 2px 6px;
+  img {
+    height: 20px;
+    width: auto;
+    max-width: 60px;
+    object-fit: contain;
+    display: block;
+  }
+`;
 
 const PageContainer = styled.div`
   width: 100%;

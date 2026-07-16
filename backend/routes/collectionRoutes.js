@@ -67,7 +67,7 @@ const PAYMENT_MODE_LABELS = {
 // Sends only the retailer's PDF receipt for one collection; does NOT notify admin.
 async function sendRetailerReceiptOnly(collectionId) {
   const collection = await Collection.findById(collectionId)
-    .populate("bill", "billNumber retailer amount dueAmount billDate")
+    .populate("bill", "billNumber retailer amount dueAmount billDate brand")
     .populate("collectedBy", "name");
 
   if (!collection) throw new Error("Collection not found");
@@ -180,7 +180,7 @@ async function triggerWhatsApp(collectionId) {
 // group, and ONE admin notification — never N messages per bill.
 async function triggerGroupWhatsApp(paymentGroupId) {
   const members = await Collection.find({ paymentGroupId })
-    .populate("bill", "billNumber retailer amount dueAmount billDate")
+    .populate("bill", "billNumber retailer amount dueAmount billDate brand")
     .populate("collectedBy", "name");
 
   if (members.length === 0) throw new Error("Payment group not found");
@@ -301,7 +301,7 @@ router.get("/export/today-collections/excel", protect, async (req, res) => {
         $lt: tomorrow,
       },
     })
-      .populate("bill", "billNumber retailer amount dueAmount billDate")
+      .populate("bill", "billNumber retailer amount dueAmount billDate brand")
       .populate("collectedBy", "name");
 
     // Create workbook and worksheet
@@ -566,7 +566,7 @@ router.post(
 
       // Respond with populated data
       const result = await Collection.findById(collection._id)
-        .populate("bill", "billNumber retailer amount dueAmount billDate")
+        .populate("bill", "billNumber retailer amount dueAmount billDate brand")
         .populate("collectedBy", "name");
 
       res.status(201).json(result);
@@ -730,7 +730,7 @@ router.post(
       const results = await Collection.find({
         _id: { $in: createdCollections.map((c) => c._id) },
       })
-        .populate("bill", "billNumber retailer amount dueAmount billDate")
+        .populate("bill", "billNumber retailer amount dueAmount billDate brand")
         .populate("collectedBy", "name");
 
       res.status(201).json({ paymentGroupId, collections: results });
@@ -784,7 +784,7 @@ router.get("/", protect, async (req, res) => {
     }
 
     const collections = await Collection.find(filter)
-      .populate("bill", "billNumber retailer")
+      .populate("bill", "billNumber retailer brand")
       .populate("collectedBy", "name")
       .sort({ collectedOn: -1 });
 
@@ -828,7 +828,7 @@ router.get("/whatsapp-logs", protect, adminOnly, async (req, res) => {
     }
 
     const collections = await Collection.find(filter)
-      .populate("bill", "billNumber retailer amount dueAmount billDate")
+      .populate("bill", "billNumber retailer amount dueAmount billDate brand")
       .populate("collectedBy", "name")
       .sort({ collectedOn: -1 })
       .limit(parseInt(limit))
@@ -998,7 +998,7 @@ router.patch(
         },
         { new: true },
       )
-        .populate("bill", "billNumber retailer amount dueAmount billDate")
+        .populate("bill", "billNumber retailer amount dueAmount billDate brand")
         .populate("collectedBy", "name")
         .populate("verifiedBy", "name");
 
@@ -1029,7 +1029,7 @@ router.put("/:id", protect, adminOnly, async (req, res) => {
       { $set: update },
       { new: true, runValidators: true },
     )
-      .populate("bill", "billNumber retailer amount dueAmount billDate")
+      .populate("bill", "billNumber retailer amount dueAmount billDate brand")
       .populate("collectedBy", "name");
 
     if (!collection) return res.status(404).json({ message: "Collection not found" });
