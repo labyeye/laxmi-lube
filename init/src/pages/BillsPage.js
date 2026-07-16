@@ -13,6 +13,9 @@ import {
   FaDownload,
 } from "react-icons/fa";
 import Layout from "../components/Layout";
+import amaronLogo from "../image/amaron-logo.jpg";
+import shellLogo from "../image/shell-logo.png";
+import gulfLogo from "../image/gulf-logo.png";
 import DynamicForm from "../components/DynamicForm";
 import { createRecord, hydrateModuleDefinition } from "../utils/dynamicApi";
 
@@ -624,6 +627,7 @@ const BillsPage = () => {
                       />
                     </th>
                     <th>Bill #</th>
+                    <th>Brand</th>
                     <th>Retailer</th>
                     <th>Amount</th>
                     <th>Bill Date</th>
@@ -643,11 +647,9 @@ const BillsPage = () => {
                             onChange={() => toggleSelect(bill._id)}
                           />
                         </td>
+                        <td>{bill.billNumber}</td>
                         <td>
-                          {bill.billNumber}
-                          {bill.brand && bill.brand !== "Other" && (
-                            <BrandBadge brand={bill.brand}>{bill.brand}</BrandBadge>
-                          )}
+                          <BrandBadge brand={bill.brand || "Other"} />
                         </td>
                         <td>{bill.retailer}</td>
                         <td>{formatCurrency(bill.amount)}</td>
@@ -1148,22 +1150,49 @@ const BillsTable = styled.table`
   }
 `;
 
-const BRAND_COLORS = {
-  Amaron: { bg: "#fef9c3", color: "#854d0e" },
-  Shell:  { bg: "#fce7f3", color: "#9d174d" },
-  Gulf:   { bg: "#dbeafe", color: "#1e40af" },
+const BRAND_LOGOS = {
+  Amaron: amaronLogo,
+  Shell: shellLogo,
+  Gulf: gulfLogo,
 };
-const BrandBadge = styled.span`
+
+const BrandBadge = ({ brand }) => {
+  const logo = BRAND_LOGOS[brand];
+  if (logo) {
+    return (
+      <BrandLogoWrap title={brand}>
+        <img src={logo} alt={brand} />
+      </BrandLogoWrap>
+    );
+  }
+  return <BrandOther>Other</BrandOther>;
+};
+
+const BrandLogoWrap = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid var(--nb-border);
+  border-radius: 6px;
+  padding: 2px 6px;
+  img {
+    height: 22px;
+    width: auto;
+    max-width: 64px;
+    object-fit: contain;
+    display: block;
+  }
+`;
+
+const BrandOther = styled.span`
   display: inline-block;
-  margin-left: 6px;
-  padding: 2px 7px;
+  padding: 2px 9px;
   border-radius: 9999px;
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.3px;
-  background: ${(p) => BRAND_COLORS[p.brand]?.bg || "#f3f4f6"};
-  color: ${(p) => BRAND_COLORS[p.brand]?.color || "#374151"};
-  vertical-align: middle;
+  background: #f3f4f6;
+  color: #6b7280;
 `;
 
 const StatusBadge = styled.span`
