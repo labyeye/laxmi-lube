@@ -128,6 +128,7 @@ router.put("/:billId", protect, adminOnly, async (req, res) => {
       billDate,
       status,
       collectionDay,
+      brand,
     } = req.body;
 
     // Find the bill
@@ -148,6 +149,7 @@ router.put("/:billId", protect, adminOnly, async (req, res) => {
     if (billDate) bill.billDate = billDate;
     if (status) bill.status = status;
     if (collectionDay) bill.collectionDay = collectionDay;
+    if (brand) bill.brand = brand;
 
     await bill.save();
 

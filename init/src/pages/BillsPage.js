@@ -44,6 +44,7 @@ const BillsPage = () => {
     billDate: "",
     collectionDay: "",
     status: "",
+    brand: "",
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [retailerFilter, setRetailerFilter] = useState("");
@@ -278,6 +279,7 @@ const BillsPage = () => {
         : "",
       collectionDay: bill.collectionDay || "",
       status: bill.status,
+      brand: bill.brand || "Other",
     });
     setIsEditModalOpen(true);
   };
@@ -298,6 +300,7 @@ const BillsPage = () => {
       billDate: "",
       collectionDay: "",
       status: "",
+      brand: "",
     });
   };
 
@@ -908,6 +911,20 @@ const BillsPage = () => {
                           <option value="Unpaid">Unpaid</option>
                           <option value="Paid">Paid</option>
                           <option value="Partially Paid">Partially Paid</option>
+                        </Select>
+                      </FormGroup>
+                      <FormGroup>
+                        <label>Brand</label>
+                        <Select
+                          name="brand"
+                          value={editFormData.brand}
+                          onChange={handleEditFormChange}
+                          required
+                        >
+                          <option value="Amaron">Amaron</option>
+                          <option value="Shell">Shell</option>
+                          <option value="Gulf">Gulf</option>
+                          <option value="Other">Other</option>
                         </Select>
                       </FormGroup>
                     </FormGrid>

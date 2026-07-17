@@ -74,6 +74,7 @@ const AdminCollectionHistory = () => {
     receiptNumber: "",
   });
   const [editGroupAmounts, setEditGroupAmounts] = useState({}); // { [collectionId]: amount }
+  const [editGroupBrands, setEditGroupBrands] = useState({}); // { [billId]: brand }
   const [editGroupSaving, setEditGroupSaving] = useState(false);
   const [editGroupError, setEditGroupError] = useState("");
 
@@ -325,6 +326,12 @@ const AdminCollectionHistory = () => {
       amounts[m._id] = m.amountCollected || "";
     });
     setEditGroupAmounts(amounts);
+
+    const brands = {};
+    members.forEach((m) => {
+      if (m.bill?._id) brands[m.bill._id] = m.bill.brand || "Other";
+    });
+    setEditGroupBrands(brands);
   };
 
   const handleEditGroupSave = async () => {
@@ -368,6 +375,24 @@ const AdminCollectionHistory = () => {
           ),
         ),
       );
+
+      const originalBrands = {};
+      editGroup.forEach((m) => {
+        if (m.bill?._id) originalBrands[m.bill._id] = m.bill.brand || "Other";
+      });
+      const changedBillIds = Object.keys(editGroupBrands).filter(
+        (billId) => editGroupBrands[billId] !== originalBrands[billId],
+      );
+      await Promise.all(
+        changedBillIds.map((billId) =>
+          axios.put(
+            `https://backend.laxmilube.in/api/bills/${billId}`,
+            { brand: editGroupBrands[billId] },
+            { headers: { Authorization: `Bearer ${token}` } },
+          ),
+        ),
+      );
+
       setEditGroup(null);
       await fetchCollections();
     } catch (err) {
@@ -398,6 +423,7 @@ const AdminCollectionHistory = () => {
       chequeNumber: pd.chequeNumber || pd.chequeNo || "",
       bankName: pd.bankName || "",
       receiptNumber: pd.receiptNumber || "",
+      brand: collection.bill?.brand || "Other",
     });
   };
 
@@ -427,6 +453,8 @@ const AdminCollectionHistory = () => {
         paymentDetails = { receiptNumber: editForm.receiptNumber };
       }
 
+      const token = localStorage.getItem("token");
+
       await axios.put(
         `https://backend.laxmilube.in/api/collections/${editCollection._id}`,
         {
@@ -437,9 +465,17 @@ const AdminCollectionHistory = () => {
           collectedOn: editForm.collectedOn,
         },
         {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          headers: { Authorization: `Bearer ${token}` },
         },
       );
+
+      if (editCollection.bill?._id && editForm.brand !== editCollection.bill?.brand) {
+        await axios.put(
+          `https://backend.laxmilube.in/api/bills/${editCollection.bill._id}`,
+          { brand: editForm.brand },
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+      }
 
       setEditCollection(null);
       await fetchCollections();
@@ -1096,6 +1132,21 @@ const AdminCollectionHistory = () => {
                 </EditSelect>
               </EditFieldRow>
 
+              <EditFieldRow>
+                <EditLabel>Brand</EditLabel>
+                <EditSelect
+                  value={editForm.brand}
+                  onChange={(e) =>
+                    setEditForm((p) => ({ ...p, brand: e.target.value }))
+                  }
+                >
+                  <option value="Amaron">Amaron</option>
+                  <option value="Shell">Shell</option>
+                  <option value="Gulf">Gulf</option>
+                  <option value="Other">Other</option>
+                </EditSelect>
+              </EditFieldRow>
+
               {editForm.paymentMode === "upi" && (
                 <>
                   <EditFieldRow>
@@ -1252,6 +1303,40 @@ const AdminCollectionHistory = () => {
                     />
                   </EditFieldRow>
                 ))}
+              </EditGroupSection>
+
+              {/* Per-bill brand */}
+              <EditGroupSection>
+                <EditGroupSectionTitle>Brand per Bill</EditGroupSectionTitle>
+                {Object.keys(
+                  editGroup.reduce((acc, m) => {
+                    if (m.bill?._id) acc[m.bill._id] = m.bill;
+                    return acc;
+                  }, {}),
+                ).map((billId) => {
+                  const bill = editGroup.find((m) => m.bill?._id === billId).bill;
+                  return (
+                    <EditFieldRow key={billId}>
+                      <EditLabel>
+                        #{bill.billNumber} — {bill.retailer}
+                      </EditLabel>
+                      <EditSelect
+                        value={editGroupBrands[billId] ?? "Other"}
+                        onChange={(e) =>
+                          setEditGroupBrands((p) => ({
+                            ...p,
+                            [billId]: e.target.value,
+                          }))
+                        }
+                      >
+                        <option value="Amaron">Amaron</option>
+                        <option value="Shell">Shell</option>
+                        <option value="Gulf">Gulf</option>
+                        <option value="Other">Other</option>
+                      </EditSelect>
+                    </EditFieldRow>
+                  );
+                })}
               </EditGroupSection>
 
               {/* Shared fields */}
