@@ -814,7 +814,8 @@ const ConfirmedNote = styled.div`
   padding: 4px 8px;
   border-radius: 6px;
   margin-bottom: 4px;
-  background: ${(p) => (p.status === "received" ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.1)")};
+  background: ${(p) =>
+    p.status === "received" ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.1)"};
   color: ${(p) => (p.status === "received" ? "#15803d" : "#991b1b")};
 `;
 

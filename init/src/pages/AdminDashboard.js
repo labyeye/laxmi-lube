@@ -1208,7 +1208,8 @@ const WaBadge = styled.span`
   border-radius: 9999px;
   font-size: 0.72rem;
   font-weight: 600;
-  background: ${(p) => (WA_STATUS_STYLE[p.status] || WA_STATUS_STYLE.pending).bg};
+  background: ${(p) =>
+    (WA_STATUS_STYLE[p.status] || WA_STATUS_STYLE.pending).bg};
   color: ${(p) => (WA_STATUS_STYLE[p.status] || WA_STATUS_STYLE.pending).color};
 `;
 

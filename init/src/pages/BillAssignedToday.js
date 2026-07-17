@@ -72,6 +72,7 @@ const BillAssignedToday = () => {
   const [allocations, setAllocations] = useState([]); // [{ billId, billNumber, dueAmount, amount }]
   const [splitConfirmed, setSplitConfirmed] = useState(false);
   const [cachedLocation, setCachedLocation] = useState(null);
+  const [retailersMap, setRetailersMap] = useState({});
   const BANK_LIST = [
     "ALLAHABAD BANK",
     "ANDHRA BANK",
@@ -126,6 +127,25 @@ const BillAssignedToday = () => {
       console.error("Failed to fetch user info:", err);
     }
   }, []);
+
+  const fetchRetailers = async () => {
+    try {
+      const res = await axios.get(
+        "https://backend.laxmilube.in/api/retailers",
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        },
+      );
+      const map = {};
+      res.data.forEach((r) => {
+        if (r.name) map[r.name] = r.phone || "No phone";
+      });
+      setRetailersMap(map);
+    } catch (err) {
+      console.error("Error fetching retailers:", err);
+    }
+  };
+
   const navigate = useNavigate();
   const fetchNextReceiptNumber = async () => {
     try {
@@ -211,6 +231,7 @@ const BillAssignedToday = () => {
   };
   useEffect(() => {
     fetchUserInfo();
+    fetchRetailers();
   }, [fetchUserInfo]);
   useEffect(() => {
     fetchBillsAssignedToday();
@@ -867,7 +888,12 @@ const BillAssignedToday = () => {
                         {bill.assignedToName && (
                           <DetailItem>
                             <DetailLabel>DSR:</DetailLabel>
-                            <DetailValue style={{ color: "var(--nb-blue)", fontWeight: 600 }}>
+                            <DetailValue
+                              style={{
+                                color: "var(--nb-blue)",
+                                fontWeight: 600,
+                              }}
+                            >
                               {bill.assignedToName}
                             </DetailValue>
                           </DetailItem>
@@ -964,7 +990,13 @@ const BillAssignedToday = () => {
                             key={customer}
                             onClick={() => setSelectedCustomer(customer)}
                           >
-                            <div>{customer}</div>
+                            <div>
+                              {customer}{" "}
+                              {retailersMap[customer] &&
+                              retailersMap[customer] !== "No phone"
+                                ? `(${retailersMap[customer]})`
+                                : ""}
+                            </div>
                           </BillOption>
                         ))}
                     </CustomerBillsContainer>
@@ -973,7 +1005,11 @@ const BillAssignedToday = () => {
                   // Step 2a: Adjust amount across multiple bills
                   <div>
                     <ModalSubtitle>
-                      Adjust Amount for {selectedCustomer}
+                      Adjust Amount for {selectedCustomer}{" "}
+                      {retailersMap[selectedCustomer] &&
+                      retailersMap[selectedCustomer] !== "No phone"
+                        ? `(${retailersMap[selectedCustomer]})`
+                        : ""}
                     </ModalSubtitle>
                     <ButtonGroup>
                       <BackButton
@@ -1058,7 +1094,11 @@ const BillAssignedToday = () => {
                   // Step 2b: Select a single bill
                   <div>
                     <ModalSubtitle>
-                      Select Bill for {selectedCustomer}
+                      Select Bill for {selectedCustomer}{" "}
+                      {retailersMap[selectedCustomer] &&
+                      retailersMap[selectedCustomer] !== "No phone"
+                        ? `(${retailersMap[selectedCustomer]})`
+                        : ""}
                     </ModalSubtitle>
                     <ButtonGroup>
                       <BackButton onClick={() => setSelectedCustomer(null)}>
@@ -1096,7 +1136,11 @@ const BillAssignedToday = () => {
                     {isSplitMode ? (
                       <SelectedBillInfo>
                         <div>
-                          <strong>Retailer:</strong> {selectedCustomer}
+                          <strong>Retailer:</strong> {selectedCustomer}{" "}
+                          {retailersMap[selectedCustomer] &&
+                          retailersMap[selectedCustomer] !== "No phone"
+                            ? `(${retailersMap[selectedCustomer]})`
+                            : ""}
                         </div>
                         <div>
                           <strong>Total Amount:</strong>{" "}
@@ -1119,7 +1163,11 @@ const BillAssignedToday = () => {
                           <strong>Bill #:</strong> {selectedBill.billNumber}
                         </div>
                         <div>
-                          <strong>Retailer:</strong> {selectedBill.retailer}
+                          <strong>Retailer:</strong> {selectedBill.retailer}{" "}
+                          {retailersMap[selectedBill.retailer] &&
+                          retailersMap[selectedBill.retailer] !== "No phone"
+                            ? `(${retailersMap[selectedBill.retailer]})`
+                            : ""}
                         </div>
                         <div>
                           <strong>Due Amount:</strong>{" "}
@@ -1826,7 +1874,8 @@ const DayButton = styled.button`
   border: 1px solid
     ${(props) => (props.active ? "var(--nb-blue)" : "var(--nb-border)")};
   border-radius: 20px;
-  background-color: ${(props) => (props.active ? "var(--nb-blue)" : "var(--nb-white)")};
+  background-color: ${(props) =>
+    props.active ? "var(--nb-blue)" : "var(--nb-white)"};
   color: ${(props) => (props.active ? "var(--nb-white)" : "var(--nb-ink)")};
   font-size: 0.75rem;
   font-weight: 500;
@@ -1836,8 +1885,10 @@ const DayButton = styled.button`
   flex-shrink: 0;
 
   &:hover {
-    background-color: ${(props) => (props.active ? "var(--nb-blue)" : "var(--nb-muted)")};
-    border-color: ${(props) => (props.active ? "var(--nb-blue)" : "var(--nb-blue)")};
+    background-color: ${(props) =>
+      props.active ? "var(--nb-blue)" : "var(--nb-muted)"};
+    border-color: ${(props) =>
+      props.active ? "var(--nb-blue)" : "var(--nb-blue)"};
   }
 
   @media (min-width: 576px) {
@@ -2461,7 +2512,8 @@ const DownloadReceiptButton = styled.button`
   align-items: center;
   justify-content: center;
   padding: 10px 20px;
-  background-color: ${(props) => (props.disabled ? "var(--nb-border)" : "#dc2626")};
+  background-color: ${(props) =>
+    props.disabled ? "var(--nb-border)" : "#dc2626"};
   color: var(--nb-white);
   border: none;
   border-radius: 6px;

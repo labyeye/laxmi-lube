@@ -60,7 +60,9 @@ const VerifyCollectionsPage = () => {
       if (!token) throw new Error("Authentication token not found");
       const response = await axios.get(
         "https://backend.laxmilube.in/api/users/me",
-        { headers: { Authorization: `Bearer ${token}` } },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
       );
       setStaffInfo({ name: response.data.name || "Staff Member" });
     } catch (err) {
@@ -1151,7 +1153,8 @@ const VerifyBadge = styled.span`
   border-radius: 10px;
   font-size: 0.72rem;
   font-weight: 600;
-  background-color: ${(p) => (VERIFY_COLORS[p.status] || VERIFY_COLORS.pending).bg};
+  background-color: ${(p) =>
+    (VERIFY_COLORS[p.status] || VERIFY_COLORS.pending).bg};
   color: ${(p) => (VERIFY_COLORS[p.status] || VERIFY_COLORS.pending).color};
 `;
 

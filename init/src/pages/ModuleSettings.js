@@ -413,7 +413,8 @@ const ModuleButton = styled.button`
   padding: 0.6rem 0.75rem;
   border-radius: 0.4rem;
   border: 1px solid var(--nb-border);
-  background: ${(props) => (props.active ? "var(--nb-blue)" : "var(--nb-white)")};
+  background: ${(props) =>
+    props.active ? "var(--nb-blue)" : "var(--nb-white)"};
   color: ${(props) => (props.active ? "var(--nb-white)" : "var(--nb-ink)")};
   font-weight: 600;
   text-align: left;

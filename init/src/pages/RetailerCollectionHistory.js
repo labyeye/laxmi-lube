@@ -310,7 +310,8 @@ const FilterButton = styled.button`
   padding: 0.6rem 1.2rem;
   border: none;
   border-radius: 0.5rem;
-  background-color: ${(props) => (props.active ? "var(--nb-blue)" : "var(--nb-muted)")};
+  background-color: ${(props) =>
+    props.active ? "var(--nb-blue)" : "var(--nb-muted)"};
   color: ${(props) => (props.active ? "var(--nb-white)" : "var(--nb-ink)")};
   font-size: 0.9rem;
   font-weight: 500;
@@ -318,7 +319,8 @@ const FilterButton = styled.button`
   transition: all 0.2s ease;
 
   &:hover {
-    background-color: ${(props) => (props.active ? "var(--nb-blue)" : "var(--nb-muted)")};
+    background-color: ${(props) =>
+      props.active ? "var(--nb-blue)" : "var(--nb-muted)"};
   }
 `;
 

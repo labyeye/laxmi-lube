@@ -1332,7 +1332,8 @@ const AvatarCircle = styled.div`
   height: 32px;
   border-radius: 50%;
   flex-shrink: 0;
-  background: ${(p) => (p.role === "admin" ? "var(--nb-blue)" : "var(--nb-muted)")};
+  background: ${(p) =>
+    p.role === "admin" ? "var(--nb-blue)" : "var(--nb-muted)"};
   color: ${(p) => (p.role === "admin" ? "var(--nb-white)" : "var(--nb-ink)")};
   border: 1px solid var(--nb-border);
   display: flex;
@@ -1359,7 +1360,8 @@ const RoleBadge = styled.span`
   font-weight: 700;
   text-transform: capitalize;
   border: 1px solid var(--nb-border);
-  background: ${(p) => (p.role === "admin" ? "var(--nb-blue)" : "var(--nb-cream)")};
+  background: ${(p) =>
+    p.role === "admin" ? "var(--nb-blue)" : "var(--nb-cream)"};
   color: ${(p) => (p.role === "admin" ? "var(--nb-white)" : "var(--nb-ink)")};
 `;
 
@@ -1373,7 +1375,12 @@ const IconBtn = styled.button`
   height: 30px;
   border: 1px solid var(--nb-border);
   border-radius: var(--nb-radius-sm);
-  background: ${(p) => (p.danger ? "var(--nb-orange)" : p.accent ? "var(--nb-blue)" : "var(--nb-muted)")};
+  background: ${(p) =>
+    p.danger
+      ? "var(--nb-orange)"
+      : p.accent
+        ? "var(--nb-blue)"
+        : "var(--nb-muted)"};
   color: ${(p) => (p.danger || p.accent ? "var(--nb-white)" : "var(--nb-ink)")};
   display: flex;
   align-items: center;
@@ -1424,7 +1431,8 @@ const BigAvatar = styled.div`
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: ${(p) => (p.role === "admin" ? "var(--nb-blue)" : "var(--nb-muted)")};
+  background: ${(p) =>
+    p.role === "admin" ? "var(--nb-blue)" : "var(--nb-muted)"};
   color: ${(p) => (p.role === "admin" ? "var(--nb-white)" : "var(--nb-ink)")};
   border: 1px solid var(--nb-border);
   display: flex;
@@ -1496,7 +1504,12 @@ const CardActionBtn = styled.button`
   font-weight: 600;
   cursor: pointer;
   box-shadow: var(--nb-shadow-sm);
-  background: ${(p) => (p.danger ? "var(--nb-orange)" : p.accent ? "var(--nb-blue)" : "var(--nb-cream)")};
+  background: ${(p) =>
+    p.danger
+      ? "var(--nb-orange)"
+      : p.accent
+        ? "var(--nb-blue)"
+        : "var(--nb-cream)"};
   color: ${(p) => (p.danger || p.accent ? "var(--nb-white)" : "var(--nb-ink)")};
   &:hover {
     transform: translateY(-1px);

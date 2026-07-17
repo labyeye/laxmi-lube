@@ -469,7 +469,10 @@ const AdminCollectionHistory = () => {
         },
       );
 
-      if (editCollection.bill?._id && editForm.brand !== editCollection.bill?.brand) {
+      if (
+        editCollection.bill?._id &&
+        editForm.brand !== editCollection.bill?.brand
+      ) {
         await axios.put(
           `https://backend.laxmilube.in/api/bills/${editCollection.bill._id}`,
           { brand: editForm.brand },
@@ -1314,7 +1317,9 @@ const AdminCollectionHistory = () => {
                     return acc;
                   }, {}),
                 ).map((billId) => {
-                  const bill = editGroup.find((m) => m.bill?._id === billId).bill;
+                  const bill = editGroup.find(
+                    (m) => m.bill?._id === billId,
+                  ).bill;
                   return (
                     <EditFieldRow key={billId}>
                       <EditLabel>

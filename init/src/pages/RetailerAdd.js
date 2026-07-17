@@ -651,7 +651,8 @@ const Tab = styled.button`
   transition: all var(--nb-transition);
   background: ${(p) => (p.active ? "var(--nb-blue)" : "var(--nb-white)")};
   color: ${(p) => (p.active ? "var(--nb-white)" : "var(--nb-ink)")};
-  box-shadow: ${(p) => (p.active ? "var(--nb-shadow-md)" : "var(--nb-shadow-sm)")};
+  box-shadow: ${(p) =>
+    p.active ? "var(--nb-shadow-md)" : "var(--nb-shadow-sm)"};
 `;
 
 const Card = styled.div`
@@ -754,7 +755,8 @@ const sharedInput = `
 
 const Input = styled.input`
   ${sharedInput}
-  border-color: ${(p) => (p.hasError ? "var(--nb-orange)" : "var(--nb-border)")};
+  border-color: ${(p) =>
+    p.hasError ? "var(--nb-orange)" : "var(--nb-border)"};
 `;
 
 const StyledSelect = styled.select`
@@ -794,7 +796,8 @@ const InputPadded = styled.input`
   ${sharedInput}
   padding-left: 2.1rem;
   padding-right: 2.1rem;
-  border-color: ${(p) => (p.hasError ? "var(--nb-orange)" : "var(--nb-border)")};
+  border-color: ${(p) =>
+    p.hasError ? "var(--nb-orange)" : "var(--nb-border)"};
 `;
 
 const FieldError = styled.span`

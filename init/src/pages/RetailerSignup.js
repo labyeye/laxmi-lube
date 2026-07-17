@@ -371,7 +371,8 @@ const DayCheckbox = styled.div`
   padding: 0.6rem;
   border: 1px solid
     ${(props) => (props.selected ? "var(--nb-blue)" : "var(--nb-border)")};
-  background-color: ${(props) => (props.selected ? "var(--nb-blue)" : "var(--nb-white)")};
+  background-color: ${(props) =>
+    props.selected ? "var(--nb-blue)" : "var(--nb-white)"};
   color: ${(props) => (props.selected ? "var(--nb-white)" : "var(--nb-ink)")};
   border-radius: 8px;
   text-align: center;
@@ -382,7 +383,8 @@ const DayCheckbox = styled.div`
 
   &:hover {
     border-color: var(--nb-blue);
-    background-color: ${(props) => (props.selected ? "var(--nb-blue)" : "var(--nb-muted)")};
+    background-color: ${(props) =>
+      props.selected ? "var(--nb-blue)" : "var(--nb-muted)"};
   }
 `;
 

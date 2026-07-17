@@ -232,7 +232,8 @@ const DatePickerContainer = styled.div`
 
 const ExportButton = styled.button`
   padding: 8px 16px;
-  background-color: ${(props) => (props.disabled ? "var(--nb-border)" : "var(--nb-blue)")};
+  background-color: ${(props) =>
+    props.disabled ? "var(--nb-border)" : "var(--nb-blue)"};
   color: var(--nb-white);
   border: none;
   border-radius: 4px;
@@ -242,7 +243,8 @@ const ExportButton = styled.button`
   white-space: nowrap;
 
   &:hover {
-    background-color: ${(props) => (props.disabled ? "var(--nb-border)" : "var(--nb-blue)")};
+    background-color: ${(props) =>
+      props.disabled ? "var(--nb-border)" : "var(--nb-blue)"};
   }
 `;
 const DateRangeContainer = styled.div`

@@ -840,7 +840,8 @@ const FilterToggle = styled.button`
   border: 1px solid
     ${({ active }) => (active ? "var(--nb-blue)" : "var(--nb-border)")};
   border-radius: 6px;
-  background: ${({ active }) => (active ? "var(--nb-blue)" : "var(--nb-white)")};
+  background: ${({ active }) =>
+    active ? "var(--nb-blue)" : "var(--nb-white)"};
   color: ${({ active }) => (active ? "#fff" : "var(--nb-ink)")};
   font-size: 0.875rem;
   font-weight: 500;
@@ -1145,7 +1146,8 @@ const TabButton = styled.button`
   border: 1px solid var(--nb-border);
   border-radius: 6px;
   padding: 0.45rem 0.75rem;
-  background: ${({ active }) => (active ? "var(--nb-blue)" : "var(--nb-white)")};
+  background: ${({ active }) =>
+    active ? "var(--nb-blue)" : "var(--nb-white)"};
   color: ${({ active }) => (active ? "#fff" : "var(--nb-ink)")};
   font-size: 0.82rem;
   font-weight: 600;

@@ -538,7 +538,10 @@ const BillsPage = () => {
             </AddBillButton>
             <RetailerSelect
               value={brandFilter}
-              onChange={(e) => { setBrandFilter(e.target.value); setSelectedIds([]); }}
+              onChange={(e) => {
+                setBrandFilter(e.target.value);
+                setSelectedIds([]);
+              }}
             >
               <option value="">All Brands</option>
               <option value="Amaron">Amaron</option>
