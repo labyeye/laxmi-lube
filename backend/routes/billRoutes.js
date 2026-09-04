@@ -665,7 +665,10 @@ router.get("/bills-assigned-today", protect, staffOnly, async (req, res) => {
       query.collectionDay = req.query.collectionDay;
     }
 
-    const bills = await Bill.find(query).populate("assignedTo", "name").lean();
+    const bills = await Bill.find(query)
+      .populate("assignedTo", "name")
+      .populate("company", "name")
+      .lean();
 
     res.json(bills);
   } catch (err) {

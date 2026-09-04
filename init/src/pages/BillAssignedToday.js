@@ -149,9 +149,11 @@ const BillAssignedToday = () => {
   const navigate = useNavigate();
   const fetchNextReceiptNumber = async () => {
     try {
+      const companyId = selectedBill?.company?._id || selectedBill?.company;
       const res = await axios.get(
         "https://backend.laxmilube.in/api/collections/next-receipt-number",
         {
+          params: companyId ? { company: companyId } : {},
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         },
       );

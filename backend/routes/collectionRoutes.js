@@ -420,8 +420,23 @@ router.get("/export/today-collections/excel", protect, async (req, res) => {
 });
 
 // Get next auto-generated receipt number (0001, 0002, ...)
+// Kalahanu bills get their own sequence, starting fresh at 0001; every other
+// company keeps the original combined sequence.
 router.get("/next-receipt-number", protect, async (req, res) => {
   try {
+    const { company } = req.query;
+    if (company) {
+      const Company = require("../models/Company");
+      const comp = await Company.findById(company).select("name").lean();
+      if (comp && /kalahanu/i.test(comp.name)) {
+        const billIds = await Bill.find({ company }).distinct("_id");
+        const count = await Collection.countDocuments({
+          paymentMode: "Cash",
+          bill: { $in: billIds },
+        });
+        return res.json({ receiptNumber: String(count + 1).padStart(4, "0") });
+      }
+    }
     const count = await Collection.countDocuments({ paymentMode: "Cash" });
     const nextNumber = String(count + 1).padStart(4, "0");
     res.json({ receiptNumber: nextNumber });
