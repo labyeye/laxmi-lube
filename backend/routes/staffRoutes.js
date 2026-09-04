@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { protect, staffOnly } = require("../middleware/authMiddleware");
+const { protect, staffOnly, companyFilter } = require("../middleware/authMiddleware");
 const Bill = require("../models/Bill");
 const Collection = require("../models/Collection");
 
@@ -12,7 +12,7 @@ router.get("/dashboard", protect, async (req, res) => {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     // Get all bills assigned to this staff member
-    const allBills = await Bill.find({ assignedTo: req.user._id });
+    const allBills = await Bill.find({ assignedTo: req.user._id, ...companyFilter(req) });
 
     // Calculate totals from all bills
     const totalBillAmount = allBills.reduce(
@@ -71,12 +71,13 @@ router.get("/dashboard", protect, async (req, res) => {
 router.get("/bills-history", protect, staffOnly, async (req, res) => {
   try {
     const { page = 1, limit = 10, status } = req.query;
-    const filter = { assignedTo: req.user._id };
+    const filter = { assignedTo: req.user._id, ...companyFilter(req) };
 
     if (status) filter.status = status;
 
     const bills = await Bill.find(filter)
       .populate("assignedTo")
+      .populate("company", "name code")
       .sort({ billDate: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);

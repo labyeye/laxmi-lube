@@ -1,12 +1,18 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
-const { protect, adminOnly } = require("../middleware/authMiddleware");
+const {
+  protect,
+  adminOnly,
+  companyFilter,
+} = require("../middleware/authMiddleware");
 const bcrypt = require("bcryptjs");
 
 router.get("/", protect, adminOnly, async (req, res) => {
   try {
-    const users = await User.find().select("-password");
+    const users = await User.find(companyFilter(req))
+      .select("-password")
+      .populate("company", "name code");
     res.json(users);
   } catch (err) {
     res
@@ -17,7 +23,7 @@ router.get("/", protect, adminOnly, async (req, res) => {
 
 router.post("/", protect, adminOnly, async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, company } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -29,6 +35,7 @@ router.post("/", protect, adminOnly, async (req, res) => {
       email,
       password,
       role,
+      company: company || undefined,
     });
 
     await user.save();
@@ -60,13 +67,14 @@ router.delete("/:id", protect, adminOnly, async (req, res) => {
 
 router.put("/:id", protect, adminOnly, async (req, res) => {
   try {
-    const { name, email, password, role, permissions } = req.body;
+    const { name, email, password, role, permissions, company } = req.body;
     const updateData = {};
 
     if (name) updateData.name = name;
     if (email) updateData.email = email;
     if (role) updateData.role = role;
     if (permissions) updateData.permissions = permissions;
+    if (company) updateData.company = company;
 
     if (password) {
       const salt = await bcrypt.genSalt(10);
@@ -128,7 +136,10 @@ router.get("/me", protect, async (req, res) => {
 });
 router.get("/staff", protect, adminOnly, async (req, res) => {
   try {
-    const staffMembers = await User.find({ role: "staff" }).select("-password");
+    const staffMembers = await User.find({
+      role: "staff",
+      ...companyFilter(req),
+    }).select("-password");
     res.json(staffMembers);
   } catch (err) {
     res

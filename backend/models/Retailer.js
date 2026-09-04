@@ -17,10 +17,32 @@ const RetailerSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    retailerCode: {
+      // Stable identifier from the Excel import, used to match a retailer
+      // across companies so re-importing under a different company updates
+      // the existing record instead of creating a duplicate.
+      type: String,
+      trim: true,
+      uppercase: true,
+      index: true,
+    },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       sparse: true, // Allows null for retailers created by admin
+    },
+    company: {
+      // Required only for newly created retailers, so pre-existing retailers
+      // saved before the multi-company feature keep saving/updating fine.
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      index: true,
+      required: [
+        function () {
+          return this.isNew;
+        },
+        "Company is required",
+      ],
     },
     status: {
       type: String,

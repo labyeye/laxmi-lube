@@ -33,6 +33,17 @@ const defaultModules = () => [
     name: "Retailer",
     fields: [
       {
+        key: "company",
+        label: "Company",
+        type: "relation",
+        ref: "company",
+        required: true,
+        visible: ["form", "list"],
+        roles: ["admin"],
+        order: 0,
+        status: "active",
+      },
+      {
         key: "name",
         label: "Retailer Name",
         type: "text",
@@ -203,6 +214,17 @@ const defaultModules = () => [
     key: "bill",
     name: "Bill",
     fields: [
+      {
+        key: "company",
+        label: "Company",
+        type: "relation",
+        ref: "company",
+        required: true,
+        visible: ["form", "list"],
+        roles: ["admin"],
+        order: 0,
+        status: "active",
+      },
       {
         key: "billNumber",
         label: "Bill Number",

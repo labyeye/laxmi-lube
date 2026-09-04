@@ -95,6 +95,20 @@ export const hydrateModuleDefinition = async (moduleKey) => {
           };
         }
 
+        if (field.ref === "company" || field.ref === "companies") {
+          const companiesResponse = await axios.get(`${API_BASE}/companies`, {
+            headers: getAuthHeaders(),
+          });
+          const companies = companiesResponse.data || [];
+          return {
+            ...field,
+            options: companies.map((c) => ({
+              label: c.name,
+              value: c._id,
+            })),
+          };
+        }
+
         const related = await fetchRecords(field.ref);
         return {
           ...field,

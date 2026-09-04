@@ -17,6 +17,12 @@ const userSchema = new mongoose.Schema({
       return this.role === "retailer";
     },
   },
+  company: {
+    // Optional: unset means "sees/manages both companies" (used for admins,
+    // and for staff/retailers created before the multi-company feature).
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Company",
+  },
   isActive: { type: Boolean, default: true },
   permissions: {
     dashboard: {

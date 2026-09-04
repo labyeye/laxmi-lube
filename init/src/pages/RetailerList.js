@@ -50,6 +50,19 @@ const RetailerList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState("table");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [columnFilters, setColumnFilters] = useState({
+    name: "",
+    address: "",
+    address1: "",
+    address2: "",
+    phone: "",
+    dayAssigned: "",
+    assignedTo: "",
+    company: "",
+    status: "",
+  });
+  const setColumnFilter = (key, value) =>
+    setColumnFilters((prev) => ({ ...prev, [key]: value }));
   const [sortField, setSortField] = useState("");
   const [sortDir, setSortDir] = useState("asc");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -63,7 +76,9 @@ const RetailerList = () => {
     dayAssigned: "",
     email: "",
     password: "",
+    company: "",
   });
+  const [companies, setCompanies] = useState([]);
   const [createLogin, setCreateLogin] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingRetailer, setSavingRetailer] = useState(false);
@@ -81,6 +96,7 @@ const RetailerList = () => {
   const [editingRetailerId, setEditingRetailerId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, name, dueBills[] }
+  const [syncing, setSyncing] = useState(false);
   const fileInputRef = useRef(null);
 
   const UPDATABLE_FIELDS = [
@@ -125,6 +141,10 @@ const RetailerList = () => {
       }
     };
     fetchStaff();
+    axios
+      .get(`${API_BASE}/companies`, { headers: getAuthHeaders() })
+      .then((res) => setCompanies(res.data || []))
+      .catch(() => setCompanies([]));
   }, []);
 
   // Stats
@@ -162,6 +182,42 @@ const RetailerList = () => {
           (r.status || "ACTIVE").toLowerCase() === filterStatus.toLowerCase(),
       );
     }
+    const textMatch = (value, query) =>
+      String(value || "")
+        .toLowerCase()
+        .includes(query.trim().toLowerCase());
+    if (columnFilters.name)
+      list = list.filter((r) => textMatch(r.name, columnFilters.name));
+    if (columnFilters.address)
+      list = list.filter(
+        (r) =>
+          textMatch(r.address1, columnFilters.address) ||
+          textMatch(r.address2, columnFilters.address),
+      );
+    if (columnFilters.address1)
+      list = list.filter((r) => textMatch(r.address1, columnFilters.address1));
+    if (columnFilters.address2)
+      list = list.filter((r) => textMatch(r.address2, columnFilters.address2));
+    if (columnFilters.phone)
+      list = list.filter((r) => textMatch(r.phone, columnFilters.phone));
+    if (columnFilters.dayAssigned)
+      list = list.filter((r) =>
+        textMatch(r.dayAssigned, columnFilters.dayAssigned),
+      );
+    if (columnFilters.assignedTo)
+      list = list.filter((r) =>
+        textMatch(r.assignedTo?.name, columnFilters.assignedTo),
+      );
+    if (columnFilters.company)
+      list = list.filter((r) =>
+        textMatch(r.company?.name, columnFilters.company),
+      );
+    if (columnFilters.status)
+      list = list.filter(
+        (r) =>
+          (r.status || "ACTIVE").toLowerCase() ===
+          columnFilters.status.toLowerCase(),
+      );
     if (sortField) {
       list.sort((a, b) => {
         const av = String(a[sortField] || "").toLowerCase();
@@ -170,7 +226,7 @@ const RetailerList = () => {
       });
     }
     return list;
-  }, [records, searchTerm, filterStatus, sortField, sortDir]);
+  }, [records, searchTerm, filterStatus, columnFilters, sortField, sortDir]);
 
   const handleSort = (field) => {
     if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -190,6 +246,7 @@ const RetailerList = () => {
       dayAssigned: "",
       email: "",
       password: "",
+      company: "",
     });
     setCreateLogin(false);
     setConfirmPassword("");
@@ -221,6 +278,7 @@ const RetailerList = () => {
       dayAssigned: record.dayAssigned || "",
       email: "",
       password: "",
+      company: record.company?._id || record.company || "",
     });
     setEditingRetailerId(record._id);
     setModalTab("manual");
@@ -240,6 +298,8 @@ const RetailerList = () => {
 
   const validateRetailerForm = () => {
     const errs = {};
+    if (!editingRetailerId && !form.company)
+      errs.company = "Company is required";
     if (!form.name.trim()) errs.name = "Retailer name is required";
     if (!form.address1.trim()) errs.address1 = "Address is required";
     if (form.phone && !/^[6-9]\d{9}$/.test(form.phone))
@@ -275,6 +335,7 @@ const RetailerList = () => {
         phone: form.phone.trim() || undefined,
         assignedTo: form.assignedTo || undefined,
         dayAssigned: form.dayAssigned || undefined,
+        company: form.company || undefined,
       };
 
       if (!editingRetailerId && createLogin && form.email && form.password) {
@@ -341,6 +402,27 @@ const RetailerList = () => {
     }
   };
 
+  const handleSyncAssignments = async () => {
+    setSyncing(true);
+    setError("");
+    try {
+      const res = await axios.post(
+        `${API_BASE}/retailers/sync-assignments`,
+        {},
+        { headers: getAuthHeaders() },
+      );
+      alert(
+        `Sync complete: ${res.data.billsAssigned} bill(s) assigned to staff based on their retailer.`,
+      );
+    } catch (err) {
+      setError(
+        err.response?.data?.message || "Failed to sync bill assignments",
+      );
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const handleImportFileChange = (e) => {
     const file = e.target.files?.[0] || null;
     setImportFile(file);
@@ -392,7 +474,11 @@ const RetailerList = () => {
         const staffIdx = headers.findIndex(
           (h) => h.includes("assigned to") || h.includes("assignedto"),
         );
-        const nameIdx = headers.findIndex((h) => h.includes("name"));
+        const nameIdx = headers.findIndex(
+          (h) => h.includes("name") && !h.includes("firm"),
+        );
+        const codeIdx = headers.findIndex((h) => h.includes("code"));
+        const firmNameIdx = headers.findIndex((h) => h.includes("firmname"));
 
         if (phoneIdx >= 0) found.push("phone");
         if (addr1Idx >= 0) found.push("address1");
@@ -425,6 +511,10 @@ const RetailerList = () => {
               dayAssigned: dayProcessed,
               assignedTo:
                 staffIdx >= 0 ? String(row[staffIdx] || "").trim() : "",
+              retailerCode:
+                codeIdx >= 0 ? String(row[codeIdx] || "").trim() : "",
+              firmName:
+                firmNameIdx >= 0 ? String(row[firmNameIdx] || "").trim() : "",
             };
           })
           .filter(Boolean);
@@ -476,6 +566,7 @@ const RetailerList = () => {
       let done = 0;
       let totalInserted = 0;
       let totalUpdated = 0;
+      let totalSkipped = 0;
       const allUpdatedDetails = [];
 
       setImportProgress({ current: 0, total });
@@ -490,7 +581,10 @@ const RetailerList = () => {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ rows: batch, updateFields }),
+          body: JSON.stringify({
+            rows: batch,
+            updateFields,
+          }),
         });
 
         if (response.status === 401) {
@@ -509,6 +603,7 @@ const RetailerList = () => {
 
         totalInserted += data.insertedCount || 0;
         totalUpdated += data.updatedCount || 0;
+        totalSkipped += data.skippedCount || 0;
         // attempted - insertedCount = how many new rows silently failed (e.g. unique index)
         const failed = (data.attempted || 0) - (data.insertedCount || 0);
         if (failed > 0)
@@ -526,8 +621,13 @@ const RetailerList = () => {
         importedCount: totalInserted,
         updatedCount: totalUpdated,
         updatedDetails: allUpdatedDetails,
-        errorCount: 0,
-        errors: [],
+        errorCount: totalSkipped,
+        errors:
+          totalSkipped > 0
+            ? [
+                `${totalSkipped} row(s) skipped — FirmName didn't match any existing company`,
+              ]
+            : [],
       });
       setImportStep(3);
       setImportFile(null);
@@ -626,6 +726,9 @@ const RetailerList = () => {
         {record.assignedTo?.name && (
           <RCardSub>👤 {record.assignedTo.name}</RCardSub>
         )}
+        {record.company?.name && (
+          <RCardSub>🏢 {record.company.name}</RCardSub>
+        )}
         <RCardStatus active={isActive}>
           {isActive ? (
             <>
@@ -659,6 +762,7 @@ const RetailerList = () => {
         <CCell>{record.phone || "—"}</CCell>
         <CCell>{record.dayAssigned || "—"}</CCell>
         <CCell>{record.assignedTo?.name || "—"}</CCell>
+        <CCell>{record.company?.name || "—"}</CCell>
         <CCell>
           <RCardStatus active={status === "ACTIVE"} compact>
             {status}
@@ -700,6 +804,13 @@ const RetailerList = () => {
             <RefreshBtn onClick={fetchRetailers} title="Refresh">
               <FaSync />
             </RefreshBtn>
+            <ExportBtn
+              onClick={handleSyncAssignments}
+              disabled={syncing}
+              title="Assign any bills that are still unassigned, based on their retailer's staff"
+            >
+              <FaSync /> {syncing ? "Syncing…" : "Sync Bill Assignments"}
+            </ExportBtn>
             <ExportBtn onClick={exportCSV}>
               <FaDownload /> Export CSV
             </ExportBtn>
@@ -837,8 +948,87 @@ const RetailerList = () => {
                   <CTh>Phone No</CTh>
                   <CTh>Day</CTh>
                   <CTh>Assigned To</CTh>
+                  <CTh>Company</CTh>
                   <CTh>Status</CTh>
                   <CTh></CTh>
+                </tr>
+                <tr>
+                  <CFilterTh>
+                    <CFilterInput
+                      placeholder="Filter…"
+                      value={columnFilters.name}
+                      onChange={(e) => setColumnFilter("name", e.target.value)}
+                    />
+                  </CFilterTh>
+                  <CFilterTh>
+                    <CFilterInput
+                      placeholder="Filter…"
+                      value={columnFilters.address}
+                      onChange={(e) =>
+                        setColumnFilter("address", e.target.value)
+                      }
+                    />
+                  </CFilterTh>
+                  <CFilterTh>
+                    <CFilterInput
+                      placeholder="Filter…"
+                      value={columnFilters.phone}
+                      onChange={(e) => setColumnFilter("phone", e.target.value)}
+                    />
+                  </CFilterTh>
+                  <CFilterTh>
+                    <CFilterSelect
+                      value={columnFilters.dayAssigned}
+                      onChange={(e) =>
+                        setColumnFilter("dayAssigned", e.target.value)
+                      }
+                    >
+                      <option value="">All</option>
+                      {DAYS.map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </CFilterSelect>
+                  </CFilterTh>
+                  <CFilterTh>
+                    <CFilterInput
+                      placeholder="Filter…"
+                      value={columnFilters.assignedTo}
+                      onChange={(e) =>
+                        setColumnFilter("assignedTo", e.target.value)
+                      }
+                    />
+                  </CFilterTh>
+                  <CFilterTh>
+                    <CFilterSelect
+                      value={columnFilters.company}
+                      onChange={(e) =>
+                        setColumnFilter("company", e.target.value)
+                      }
+                    >
+                      <option value="">All</option>
+                      {companies.map((c) => (
+                        <option key={c._id} value={c.name}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </CFilterSelect>
+                  </CFilterTh>
+                  <CFilterTh>
+                    <CFilterSelect
+                      value={columnFilters.status}
+                      onChange={(e) =>
+                        setColumnFilter("status", e.target.value)
+                      }
+                    >
+                      <option value="">All</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="PENDING">Pending</option>
+                      <option value="REJECTED">Rejected</option>
+                    </CFilterSelect>
+                  </CFilterTh>
+                  <CFilterTh></CFilterTh>
                 </tr>
               </CHead>
               <tbody>
@@ -874,8 +1064,96 @@ const RetailerList = () => {
                   <CTh>Phone No</CTh>
                   <CTh>Collection Day</CTh>
                   <CTh>Assigned To</CTh>
+                  <CTh>Company</CTh>
                   <CTh>Status</CTh>
                   <CTh></CTh>
+                </tr>
+                <tr>
+                  <CFilterTh>
+                    <CFilterInput
+                      placeholder="Filter…"
+                      value={columnFilters.name}
+                      onChange={(e) => setColumnFilter("name", e.target.value)}
+                    />
+                  </CFilterTh>
+                  <CFilterTh>
+                    <CFilterInput
+                      placeholder="Filter…"
+                      value={columnFilters.address1}
+                      onChange={(e) =>
+                        setColumnFilter("address1", e.target.value)
+                      }
+                    />
+                  </CFilterTh>
+                  <CFilterTh>
+                    <CFilterInput
+                      placeholder="Filter…"
+                      value={columnFilters.address2}
+                      onChange={(e) =>
+                        setColumnFilter("address2", e.target.value)
+                      }
+                    />
+                  </CFilterTh>
+                  <CFilterTh>
+                    <CFilterInput
+                      placeholder="Filter…"
+                      value={columnFilters.phone}
+                      onChange={(e) => setColumnFilter("phone", e.target.value)}
+                    />
+                  </CFilterTh>
+                  <CFilterTh>
+                    <CFilterSelect
+                      value={columnFilters.dayAssigned}
+                      onChange={(e) =>
+                        setColumnFilter("dayAssigned", e.target.value)
+                      }
+                    >
+                      <option value="">All</option>
+                      {DAYS.map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </CFilterSelect>
+                  </CFilterTh>
+                  <CFilterTh>
+                    <CFilterInput
+                      placeholder="Filter…"
+                      value={columnFilters.assignedTo}
+                      onChange={(e) =>
+                        setColumnFilter("assignedTo", e.target.value)
+                      }
+                    />
+                  </CFilterTh>
+                  <CFilterTh>
+                    <CFilterSelect
+                      value={columnFilters.company}
+                      onChange={(e) =>
+                        setColumnFilter("company", e.target.value)
+                      }
+                    >
+                      <option value="">All</option>
+                      {companies.map((c) => (
+                        <option key={c._id} value={c.name}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </CFilterSelect>
+                  </CFilterTh>
+                  <CFilterTh>
+                    <CFilterSelect
+                      value={columnFilters.status}
+                      onChange={(e) =>
+                        setColumnFilter("status", e.target.value)
+                      }
+                    >
+                      <option value="">All</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="PENDING">Pending</option>
+                      <option value="REJECTED">Rejected</option>
+                    </CFilterSelect>
+                  </CFilterTh>
+                  <CFilterTh></CFilterTh>
                 </tr>
               </CHead>
               <tbody>
@@ -887,6 +1165,7 @@ const RetailerList = () => {
                     <CCell>{r.phone || "—"}</CCell>
                     <CCell>{r.dayAssigned || "—"}</CCell>
                     <CCell>{r.assignedTo?.name || "—"}</CCell>
+                    <CCell>{r.company?.name || "—"}</CCell>
                     <CCell>
                       <RCardStatus active={r.status === "ACTIVE"} compact>
                         {r.status || "ACTIVE"}
@@ -959,6 +1238,28 @@ const RetailerList = () => {
               {modalTab === "manual" ? (
                 <form onSubmit={handleRetailerSubmit}>
                   <ModalBody>
+                    <Field>
+                      <label>
+                        Company{!editingRetailerId ? " *" : ""}
+                      </label>
+                      <select
+                        value={form.company}
+                        onChange={(e) =>
+                          handleFormChange("company", e.target.value)
+                        }
+                      >
+                        <option value="">Select company</option>
+                        {companies.map((c) => (
+                          <option key={c._id} value={c._id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                      {fieldErrors.company && (
+                        <InlineError>{fieldErrors.company}</InlineError>
+                      )}
+                    </Field>
+
                     <Field>
                       <label>Retailer Name *</label>
                       <input
@@ -1167,7 +1468,8 @@ const RetailerList = () => {
                           <FileText>Selected: {importFile.name}</FileText>
                         )}
                         <Hint>
-                          <strong>Name</strong> column is required (master key).
+                          <strong>Name</strong> and <strong>FirmName</strong>{" "}
+                          columns are required (FirmName picks the company).
                           New retailers get all columns imported. Existing
                           retailers get selected fields updated.
                         </Hint>
@@ -1772,6 +2074,28 @@ const CTh = styled.th`
     vertical-align: middle;
   }
 `;
+
+const CFilterTh = styled.th`
+  background: var(--nb-white);
+  padding: 0.35rem 0.6rem;
+  border-bottom: 1px solid var(--nb-border);
+`;
+
+const CFilterInput = styled.input`
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  border: 1px solid var(--nb-border);
+  border-radius: 4px;
+  background: var(--nb-white);
+  color: var(--nb-ink);
+`;
+
+const CFilterSelect = styled(CFilterInput).attrs({ as: "select" })``;
 
 const CRow = styled.tr`
   background: ${(p) => (p.alt ? "var(--nb-muted)" : "var(--nb-white)")};

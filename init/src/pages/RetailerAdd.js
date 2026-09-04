@@ -36,7 +36,10 @@ const RetailerAdd = () => {
     dayAssigned: "",
     email: "",
     password: "",
+    company: "",
   });
+  const [companies, setCompanies] = useState([]);
+  const [importCompany, setImportCompany] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [createLogin, setCreateLogin] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -66,6 +69,10 @@ const RetailerAdd = () => {
         setStaffList(staff);
       })
       .catch(() => {});
+    axios
+      .get(`${API_BASE}/companies`, { headers: getAuthHeaders() })
+      .then((res) => setCompanies(res.data || []))
+      .catch(() => {});
   }, []);
 
   const handleChange = (key, value) => {
@@ -75,6 +82,7 @@ const RetailerAdd = () => {
 
   const validate = () => {
     const errs = {};
+    if (!form.company) errs.company = "Company is required";
     if (!form.name.trim()) errs.name = "Retailer name is required";
     if (!form.address1.trim()) errs.address1 = "Address is required";
     if (form.phone && !/^[6-9]\d{9}$/.test(form.phone))
@@ -109,6 +117,7 @@ const RetailerAdd = () => {
         phone: form.phone.trim() || undefined,
         assignedTo: form.assignedTo || undefined,
         dayAssigned: form.dayAssigned || undefined,
+        company: form.company || undefined,
       };
       if (createLogin && form.email && form.password) {
         payload.email = form.email.trim();
@@ -131,6 +140,7 @@ const RetailerAdd = () => {
         dayAssigned: "",
         email: "",
         password: "",
+        company: form.company,
       });
       setConfirmPassword("");
       setCreateLogin(false);
@@ -154,12 +164,17 @@ const RetailerAdd = () => {
       setImportError("Please select a file");
       return;
     }
+    if (!importCompany) {
+      setImportError("Please select a company");
+      return;
+    }
     setImportLoading(true);
     setImportError("");
     setImportMessage("");
     setImportProgress({ current: 0, total: 0 });
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("company", importCompany);
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(`${API_BASE}/retailers/import`, {
@@ -256,6 +271,26 @@ const RetailerAdd = () => {
               <Section>
                 <SectionLabel>Basic Information</SectionLabel>
                 <FormGrid>
+                  <FieldGroup fullWidth>
+                    <Label>
+                      Company <Required>*</Required>
+                    </Label>
+                    <StyledSelect
+                      value={form.company}
+                      onChange={(e) => handleChange("company", e.target.value)}
+                      hasError={!!fieldErrors.company}
+                    >
+                      <option value="">— Select company —</option>
+                      {companies.map((c) => (
+                        <option key={c._id} value={c._id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </StyledSelect>
+                    {fieldErrors.company && (
+                      <FieldError>{fieldErrors.company}</FieldError>
+                    )}
+                  </FieldGroup>
                   <FieldGroup fullWidth>
                     <Label>
                       Retailer Name <Required>*</Required>
@@ -499,6 +534,22 @@ const RetailerAdd = () => {
 
             <form onSubmit={handleImport}>
               <Section>
+                <FieldGroup fullWidth style={{ marginBottom: "1rem" }}>
+                  <Label>
+                    Company <Required>*</Required>
+                  </Label>
+                  <StyledSelect
+                    value={importCompany}
+                    onChange={(e) => setImportCompany(e.target.value)}
+                  >
+                    <option value="">— Select company —</option>
+                    {companies.map((c) => (
+                      <option key={c._id} value={c._id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </StyledSelect>
+                </FieldGroup>
                 <DropZone
                   onClick={() => document.getElementById("fileInput").click()}
                   hasFile={!!file}
@@ -566,7 +617,10 @@ const RetailerAdd = () => {
                 >
                   Clear
                 </CancelBtn>
-                <SubmitBtn type="submit" disabled={importLoading || !file}>
+                <SubmitBtn
+                  type="submit"
+                  disabled={importLoading || !file || !importCompany}
+                >
                   {importLoading && <Spinner />}
                   {importLoading ? "Uploading..." : `Upload ${retailersLabel}`}
                 </SubmitBtn>

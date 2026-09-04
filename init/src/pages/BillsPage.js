@@ -51,6 +51,17 @@ const BillsPage = () => {
   const [brandFilter, setBrandFilter] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
   const [totalCollected, setTotalCollected] = useState(0);
+  const [companies, setCompanies] = useState([]);
+  const [columnFilters, setColumnFilters] = useState({
+    billNumber: "",
+    assignedTo: "",
+    company: "",
+    status: "",
+  });
+  const setColumnFilter = (key, value) =>
+    setColumnFilters((prev) => ({ ...prev, [key]: value }));
+  const textMatch = (value, filter) =>
+    !filter || (value || "").toString().toLowerCase().includes(filter.toLowerCase());
 
   const fetchData = async () => {
     setLoading(true);
@@ -93,6 +104,16 @@ const BillsPage = () => {
 
   useEffect(() => {
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    axios
+      .get("https://backend.laxmilube.in/api/companies", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => setCompanies(res.data || []))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -167,6 +188,7 @@ const BillsPage = () => {
             "billamt",
             "billdate",
             "day",
+            "firmname",
           ];
           const missingColumns = requiredColumns.filter(
             (col) => !lowerHeaders.includes(col.toLowerCase()),
@@ -195,7 +217,6 @@ const BillsPage = () => {
       setError("Please select a file to upload");
       return;
     }
-
     const validationError = await validateExcelStructure(importFile);
     if (validationError) {
       setError(validationError);
@@ -442,7 +463,22 @@ const BillsPage = () => {
           .includes(searchTerm.toLowerCase()));
     const matchesRetailer = !retailerFilter || bill.retailer === retailerFilter;
     const matchesBrand = !brandFilter || bill.brand === brandFilter;
-    return matchesSearch && matchesRetailer && matchesBrand;
+    const matchesBillNumber = textMatch(bill.billNumber, columnFilters.billNumber);
+    const matchesAssignedTo = textMatch(
+      bill.assignedToName,
+      columnFilters.assignedTo,
+    );
+    const matchesCompany = textMatch(bill.company?.name, columnFilters.company);
+    const matchesStatus = !columnFilters.status || bill.status === columnFilters.status;
+    return (
+      matchesSearch &&
+      matchesRetailer &&
+      matchesBrand &&
+      matchesBillNumber &&
+      matchesAssignedTo &&
+      matchesCompany &&
+      matchesStatus
+    );
   });
 
   const allSelected =
@@ -506,6 +542,7 @@ const BillsPage = () => {
       "Collection Day": bill.collectionDay || "",
       Status: bill.status || "",
       "Assigned To": bill.assignedToName || "Not Assigned",
+      Company: bill.company?.name || "",
     }));
     const worksheet = xlsx.utils.json_to_sheet(rows);
     const workbook = xlsx.utils.book_new();
@@ -639,7 +676,62 @@ const BillsPage = () => {
                     <th>Bill Date</th>
                     <th>Status</th>
                     <th>Assigned To</th>
+                    <th>Company</th>
                     <th>Actions</th>
+                  </tr>
+                  <tr>
+                    <FilterTh></FilterTh>
+                    <FilterTh>
+                      <FilterInput
+                        placeholder="Filter…"
+                        value={columnFilters.billNumber}
+                        onChange={(e) =>
+                          setColumnFilter("billNumber", e.target.value)
+                        }
+                      />
+                    </FilterTh>
+                    <FilterTh></FilterTh>
+                    <FilterTh></FilterTh>
+                    <FilterTh></FilterTh>
+                    <FilterTh></FilterTh>
+                    <FilterTh>
+                      <FilterSelect
+                        value={columnFilters.status}
+                        onChange={(e) =>
+                          setColumnFilter("status", e.target.value)
+                        }
+                      >
+                        <option value="">All</option>
+                        <option value="Paid">Paid</option>
+                        <option value="Unpaid">Unpaid</option>
+                        <option value="Partially Paid">Partially Paid</option>
+                      </FilterSelect>
+                    </FilterTh>
+                    <FilterTh>
+                      <FilterInput
+                        placeholder="Filter…"
+                        value={columnFilters.assignedTo}
+                        onChange={(e) =>
+                          setColumnFilter("assignedTo", e.target.value)
+                        }
+                      />
+                    </FilterTh>
+                    <FilterTh>
+                      <FilterSelect
+                        value={columnFilters.company}
+                        onChange={(e) =>
+                          setColumnFilter("company", e.target.value)
+                        }
+                      >
+                        <option value="">All</option>
+                        {companies.map((c) => (
+                          <option key={c._id} value={c.name}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </FilterSelect>
+                    </FilterTh>
+                    <FilterTh></FilterTh>
                   </tr>
                 </thead>
                 <tbody>
@@ -667,6 +759,7 @@ const BillsPage = () => {
                           </StatusBadge>
                         </td>
                         <td>{bill.assignedToName || "Not Assigned"}</td>
+                        <td>{bill.company?.name || "—"}</td>
                         <td>
                           <ActionButtons>
                             <AssignButton onClick={() => openAssignModal(bill)}>
@@ -687,7 +780,7 @@ const BillsPage = () => {
                   ) : (
                     <tr>
                       <td
-                        colSpan="8"
+                        colSpan="9"
                         style={{ textAlign: "center", padding: "20px" }}
                       >
                         No bills found matching your search
@@ -1169,6 +1262,22 @@ const BillsTable = styled.table`
     }
   }
 `;
+
+const FilterTh = styled.th`
+  background-color: var(--nb-white) !important;
+  padding: 0.4rem 0.5rem !important;
+  border-bottom: 1px solid var(--nb-border) !important;
+`;
+
+const FilterInput = styled.input`
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--nb-border);
+  border-radius: 6px;
+  font-size: 0.8rem;
+`;
+
+const FilterSelect = styled(FilterInput).attrs({ as: "select" })``;
 
 const BRAND_LOGOS = {
   Amaron: amaronLogo,

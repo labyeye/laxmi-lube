@@ -67,7 +67,11 @@ const PAYMENT_MODE_LABELS = {
 // Sends only the retailer's PDF receipt for one collection; does NOT notify admin.
 async function sendRetailerReceiptOnly(collectionId) {
   const collection = await Collection.findById(collectionId)
-    .populate("bill", "billNumber retailer amount dueAmount billDate brand")
+    .populate({
+      path: "bill",
+      select: "billNumber retailer amount dueAmount billDate brand company",
+      populate: { path: "company", select: "name" },
+    })
     .populate("collectedBy", "name");
 
   if (!collection) throw new Error("Collection not found");
@@ -180,7 +184,11 @@ async function triggerWhatsApp(collectionId) {
 // group, and ONE admin notification — never N messages per bill.
 async function triggerGroupWhatsApp(paymentGroupId) {
   const members = await Collection.find({ paymentGroupId })
-    .populate("bill", "billNumber retailer amount dueAmount billDate brand")
+    .populate({
+      path: "bill",
+      select: "billNumber retailer amount dueAmount billDate brand company",
+      populate: { path: "company", select: "name" },
+    })
     .populate("collectedBy", "name");
 
   if (members.length === 0) throw new Error("Payment group not found");

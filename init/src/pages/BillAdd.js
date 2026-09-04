@@ -18,8 +18,20 @@ const BillsAdd = () => {
     current: 0,
     total: 0,
   });
+  const [companies, setCompanies] = useState([]);
+  const [importCompany, setImportCompany] = useState("");
   const API_URL = "https://backend.laxmilube.in/api";
   const { getModuleName } = useModules();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    fetch(`${API_URL}/companies`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => setCompanies(data || []))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const loadModule = async () => {
@@ -43,7 +55,10 @@ const BillsAdd = () => {
       setError("Please select a file to upload");
       return;
     }
-
+    if (!importCompany) {
+      setError("Please select a company");
+      return;
+    }
     const validationError = await validateExcelStructure(file);
     if (validationError) {
       setError(validationError);
@@ -53,6 +68,7 @@ const BillsAdd = () => {
     setLoading(true);
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("company", importCompany);
 
     try {
       const token = localStorage.getItem("token");
@@ -228,6 +244,20 @@ const BillsAdd = () => {
         <SectionHeader>
           Upload {getModuleName("bill", "plural")} (Excel)
         </SectionHeader>
+        <CompanySelectWrap>
+          <label>Company *</label>
+          <select
+            value={importCompany}
+            onChange={(e) => setImportCompany(e.target.value)}
+          >
+            <option value="">— Select company —</option>
+            {companies.map((c) => (
+              <option key={c._id} value={c._id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </CompanySelectWrap>
         <FileUploadContainer>
           <FileInputLabel>
             <FileInput
@@ -242,7 +272,7 @@ const BillsAdd = () => {
         </FileUploadContainer>
 
         <ButtonContainer>
-          <Button type="submit" disabled={loading || !file}>
+          <Button type="submit" disabled={loading || !file || !importCompany}>
             {loading
               ? importProgress.total > 0
                 ? `Importing ${importProgress.current} of ${importProgress.total} rows`
@@ -352,6 +382,29 @@ const Button = styled.button`
   transition: all 0.2s ease;
   width: 100%;
   max-width: 200px;
+`;
+
+const CompanySelectWrap = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  max-width: 300px;
+
+  label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--nb-ink);
+  }
+
+  select {
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--nb-border);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    background: var(--nb-white);
+    color: var(--nb-ink);
+  }
 `;
 
 const FileUploadContainer = styled.div`

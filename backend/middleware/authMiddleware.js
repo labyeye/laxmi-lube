@@ -67,10 +67,24 @@ const checkPermission = (module, action) => {
   };
 };
 
+// Builds a company filter for list/read queries.
+// Staff: locked to their own company. Admin: filtered only if ?company= is passed
+// (no query param = sees both companies), which also lets a company-scoped admin
+// be locked down the same way in future without changing every route.
+const companyFilter = (req) => {
+  if (req.user.role === "admin") {
+    const requested = req.query.company || req.body?.company;
+    if (req.user.company) return { company: req.user.company };
+    return requested ? { company: requested } : {};
+  }
+  return req.user.company ? { company: req.user.company } : {};
+};
+
 module.exports = {
   protect,
   adminOnly,
   staffOnly,
   retailerOnly,
   checkPermission,
+  companyFilter,
 };

@@ -28,6 +28,7 @@ const recordRoutes = require("./routes/recordRoutes");
 const whatsappWebhookRoutes = require("./routes/whatsappWebhookRoutes");
 const reconciliationRoutes = require("./routes/reconciliationRoutes");
 const cashAndSaleRoutes = require("./routes/cashAndSaleRoutes");
+const companyRoutes = require("./routes/companyRoutes");
 
 const app = express();
 app.use(cors());
@@ -61,6 +62,7 @@ app.use("/api/records", recordRoutes);
 app.use("/api/whatsapp/webhook", whatsappWebhookRoutes);
 app.use("/api/reconciliation", reconciliationRoutes);
 app.use("/api/cash-and-sale", cashAndSaleRoutes);
+app.use("/api/companies", companyRoutes);
 const PORT = 1200;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 // Set the timezone for the entire application

@@ -32,6 +32,7 @@ const BillsHistory = () => {
           <li key={bill._id}>
             Bill ID: {bill.billNumber}, Amount: ₹{bill.amount}, Status:{" "}
             {bill.status}
+            {bill.company?.name ? `, Company: ${bill.company.name}` : ""}
           </li>
         ))}
       </ul>

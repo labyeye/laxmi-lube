@@ -68,6 +68,7 @@ const autoMigrateLegacy = async (moduleKey, moduleDef) => {
 
 const legacyFieldMap = {
   retailer: [
+    "company",
     "name",
     "address1",
     "address2",
@@ -86,6 +87,7 @@ const legacyFieldMap = {
     "company",
   ],
   bill: [
+    "company",
     "billNumber",
     "retailer",
     "amount",

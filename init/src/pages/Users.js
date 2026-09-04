@@ -40,7 +40,9 @@ const Users = () => {
     email: "",
     password: "",
     role: "staff",
+    company: "",
   });
+  const [companies, setCompanies] = useState([]);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -89,6 +91,12 @@ const Users = () => {
 
   useEffect(() => {
     fetchUsers();
+    axios
+      .get("https://backend.laxmilube.in/api/companies", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      })
+      .then((res) => setCompanies(res.data || []))
+      .catch(() => {});
   }, []);
 
   const stats = useMemo(
@@ -256,6 +264,7 @@ const Users = () => {
       email: user.email,
       password: "",
       role: user.role,
+      company: user.company?._id || user.company || "",
     });
     setEditMode(true);
     setCurrentUserId(user._id);
@@ -263,7 +272,13 @@ const Users = () => {
   };
 
   const resetForm = () => {
-    setNewUser({ name: "", email: "", password: "", role: "staff" });
+    setNewUser({
+      name: "",
+      email: "",
+      password: "",
+      role: "staff",
+      company: "",
+    });
     setEditMode(false);
     setCurrentUserId(null);
     setShowPassword(false);
@@ -573,6 +588,11 @@ const Users = () => {
                         {visibleColumns.role && (
                           <td>
                             <RoleBadge role={user.role}>{user.role}</RoleBadge>
+                            {user.company?.name && (
+                              <div>
+                                <small>{user.company.name}</small>
+                              </div>
+                            )}
                           </td>
                         )}
                         {visibleColumns.createdAt && (
@@ -924,6 +944,22 @@ const Users = () => {
                     >
                       <option value="staff">Staff</option>
                       <option value="admin">Admin</option>
+                    </FieldSelect>
+                  </FieldGroup>
+                  <FieldGroup>
+                    <FieldLabel>Company (optional)</FieldLabel>
+                    <FieldSelect
+                      value={newUser.company}
+                      onChange={(e) =>
+                        setNewUser({ ...newUser, company: e.target.value })
+                      }
+                    >
+                      <option value="">— Both companies —</option>
+                      {companies.map((c) => (
+                        <option key={c._id} value={c._id}>
+                          {c.name}
+                        </option>
+                      ))}
                     </FieldSelect>
                   </FieldGroup>
                   <FormActions>

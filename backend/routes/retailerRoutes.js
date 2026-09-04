@@ -4,7 +4,11 @@ const router = express.Router();
 const multer = require("multer");
 const xlsx = require("xlsx");
 const Retailer = require("../models/Retailer");
-const { protect, adminOnly } = require("../middleware/authMiddleware");
+const {
+  protect,
+  adminOnly,
+  companyFilter,
+} = require("../middleware/authMiddleware");
 const mongoose = require("mongoose");
 const User = require("../models/User");
 const fs = require("fs");
@@ -20,6 +24,37 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+// Auto-assign a retailer's unassigned bills to its assigned staff.
+async function assignBillsForRetailer(retailerName, staffId) {
+  if (!staffId || !retailerName) return 0;
+  const Bill = require("../models/Bill");
+  const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const result = await Bill.updateMany(
+    {
+      retailer: new RegExp(`^${escapeRegex(retailerName)}$`, "i"),
+      $or: [{ assignedTo: null }, { assignedTo: { $exists: false } }],
+    },
+    { $set: { assignedTo: staffId, assignedDate: new Date() } },
+  );
+  return result.modifiedCount || 0;
+}
+
+// Manual "sync now" — catches up any bills left unassigned by past imports.
+router.post("/sync-assignments", protect, adminOnly, async (req, res) => {
+  try {
+    const retailers = await Retailer.find({ assignedTo: { $ne: null } })
+      .select("name assignedTo")
+      .lean();
+    let billsAssigned = 0;
+    for (const r of retailers) {
+      billsAssigned += await assignBillsForRetailer(r.name, r.assignedTo);
+    }
+    res.json({ retailersChecked: retailers.length, billsAssigned });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to sync bill assignments" });
+  }
+});
+
 router.post("/", protect, adminOnly, async (req, res) => {
   try {
     const {
@@ -31,8 +66,13 @@ router.post("/", protect, adminOnly, async (req, res) => {
       email,
       password,
       phone,
+      company,
     } = req.body;
     console.log("Creating retailer:", { name, address1, assignedTo, email });
+
+    if (!company) {
+      return res.status(400).json({ message: "Company is required" });
+    }
 
     // Create retailer document
     const retailer = new Retailer({
@@ -43,11 +83,16 @@ router.post("/", protect, adminOnly, async (req, res) => {
       dayAssigned,
       phone: phone || undefined,
       createdBy: req.user._id,
+      company,
       status: "ACTIVE",
     });
 
     await retailer.save();
     console.log("Retailer saved:", retailer);
+
+    if (assignedTo) {
+      await assignBillsForRetailer(retailer.name, assignedTo);
+    }
 
     // If email and password provided, create user account
     if (email && password) {
@@ -104,6 +149,11 @@ router.post(
         cleanup();
         return res.status(400).json({ message: "No file uploaded" });
       }
+      const company = req.body.company || undefined;
+      if (!company) {
+        cleanup();
+        return res.status(400).json({ message: "Company is required" });
+      }
       const dayAbbreviations = {
         MON: "Monday",
         TUE: "Tuesday",
@@ -140,6 +190,9 @@ router.post(
           h.includes("mobile") ||
           h.includes("whatsapp") ||
           h.includes("contact"),
+      );
+      const codeCol = lowerHeaders.findIndex(
+        (h) => h.includes("retailer code") || h.includes("code"),
       );
 
       if (nameCol === -1) {
@@ -210,6 +263,9 @@ router.post(
           }
         }
 
+        const retailerCode =
+          codeCol !== -1 ? row[codeCol]?.toString().trim() : "";
+
         validRetailers.push({
           name,
           address1,
@@ -218,6 +274,8 @@ router.post(
           assignedTo,
           phone: phone || undefined,
           createdBy: req.user._id,
+          company,
+          retailerCode: retailerCode || undefined,
         });
       }
 
@@ -241,10 +299,26 @@ router.post(
       const fieldsToUpdate =
         updateFields.length > 0 ? updateFields : ALL_FIELDS;
 
-      // ── Pass 2: find existing retailers by name ────────────────────────────
+      // ── Pass 2: find existing retailers by name (same company) or by
+      // retailerCode (any company — lets a re-import under a different
+      // company move the retailer instead of duplicating it) ────────────────
       const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const names = validRetailers.map((r) => r.name);
+      const codes = validRetailers
+        .filter((r) => r.retailerCode)
+        .map((r) => r.retailerCode);
+
+      const existingByCode = codes.length
+        ? await Retailer.find({ retailerCode: { $in: codes } })
+            .select("retailerCode _id company")
+            .lean()
+        : [];
+      const existingByCodeMap = new Map(
+        existingByCode.map((r) => [r.retailerCode, r]),
+      );
+
       const existingRetailers = await Retailer.find({
+        ...(company ? { company } : {}),
         name: { $in: names.map((n) => new RegExp(`^${escapeRegex(n)}$`, "i")) },
       })
         .select("name _id")
@@ -260,11 +334,22 @@ router.post(
       const updatedDetails = []; // [{ name, fields: [...] }]
 
       for (const r of validRetailers) {
-        const existingId = existingMap.get(r.name.toUpperCase());
+        const byCode = r.retailerCode
+          ? existingByCodeMap.get(r.retailerCode)
+          : null;
+        const existingId = byCode
+          ? byCode._id
+          : existingMap.get(r.name.toUpperCase());
         if (existingId) {
           // Existing: update only selected fields (skip empty/undefined values)
           const updateData = {};
           const updatedFields = [];
+          // Matched by code and imported under a different company this
+          // time: move the retailer instead of leaving it under the old one.
+          if (byCode && String(byCode.company) !== String(company)) {
+            updateData.company = company;
+            updatedFields.push("Company");
+          }
           for (const field of fieldsToUpdate) {
             if (field === "phone") {
               if (r.phone !== undefined) {
@@ -298,6 +383,9 @@ router.post(
             updatedCount++;
             updatedDetails.push({ name: r.name, fields: updatedFields });
           }
+          if (updateData.assignedTo) {
+            await assignBillsForRetailer(r.name, updateData.assignedTo);
+          }
         } else {
           // New retailer: insert with all available data from Excel
           toInsert.push(r);
@@ -309,6 +397,9 @@ router.post(
           ordered: false,
         });
         insertedCount = inserted.length;
+        for (const r of inserted) {
+          if (r.assignedTo) await assignBillsForRetailer(r.name, r.assignedTo);
+        }
       }
 
       res.json({
@@ -363,31 +454,75 @@ router.post("/import-batch", protect, adminOnly, async (req, res) => {
       staffMembers.map((s) => [s.name.trim().toUpperCase(), s._id]),
     );
 
-    // Load ALL existing retailer names in one query — simple string check, no regex
-    const allExisting = await Retailer.find({}).select("name _id").lean();
+    // Company comes from each row's FirmName column, not a picker.
+    const Company = require("../models/Company");
+    const allCompanies = await Company.find({}).select("name").lean();
+    const companyByName = new Map(
+      allCompanies.map((c) => [c.name.trim().toUpperCase(), c._id]),
+    );
+
+    // Load ALL existing retailers in one query, keyed by company + name
+    const allExisting = await Retailer.find({}).select("name company _id").lean();
     const existingMap = new Map(
-      allExisting.map((r) => [r.name.trim().toUpperCase(), r._id]),
+      allExisting.map((r) => [
+        `${r.company}_${r.name.trim().toUpperCase()}`,
+        r._id,
+      ]),
+    );
+
+    // Retailers with a code are matched across ALL companies, so re-importing
+    // the same file under a different company moves the retailer instead of
+    // creating a duplicate under the new company.
+    const codes = rows
+      .map((r) => (r.retailerCode || "").trim().toUpperCase())
+      .filter(Boolean);
+    const existingByCode = codes.length
+      ? await Retailer.find({ retailerCode: { $in: codes } })
+          .select("retailerCode _id company")
+          .lean()
+      : [];
+    const existingByCodeMap = new Map(
+      existingByCode.map((r) => [r.retailerCode, r]),
     );
 
     const toInsert = [];
     const updateOps = [];
     let updatedCount = 0;
+    let skippedCount = 0;
     const updatedDetails = [];
 
     for (const row of rows) {
       const name = (row.name || "").trim();
       if (!name) continue;
 
+      const company = companyByName.get(
+        (row.firmName || "").trim().toUpperCase(),
+      );
+      if (!company) {
+        skippedCount++;
+        continue;
+      }
+
       const assignedToId = row.assignedTo
         ? staffByName.get(row.assignedTo.trim().toUpperCase()) || undefined
         : undefined;
 
-      const existingId = existingMap.get(name.toUpperCase());
+      const retailerCode = (row.retailerCode || "").trim().toUpperCase();
+      const byCode = retailerCode ? existingByCodeMap.get(retailerCode) : null;
+      const existingId = byCode
+        ? byCode._id
+        : existingMap.get(`${company}_${name.toUpperCase()}`);
 
       if (existingId) {
         // Existing retailer: update only the fields the user selected
         const updateData = {};
         const fieldLabels = [];
+        // Matched by code but filed under a different company this time:
+        // move it instead of leaving it under the old company.
+        if (byCode && String(byCode.company) !== String(company)) {
+          updateData.company = company;
+          fieldLabels.push("Company");
+        }
         for (const f of fieldsToUpdate) {
           if (f === "phone" && row.phone != null) {
             updateData.phone = String(row.phone);
@@ -429,7 +564,9 @@ router.post("/import-batch", protect, adminOnly, async (req, res) => {
           phone: row.phone ? String(row.phone) : undefined,
           dayAssigned: row.dayAssigned || "",
           assignedTo: assignedToId || undefined,
+          retailerCode: retailerCode || undefined,
           createdBy: req.user._id,
+          company,
           status: "ACTIVE",
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -462,6 +599,7 @@ router.post("/import-batch", protect, adminOnly, async (req, res) => {
       insertedCount,
       updatedCount,
       updatedDetails,
+      skippedCount,
       attempted: toInsert.length,
     });
   } catch (err) {
@@ -472,7 +610,7 @@ router.post("/import-batch", protect, adminOnly, async (req, res) => {
 
 router.put("/:id", protect, adminOnly, async (req, res) => {
   try {
-    const { name, address1, address2, assignedTo, dayAssigned, phone } =
+    const { name, address1, address2, assignedTo, dayAssigned, phone, company } =
       req.body;
     const retailer = await Retailer.findById(req.params.id);
 
@@ -488,9 +626,15 @@ router.put("/:id", protect, adminOnly, async (req, res) => {
     retailer.dayAssigned =
       dayAssigned !== undefined ? dayAssigned : retailer.dayAssigned;
     retailer.phone = phone !== undefined ? phone : retailer.phone;
+    retailer.company = company !== undefined ? company : retailer.company;
     retailer.updatedAt = Date.now();
 
     await retailer.save();
+
+    if (retailer.assignedTo) {
+      await assignBillsForRetailer(retailer.name, retailer.assignedTo);
+    }
+
     res.json(retailer);
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -537,9 +681,10 @@ router.delete("/:id", protect, adminOnly, async (req, res) => {
 
 router.get("/", protect, async (req, res) => {
   try {
-    const retailers = await Retailer.find({})
+    const retailers = await Retailer.find(companyFilter(req))
       .populate("assignedTo", "name")
       .populate("createdBy", "name")
+      .populate("company", "name code")
       .sort({ name: 1 });
     res.json(retailers);
   } catch (err) {
@@ -593,7 +738,10 @@ router.get("/export", protect, adminOnly, async (req, res) => {
 // Admin: Get pending retailer approvals
 router.get("/pending", protect, adminOnly, async (req, res) => {
   try {
-    const pendingRetailers = await Retailer.find({ status: "PENDING" })
+    const pendingRetailers = await Retailer.find({
+      status: "PENDING",
+      ...companyFilter(req),
+    })
       .populate("assignedTo", "name email")
       .populate("userId", "email")
       .sort({ createdAt: -1 });

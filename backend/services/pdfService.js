@@ -6,6 +6,18 @@ const RECEIPT_PDF_PATH = path.join(
   __dirname,
   "../../init/src/assets/Receipt.pdf",
 );
+const RECEIPT_PDF_PATH_KH = path.join(
+  __dirname,
+  "../../init/src/assets/Receipt_KH.pdf",
+);
+
+// Kalahanu bills use their own receipt template; everything else uses the default.
+function getReceiptTemplatePath(companyName) {
+  if ((companyName || "").toLowerCase().includes("kalahanu")) {
+    return RECEIPT_PDF_PATH_KH;
+  }
+  return RECEIPT_PDF_PATH;
+}
 
 // Mirrors the POS constants in the frontend generateReceipt.js
 const POS = {
@@ -99,7 +111,9 @@ function toWords(amount) {
 }
 
 async function generateReceiptPDF(collection, bill, retailer) {
-  const templateBytes = fs.readFileSync(RECEIPT_PDF_PATH);
+  const templateBytes = fs.readFileSync(
+    getReceiptTemplatePath(bill?.company?.name),
+  );
   const pdfDoc = await PDFDocument.load(templateBytes);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -210,7 +224,9 @@ async function generateReceiptPDF(collection, bill, retailer) {
  * @param {Object}   retailer - Retailer doc (name, phone, …)
  */
 async function generateGroupReceiptPDF(members, retailer) {
-  const templateBytes = fs.readFileSync(RECEIPT_PDF_PATH);
+  const templateBytes = fs.readFileSync(
+    getReceiptTemplatePath(members[0]?.bill?.company?.name),
+  );
   const pdfDoc = await PDFDocument.load(templateBytes);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);

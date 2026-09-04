@@ -15,6 +15,19 @@ const BillSchema = new mongoose.Schema(
       index: true,
     },
     deleted: { type: Boolean, default: false },
+    company: {
+      // Required only for newly created bills, so pre-existing bills saved
+      // before the multi-company feature keep saving/updating fine.
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      index: true,
+      required: [
+        function () {
+          return this.isNew;
+        },
+        "Company is required",
+      ],
+    },
     amount: {
       type: Number,
       required: [true, "Amount is required"],

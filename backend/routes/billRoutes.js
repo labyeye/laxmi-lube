@@ -10,6 +10,7 @@ const {
   protect,
   adminOnly,
   staffOnly,
+  companyFilter,
 } = require("../middleware/authMiddleware");
 
 // Map first character of bill number → brand
@@ -46,15 +47,23 @@ router.post("/", protect, adminOnly, async (req, res) => {
       billDate,
       status,
       collectionDay,
+      company,
     } = req.body;
 
     // Validate required fields
-    if (!billNumber || !retailer || !amount || !billDate || !collectionDay) {
+    if (
+      !billNumber ||
+      !retailer ||
+      !amount ||
+      !billDate ||
+      !collectionDay ||
+      !company
+    ) {
       return res.status(400).json({
         success: false,
         message: "Missing required fields",
         error:
-          "Bill number, retailer, amount, bill date, and collection day are required",
+          "Bill number, retailer, amount, bill date, collection day, and company are required",
       });
     }
 
@@ -65,6 +74,7 @@ router.post("/", protect, adminOnly, async (req, res) => {
       dueAmount: dueAmount ? parseFloat(dueAmount) : parseFloat(amount),
       billDate,
       collectionDay,
+      company,
       status: status || "Unpaid",
     });
 
@@ -222,13 +232,14 @@ router.put("/:billId/assign", protect, adminOnly, async (req, res) => {
 
 router.get("/", protect, async (req, res) => {
   try {
-    let query = { deleted: false };
+    let query = { deleted: false, ...companyFilter(req) };
     if (req.user.role !== "admin") {
       query.assignedTo = req.user._id;
     }
 
     const bills = await Bill.find(query)
       .populate("assignedTo", "name")
+      .populate("company", "name code")
       .populate({
         path: "collections",
         select: "amountCollected paymentDate paymentMode",
@@ -330,6 +341,11 @@ router.post(
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
+      const Company = require("../models/Company");
+      const companies = await Company.find({}).select("name").lean();
+      const companyMap = new Map(
+        companies.map((c) => [c.name.trim().toUpperCase(), c._id]),
+      );
 
       const dayAbbreviations = {
         MON: "Monday",
@@ -353,14 +369,29 @@ router.post(
       }
 
       let defaultStaffId = null;
+      const retailerMap = new Map();
       try {
+        // Company now comes from each row's FirmName column, so staff/retailer
+        // lookups are loaded globally rather than scoped to one company.
         const User = require("../models/User");
-        const staffMembers = await User.find({ role: { $in: ["staff", "admin"] } }).lean();
+        const staffMembers = await User.find({
+          role: { $in: ["staff", "admin"] },
+        }).lean();
         staffMembers.forEach((staff) => {
           staffMap.set(staff.name.toUpperCase(), staff._id);
         });
         // Default fallback: "Office Sale" user
         defaultStaffId = staffMap.get("OFFICE SALE") || null;
+
+        const Retailer = require("../models/Retailer");
+        const retailers = await Retailer.find({
+          assignedTo: { $ne: null },
+        })
+          .select("name assignedTo")
+          .lean();
+        retailers.forEach((r) => {
+          retailerMap.set(r.name.toUpperCase(), r.assignedTo);
+        });
       } catch (err) {
         console.warn("Could not load staff members:", err.message);
       }
@@ -391,6 +422,7 @@ router.post(
         const billBalance = getValue(row, ["billbalance", "balance"]);
         const staffName = getValue(row, ["staff name", "staff"]);
         const collectionDayInput = getValue(row, ["day", "collectionday"]);
+        const firmName = getValue(row, ["firmname"]);
 
         if (!custName && !billAmt) continue;
 
@@ -398,6 +430,16 @@ router.post(
           errors.push(
             `Row ${index + 2}: Missing required fields (retailer, amount, date)`,
           );
+          continue;
+        }
+
+        if (!firmName) {
+          errors.push(`Row ${index + 2}: Missing FirmName`);
+          continue;
+        }
+        const company = companyMap.get(firmName.trim().toUpperCase());
+        if (!company) {
+          errors.push(`Row ${index + 2}: Unknown FirmName "${firmName}"`);
           continue;
         }
 
@@ -480,8 +522,13 @@ router.post(
           billDate,
           collectionDay,
           status,
+          company,
           brand: getBrandFromBillNumber(billNo),
-          assignedTo: staffName ? (staffMap.get(staffName.toUpperCase()) || defaultStaffId) : defaultStaffId,
+          assignedTo: staffName
+            ? staffMap.get(staffName.toUpperCase()) ||
+              retailerMap.get(custName.toUpperCase()) ||
+              defaultStaffId
+            : retailerMap.get(custName.toUpperCase()) || defaultStaffId,
         });
       }
 
@@ -490,12 +537,12 @@ router.post(
       const existingBills = await Bill.find({
         retailer: { $in: retailerNames },
       })
-        .select("retailer billDate amount")
+        .select("retailer billDate amount company")
         .lean();
 
       const existingKeys = new Set(
         existingBills.map((b) =>
-          `${b.retailer}_${new Date(b.billDate).toISOString().slice(0, 10)}_${b.amount}`.toUpperCase(),
+          `${b.company}_${b.retailer}_${new Date(b.billDate).toISOString().slice(0, 10)}_${b.amount}`.toUpperCase(),
         ),
       );
 
@@ -503,7 +550,7 @@ router.post(
       let alreadyExistsCount = 0;
       for (const bill of validBills) {
         const key =
-          `${bill.retailer}_${new Date(bill.billDate).toISOString().slice(0, 10)}_${bill.amount}`.toUpperCase();
+          `${bill.company}_${bill.retailer}_${new Date(bill.billDate).toISOString().slice(0, 10)}_${bill.amount}`.toUpperCase();
         if (existingKeys.has(key)) {
           alreadyExistsCount++;
           errors.push(
@@ -562,7 +609,7 @@ router.get("/assigned-customers", protect, staffOnly, async (req, res) => {
     const assignedFilter = viewableStaff.length > 0
       ? { $or: [{ assignedTo: { $in: allowedIds } }, { assignedTo: null }, { assignedTo: { $exists: false } }] }
       : { assignedTo: { $in: allowedIds } };
-    const bills = await Bill.find(assignedFilter).distinct("retailer");
+    const bills = await Bill.find({ ...assignedFilter, ...companyFilter(req) }).distinct("retailer");
     res.json(bills);
   } catch (err) {
     res.status(500).json({
@@ -609,6 +656,7 @@ router.get("/bills-assigned-today", protect, staffOnly, async (req, res) => {
 
     const query = {
       ...assignedFilter,
+      ...companyFilter(req),
       status: { $ne: "Paid" },
     };
 
