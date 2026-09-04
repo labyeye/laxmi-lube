@@ -311,7 +311,7 @@ const defaultModules = () => [
         type: "relation",
         ref: "user",
         required: false,
-        visible: ["list"],
+        visible: ["form", "list"],
         roles: ["admin"],
         order: 8,
         status: "active",

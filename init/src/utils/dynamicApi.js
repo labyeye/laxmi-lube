@@ -82,7 +82,7 @@ export const hydrateModuleDefinition = async (moduleKey) => {
     (definition.fields || []).map(async (field) => {
       if (field.type === "relation" && field.ref) {
         if (field.ref === "user" || field.ref === "users") {
-          const usersResponse = await axios.get(`${API_BASE}/users`, {
+          const usersResponse = await axios.get(`${API_BASE}/users/staff`, {
             headers: getAuthHeaders(),
           });
           const users = usersResponse.data || [];
